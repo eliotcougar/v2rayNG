@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">امکان دریافت مجوز وجود ندارد</string>
     <string name="toast_permission_denied_notification">امکان دریافت مجوز ارسال اعلان وجود ندارد</string>
     <string name="notification_action_more">برای اطلاعات بیشتر کلیک کنید</string>
-    <string name="toast_services_start">شروع خدمات</string>
-    <string name="toast_services_stop">توقف سرویس</string>
-    <string name="toast_services_success">سرویس با موفقیت شروع شد</string>
-    <string name="toast_services_failure">شروع سرویس با شکست مواجه شد</string>
+    <string name="toast_services_start">سرویس در حال شروع است…</string>
+    <string name="toast_services_stop">سرویس متوقف شد</string>
+    <string name="toast_services_success">سرویس شروع شد</string>
+    <string name="toast_services_failure">راه‌اندازی سرویس ناموفق بود</string>
+    <string name="toast_services_failure_detail">راه‌اندازی سرویس ناموفق بود: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">خروجی گرفتن در کلیپ‌ بورد</string>
     <string name="menu_item_import_proxy_app">وارد کردن از کلیپ‌ بورد</string>
     <string name="per_app_proxy_settings">تنظیمات به تفکیک برنامه</string>
-    <string name="per_app_proxy_settings_enable">فعال‌سازی به تفکیک برنامه</string>
+    <string name="per_app_proxy_settings_enable">مسیریابی به تفکیک برنامه</string>
     <string name="app_picker_unknown_app">برنامه ناشناس (UID شناسایی‌نشده)</string>
 
     <!-- Preferences -->
@@ -187,7 +188,7 @@
     <string name="title_core_settings">تنظیمات هسته</string>
     <string name="title_vpn_settings">تنظیمات VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی به تفکیک برنامه</string>
-    <string name="summary_pref_per_app_proxy">حالت عادی: برنامه‌های انتخاب‌شده از پروکسی استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند؛\nحالت دور زدن: برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از پروکسی استفاده می‌کنند.\nگزینهٔ انتخاب خودکار برنامه‌هایی که باید از پروکسی استفاده کنند در منو قرار دارد.</string>
+    <string name="summary_pref_per_app_proxy">مسیریابی به تفکیک برنامه مشخص می‌کند کدام برنامه‌ها از VPN استفاده کنند.\n\nدر حالت عمومی، برنامه‌های انتخاب‌شده از VPN استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند. در حالت دور زدن، برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از VPN استفاده می‌کنند. انتخاب خودکار برنامه‌ها از منوی «بیشتر» در دسترس است.</string>
     <string name="title_pref_is_booted">اتصال خودکار هنگام راه اندازی</string>
     <string name="summary_pref_is_booted">هنگام راه اندازی به طور خودکار به سرور انتخابی متصل می شود که ممکن است ناموفق باشد.</string>
 
@@ -320,10 +321,10 @@
     <string name="summary_root_lan_sharing">دستگاه‌های متصل به نقطه اتصال Wi‑Fi و USB را از طریق VPN مسیریابی کنید</string>
     <string name="title_language">زبان</string>
     <string name="title_ui_settings">تنظیمات رابط کاربری</string>
-    <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
+    <string name="title_pref_ui_mode_night">پوسته رابط کاربری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
-    <string name="title_pref_use_hev_tunnel">استفاده از Hev TUN</string>
+    <string name="title_pref_use_hev_tunnel">استفاده از قابلیت Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">اگر فعال باشد، تونل VPN از hev-socks5-tunnel استفاده می‌کند؛ در غیر این صورت از xray-core استفاده خواهد شد.</string>
     <string name="title_pref_hev_tunnel_loglevel">سطح گزارش‌های Hev TUN</string>
     <string name="title_pref_hev_tunnel_rw_timeout">مهلت خواندن/نوشتن Hev TUN (ثانیه؛ پیش‌فرض TCP/UDP: 300/60)</string>
@@ -335,6 +336,8 @@
     <string name="summary_root_lan_sharing">ترافیک دستگاه‌های متصل به نقطهٔ اتصال Wi-Fi و USB را از VPN عبور می‌دهد.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">به‌روزرسانی</string>
     <string name="logcat_copy">کپی</string>
     <string name="logcat_clear">پاک کردن</string>
     <string name="logcat_share">اشتراک‌گذاری گزارش</string>

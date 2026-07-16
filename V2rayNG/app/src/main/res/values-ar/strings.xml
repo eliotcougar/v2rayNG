@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">تعذر الحصول على الإذن</string>
     <string name="toast_permission_denied_notification">تعذر الحصول على إذن الإشعارات</string>
     <string name="notification_action_more">انقر للمزيد</string>
-    <string name="toast_services_start">بدء الخدمات</string>
-    <string name="toast_services_stop">إيقاف الخدمات</string>
-    <string name="toast_services_success">نجاح بدء الخدمات</string>
-    <string name="toast_services_failure">فشل بدء الخدمات</string>
+    <string name="toast_services_start">جارٍ بدء الخدمة…</string>
+    <string name="toast_services_stop">تم إيقاف الخدمة</string>
+    <string name="toast_services_success">تم بدء الخدمة</string>
+    <string name="toast_services_failure">تعذر بدء الخدمة</string>
+    <string name="toast_services_failure_detail">تعذر بدء الخدمة: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">ملف التكوين</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">تصدير إلى الحافظة</string>
     <string name="menu_item_import_proxy_app">استيراد من الحافظة</string>
     <string name="per_app_proxy_settings">إعدادات كل تطبيق</string>
-    <string name="per_app_proxy_settings_enable">تمكين الإعدادات لكل تطبيق</string>
+    <string name="per_app_proxy_settings_enable">التوجيه حسب التطبيق</string>
     <string name="app_picker_unknown_app">تطبيق غير معروف (UID غير محدد)</string>
 
     <!-- Preferences -->
@@ -187,7 +188,7 @@
     <string name="title_core_settings">إعدادات النواة</string>
     <string name="title_vpn_settings">إعدادات VPN</string>
     <string name="title_pref_per_app_proxy">الوكيل لكل تطبيق</string>
-    <string name="summary_pref_per_app_proxy">عام: تستخدم التطبيقات المحددة الوكيل، وتتصل التطبيقات غير المحددة مباشرة؛\nوضع التجاوز: تتصل التطبيقات المحددة مباشرة، وتستخدم التطبيقات غير المحددة الوكيل.\nيتوفر في القائمة خيار لتحديد التطبيقات التي ستستخدم الوكيل تلقائيًا.</string>
+    <string name="summary_pref_per_app_proxy">يحدد التوجيه حسب التطبيق التطبيقات التي تستخدم شبكة VPN.\n\nفي الوضع العام، تستخدم التطبيقات المحددة شبكة VPN وتتصل التطبيقات غير المحددة مباشرة. في وضع التجاوز، تتصل التطبيقات المحددة مباشرة وتستخدم التطبيقات غير المحددة شبكة VPN. يتوفر التحديد التلقائي للتطبيقات من قائمة «المزيد».</string>
     <string name="title_pref_is_booted">الاتصال تلقائياً عند بدء التشغيل</string>
     <string name="summary_pref_is_booted">الاتصال تلقائياً بالخادم المحدد عند بدء التشغيل؛ قد لا تنجح المحاولة</string>
 
@@ -320,7 +321,7 @@
     <string name="summary_root_lan_sharing">توجيه أجهزة نقطة اتصال Wi‑Fi والأجهزة المتصلة عبر USB من خلال VPN</string>
     <string name="title_language">اللغة</string>
     <string name="title_ui_settings">إعدادات واجهة المستخدم</string>
-    <string name="title_pref_ui_mode_night">إعدادات وضع واجهة المستخدم ليلاً</string>
+    <string name="title_pref_ui_mode_night">سمة واجهة المستخدم</string>
     <string name="title_pref_dynamic_color">تفعيل الألوان الديناميكية</string>
     <string name="summary_pref_dynamic_color">يعمل فقط على أندرويد 12+</string>
     <string name="title_pref_use_hev_tunnel">تمكين ميزة Hev TUN</string>
@@ -335,6 +336,8 @@
     <string name="summary_root_lan_sharing">توجيه حركة مرور أجهزة نقطة اتصال Wi-Fi والأجهزة المربوطة عبر USB من خلال VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">تحديث</string>
     <string name="logcat_copy">نسخ</string>
     <string name="logcat_clear">مسح</string>
     <string name="logcat_share">مشاركة السجل</string>

@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">گرؽڌن موجوز مومکن نؽڌ</string>
     <string name="toast_permission_denied_notification">گرؽڌن موجوز وارسۊوی مومکن نؽڌ</string>
     <string name="notification_action_more">سی دووسمندیا قلوه کیلیک کوݩ</string>
-    <string name="toast_services_start">ره وستن سرویس</string>
-    <string name="toast_services_stop">واڌاشتن سرویس</string>
-    <string name="toast_services_success">ره وستن سرویس وا مووفقیت ٱنجوم وابی</string>
-    <string name="toast_services_failure">ره وستن سرویس وا مووفقیت ٱنجوم نوابی</string>
+    <string name="toast_services_start">سرویس ره ایفته…</string>
+    <string name="toast_services_stop">سرویس واڌاشته وابی</string>
+    <string name="toast_services_success">سرویس وا مووفقیت ره ایفت</string>
+    <string name="toast_services_failure">ره وندن سرویس شکست خرد</string>
+    <string name="toast_services_failure_detail">ره وندن سرویس شکست خرد: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">و در کشیڌن من کلیپ بورد</string>
     <string name="menu_item_import_proxy_app">و من ٱووردن ز کلیپ بورد</string>
     <string name="per_app_proxy_settings">سامووا ب تفکیک برنومه</string>
-    <string name="per_app_proxy_settings_enable">ره وندن ب تفکیک برنومه</string>
+    <string name="per_app_proxy_settings_enable">تور جوستن ب تفکیک برنومه</string>
     <string name="app_picker_unknown_app">برنومه ناناس (UID ناساڌه)</string>
 
     <!-- Preferences -->
@@ -187,7 +188,7 @@
     <string name="title_core_settings">سامووا هسته</string>
     <string name="title_vpn_settings">سامووا VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی و ری برنومه</string>
-    <string name="summary_pref_per_app_proxy">پوی وولاتی: برنومه پسند وابیڌه وا ی پروکسی منپیز ابۊ، برنومه پسند نوابیڌه موستقیمن منپیز ابۊ.\nحالت دور زیڌن: برنومه پسند وابیڌه موستقیمن منپیز ابۊ، برنومه پسند نوابیڌه وا ی پروکسی منپیز ابۊ.\nپسند خوتکار برنومه یلی ک وا ی پروکسی منپیز ابۊن من نومگه امکووݩ پذیر هڌ.</string>
+    <string name="summary_pref_per_app_proxy">تور جوستن ب تفکیک برنومه معین اکۊ ک کوم برنومه یل VPN ن ب کار بگرن.\n\nمن هالت پوی وولاتی، برنومه یل پسند وابیڌه VPN ن ب کار اگرن و برنومه یل پسند نوابیڌه موستقیمن منپیز ابۊن. من هالت دور زیڌن، برنومه یل پسند وابیڌه موستقیمن منپیز ابۊن و برنومه یل پسند نوابیڌه VPN ن ب کار اگرن. پسند خوتکار برنومه یل ز نومگه «بیشتر» امکووݩ پزیر هڌ.</string>
     <string name="title_pref_is_booted">منپیز خوتکار مجال ره ونی</string>
     <string name="summary_pref_is_booted">مجال ره وندن، خوساخوس و سرور پسند بیڌه منپیز ابۊ که گاشڌ نا مووفق بۊ.</string>
 
@@ -314,7 +315,7 @@
     <string name="title_mode_help">سی دووسمندیا وو هیاری قلوه، ری ای هؽل بزݩ</string>
     <string name="title_language">زووݩ</string>
     <string name="title_ui_settings">سامووا رابط منتوری</string>
-    <string name="title_pref_ui_mode_night">سامووا حالت رابط منتوری</string>
+    <string name="title_pref_ui_mode_night">پوسته رابت منتوری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
     <string name="title_pref_use_hev_tunnel">و کار گرؽڌن ویژیی Hev TUN</string>
@@ -329,6 +330,8 @@
     <string name="summary_root_lan_sharing">ترافیک هات‌اسپات وای‌فای وو دسگا یل منپیز وابیڌه وا USB (تترینگ) ن ز تور VPN بفشنین.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">ورۊ کردن</string>
     <string name="logcat_copy">لف گیری</string>
     <string name="logcat_clear">روفتن</string>
     <string name="logcat_share">یک رسۊوی گوزارش</string>

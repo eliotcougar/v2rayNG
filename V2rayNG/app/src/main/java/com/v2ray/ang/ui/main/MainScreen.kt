@@ -24,11 +24,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.ui.compose.LocalAppSnackbar
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -49,6 +51,18 @@ fun MainScreen(
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
+
+    val context = LocalContext.current
+    val snackbar = LocalAppSnackbar.current
+    LaunchedEffect(mainViewModel, context) {
+        mainViewModel.serviceStatusMessages.collect { message ->
+            val text = context.getString(
+                message.stringRes,
+                *message.formatArgs.toTypedArray()
+            )
+            if (message.isError) snackbar.showError(text) else snackbar.showSuccess(text)
+        }
+    }
 
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)

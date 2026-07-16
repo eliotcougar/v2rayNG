@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">Vui lòng cấp các quyền cần thiết cho v2rayNG. Bạn có thể đã từ chối quyền truy cập máy ảnh hoặc bộ nhớ.</string>
     <string name="toast_permission_denied_notification">Không thể nhận quyền thông báo</string>
     <string name="notification_action_more">Nhấn để biết thêm…</string>
-    <string name="toast_services_start">Đang khởi động v2rayNG…</string>
-    <string name="toast_services_stop">Đã dừng v2rayNG!</string>
-    <string name="toast_services_success">Đã khởi động v2rayNG!</string>
-    <string name="toast_services_failure">Không thể khởi động v2rayNG, kiểm tra lại cấu hình!</string>
+    <string name="toast_services_start">Đang khởi động dịch vụ…</string>
+    <string name="toast_services_stop">Đã dừng dịch vụ</string>
+    <string name="toast_services_success">Đã khởi động dịch vụ</string>
+    <string name="toast_services_failure">Không thể khởi động dịch vụ</string>
+    <string name="toast_services_failure_detail">Không thể khởi động dịch vụ: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">v2rayNG</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">Xuất và Sao chép</string>
     <string name="menu_item_import_proxy_app">Nhập từ bảng tạm</string>
     <string name="per_app_proxy_settings">Cài đặt theo ứng dụng</string>
-    <string name="per_app_proxy_settings_enable">Bật cài đặt theo ứng dụng</string>
+    <string name="per_app_proxy_settings_enable">Định tuyến theo ứng dụng</string>
     <string name="app_picker_unknown_app">Ứng dụng không xác định (không nhận dạng được UID)</string>
 
     <!-- Preferences -->
@@ -186,8 +187,8 @@
     <string name="title_advanced">Cài đặt nâng cao</string>
     <string name="title_core_settings">Cài đặt lõi</string>
     <string name="title_vpn_settings">Cài đặt VPN</string>
-    <string name="title_pref_per_app_proxy">Proxy theo từng ứng dụng</string>
-    <string name="summary_pref_per_app_proxy">Thông thường: ứng dụng đã chọn dùng proxy, ứng dụng chưa chọn kết nối trực tiếp;\nChế độ bỏ qua: ứng dụng đã chọn kết nối trực tiếp, ứng dụng chưa chọn dùng proxy.\nTrong trình đơn có tùy chọn tự động chọn các ứng dụng sẽ dùng proxy.</string>
+    <string name="title_pref_per_app_proxy">Proxy theo Ứng dụng</string>
+    <string name="summary_pref_per_app_proxy">Định tuyến theo ứng dụng kiểm soát những ứng dụng nào sử dụng VPN.\n\nỞ chế độ Chung, các ứng dụng đã chọn sử dụng VPN và các ứng dụng chưa chọn kết nối trực tiếp. Ở chế độ Bỏ qua, các ứng dụng đã chọn kết nối trực tiếp và các ứng dụng chưa chọn sử dụng VPN. Có thể tự động chọn ứng dụng từ menu Thêm.</string>
     <string name="title_pref_is_booted">Tự động kết nối khi khởi động</string>
     <string name="summary_pref_is_booted">Tự động kết nối với máy chủ đã chọn khi khởi động; thao tác này có thể không thành công</string>
 
@@ -320,10 +321,10 @@
     <string name="summary_root_lan_sharing">Định tuyến các thiết bị điểm phát sóng Wi‑Fi và thiết bị chia sẻ kết nối USB qua VPN</string>
     <string name="title_language">Ngôn ngữ</string>
     <string name="title_ui_settings">Cài đặt UI</string>
-    <string name="title_pref_ui_mode_night">Cài đặt chế độ UI</string>
+    <string name="title_pref_ui_mode_night">Chủ đề giao diện</string>
     <string name="title_pref_dynamic_color">Bật màu động</string>
     <string name="summary_pref_dynamic_color">Chỉ hoạt động trên Android 12+</string>
-    <string name="title_pref_use_hev_tunnel">Dùng Hev TUN</string>
+    <string name="title_pref_use_hev_tunnel">Bật tính năng Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">Khi bật, TUN sẽ dùng hev-socks5-tunnel; nếu không, TUN sẽ dùng xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Mức nhật ký Hev TUN</string>
     <string name="title_pref_hev_tunnel_rw_timeout">Thời gian chờ đọc/ghi của Hev TUN (giây; mặc định TCP/UDP: 300/60)</string>
@@ -335,6 +336,8 @@
     <string name="summary_root_lan_sharing">Định tuyến lưu lượng từ thiết bị dùng điểm phát Wi-Fi và chia sẻ kết nối USB qua VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">Cập nhật</string>
     <string name="logcat_copy">Sao chép</string>
     <string name="logcat_clear">Xoá</string>
     <string name="logcat_share">Chia sẻ nhật ký</string>

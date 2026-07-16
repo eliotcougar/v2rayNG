@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">Permission denied</string>
     <string name="toast_permission_denied_notification">Notification permission denied</string>
     <string name="notification_action_more">Tap for more</string>
-    <string name="toast_services_start">Starting service</string>
-    <string name="toast_services_stop">Stopping service</string>
-    <string name="toast_services_success">Service started successfully</string>
+    <string name="toast_services_start">Starting service…</string>
+    <string name="toast_services_stop">Service stopped</string>
+    <string name="toast_services_success">Service started</string>
     <string name="toast_services_failure">Failed to start service</string>
+    <string name="toast_services_failure_detail">Failed to start service: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">Config</string>
@@ -314,10 +315,10 @@
     <string name="title_mode_help">Click me for more help</string>
     <string name="title_language">Language</string>
     <string name="title_ui_settings">UI settings</string>
-    <string name="title_pref_ui_mode_night">UI mode settings</string>
+    <string name="title_pref_ui_mode_night">UI Theme</string>
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
-    <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
+    <string name="title_pref_use_hev_tunnel">Enable Hev TUN Feature</string>
     <string name="summary_pref_use_hev_tunnel">When enabled, TUN will use hev-socks5-tunnel; otherwise, it will use xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN log level</string>
     <string name="title_pref_hev_tunnel_rw_timeout">Hev TUN read/write timeout (seconds; TCP/UDP defaults: 300/60)</string>
@@ -329,6 +330,8 @@
     <string name="summary_root_lan_sharing">Route traffic from Wi-Fi hotspot and USB-tethered devices through the VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">Update</string>
     <string name="logcat_copy">Copy</string>
     <string name="logcat_clear">Clear</string>
     <string name="logcat_share">Share log</string>

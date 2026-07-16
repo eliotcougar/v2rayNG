@@ -44,7 +44,9 @@ import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
+import com.v2ray.ang.ui.compose.LocalAppSnackbar
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
@@ -132,6 +134,7 @@ fun LogcatScreen(
     onShareLogcat: () -> Unit
 ) {
     val context = LocalContext.current
+    val isTelevision = isTelevisionDevice()
     val scope = rememberCoroutineScope()
     val logs by viewModel.filteredLogs.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -139,6 +142,12 @@ fun LogcatScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
 
+    val snackbar = LocalAppSnackbar.current
+    LaunchedEffect(isTelevision) {
+        if (!isTelevision) {
+            snackbar.showInfo(context, R.string.pull_down_to_refresh)
+        }
+    }
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -161,6 +170,13 @@ fun LogcatScreen(
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
+                    if (isTelevision) {
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_check_update_24dp),
+                            label = stringResource(R.string.logcat_update),
+                            onClick = viewModel::loadLogcat
+                        )
+                    }
                     if (!showSearch) {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_search_24dp),

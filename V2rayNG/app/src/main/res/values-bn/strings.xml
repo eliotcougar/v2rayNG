@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">অনুমতি পাওয়া যাচ্ছে না</string>
     <string name="toast_permission_denied_notification">বিজ্ঞপ্তির অনুমতি পাওয়া যায়নি</string>
     <string name="notification_action_more">আরও দেখতে ক্লিক করুন</string>
-    <string name="toast_services_start">সার্ভিস শুরু করুন</string>
-    <string name="toast_services_stop">সার্ভিস বন্ধ করুন</string>
-    <string name="toast_services_success">সার্ভিস সফলভাবে শুরু হয়েছে</string>
-    <string name="toast_services_failure">সার্ভিস শুরু হতে ব্যর্থ হয়েছে</string>
+    <string name="toast_services_start">সার্ভিস শুরু হচ্ছে…</string>
+    <string name="toast_services_stop">সার্ভিস বন্ধ হয়েছে</string>
+    <string name="toast_services_success">সার্ভিস শুরু হয়েছে</string>
+    <string name="toast_services_failure">সার্ভিস শুরু করা যায়নি</string>
+    <string name="toast_services_failure_detail">সার্ভিস শুরু করা যায়নি: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">কনফিগারেশন ফাইল</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">ক্লিপবোর্ডে রপ্তানি করুন</string>
     <string name="menu_item_import_proxy_app">ক্লিপবোর্ড থেকে আমদানি করুন</string>
     <string name="per_app_proxy_settings">অ্যাপভিত্তিক সেটিংস</string>
-    <string name="per_app_proxy_settings_enable">অ্যাপভিত্তিক সেটিংস চালু করুন</string>
+    <string name="per_app_proxy_settings_enable">প্রতি-অ্যাপ রাউটিং</string>
     <string name="app_picker_unknown_app">অজানা অ্যাপ (UID শনাক্ত করা যায়নি)</string>
 
     <!-- Preferences -->
@@ -187,7 +188,7 @@
     <string name="title_core_settings">কোর সেটিংস</string>
     <string name="title_vpn_settings">VPN সেটিংস</string>
     <string name="title_pref_per_app_proxy">প্রতি-অ্যাপ প্রক্সি</string>
-    <string name="summary_pref_per_app_proxy">সাধারণ: নির্বাচিত অ্যাপ প্রক্সি ব্যবহার করে, অনির্বাচিত অ্যাপ সরাসরি সংযুক্ত হয়;\nবাইপাস মোড: নির্বাচিত অ্যাপ সরাসরি সংযুক্ত হয়, অনির্বাচিত অ্যাপ প্রক্সি ব্যবহার করে।\nযেসব অ্যাপ প্রক্সি ব্যবহার করবে, সেগুলি স্বয়ংক্রিয়ভাবে নির্বাচনের বিকল্পটি মেনুতে আছে।</string>
+    <string name="summary_pref_per_app_proxy">প্রতি-অ্যাপ রাউটিং কোন অ্যাপ VPN ব্যবহার করবে তা নিয়ন্ত্রণ করে।\n\nসাধারণ মোডে নির্বাচিত অ্যাপগুলো VPN ব্যবহার করে এবং অনির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয়। বাইপাস মোডে নির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয় এবং অনির্বাচিত অ্যাপগুলো VPN ব্যবহার করে। আরও মেনু থেকে স্বয়ংক্রিয় অ্যাপ নির্বাচন করা যায়।</string>
     <string name="title_pref_is_booted">চালুর সময় স্বয়ংক্রিয় সংযোগ</string>
     <string name="summary_pref_is_booted">চালুর সময় নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে; সংযোগ ব্যর্থ হতে পারে</string>
 
@@ -320,7 +321,7 @@
     <string name="summary_root_lan_sharing">Wi‑Fi হটস্পট এবং USB-টেথার করা ডিভাইসগুলো VPN-এর মাধ্যমে রুট করুন</string>
     <string name="title_language">ভাষা</string>
     <string name="title_ui_settings">ইউআই সেটিংস</string>
-    <string name="title_pref_ui_mode_night">ইউআই মোড সেটিংস</string>
+    <string name="title_pref_ui_mode_night">ইউআই থিম</string>
     <string name="title_pref_dynamic_color">ডায়নামিক রঙ চালু করুন</string>
     <string name="summary_pref_dynamic_color">শুধুমাত্র Android 12+ ডিভাইসে কাজ করে</string>
     <string name="title_pref_use_hev_tunnel">Hev TUN সুবিধা চালু করুন</string>
@@ -335,6 +336,8 @@
     <string name="summary_root_lan_sharing">Wi-Fi হটস্পট ও USB-টেদার করা ডিভাইসের ট্রাফিক VPN-এর মাধ্যমে রাউট করুন।</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">আপডেট করুন</string>
     <string name="logcat_copy">কপি করুন</string>
     <string name="logcat_clear">পরিষ্কার করুন</string>
     <string name="logcat_share">লগ শেয়ার করুন</string>

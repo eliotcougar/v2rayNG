@@ -28,7 +28,10 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -59,6 +62,12 @@ class MainViewModel(
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    private val _serviceStatusMessages = MutableSharedFlow<ServiceStatusMessage>(
+        extraBufferCapacity = 1
+    )
+    val serviceStatusMessages: SharedFlow<ServiceStatusMessage> =
+        _serviceStatusMessages.asSharedFlow()
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -102,16 +111,29 @@ class MainViewModel(
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
             MainServiceEvent.StateStartSuccess -> {
-                toastSuccess(R.string.toast_services_success)
+                _serviceStatusMessages.tryEmit(
+                    ServiceStatusMessage(R.string.toast_services_success)
+                )
                 updateRunningState(true)
             }
 
             MainServiceEvent.StateStartFailure -> {
-                toastError(R.string.toast_services_failure)
+                _serviceStatusMessages.tryEmit(
+                    ServiceStatusMessage(
+                        stringRes = R.string.toast_services_failure,
+                        isError = true
+                    )
+                )
                 updateRunningState(false)
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            MainServiceEvent.StateStopSuccess -> {
+                _serviceStatusMessages.tryEmit(
+                    ServiceStatusMessage(R.string.toast_services_stop)
+                )
+                updateRunningState(false)
+            }
+
             is MainServiceEvent.MeasureDelayResult -> {
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
             }

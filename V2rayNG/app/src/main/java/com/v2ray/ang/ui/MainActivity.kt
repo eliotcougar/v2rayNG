@@ -112,6 +112,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
@@ -138,6 +139,7 @@ import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ConfirmDialog
 import com.v2ray.ang.compose.SelectListDialog
 import com.v2ray.ang.compose.LocalDarkTheme
+import com.v2ray.ang.compose.LocalAppSnackbar
 import com.v2ray.ang.compose.QRCodeDialog
 import com.v2ray.ang.compose.ReorderableGridItem
 import com.v2ray.ang.compose.ReorderableListItem
@@ -1070,6 +1072,8 @@ fun MainScreen(
     shareMethodMoreEntries: List<String>
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
+    val snackbar = LocalAppSnackbar.current
     val isTelevision = isTelevisionDevice()
     val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val groups = uiState.groups
@@ -1079,6 +1083,20 @@ fun MainScreen(
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
+
+    LaunchedEffect(mainViewModel, resources) {
+        mainViewModel.serviceStatusMessages.collect { message ->
+            val text = resources.getString(
+                message.stringRes,
+                *message.formatArgs.toTypedArray()
+            )
+            if (message.isError) {
+                snackbar.showError(text)
+            } else {
+                snackbar.showSuccess(text)
+            }
+        }
+    }
 
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)

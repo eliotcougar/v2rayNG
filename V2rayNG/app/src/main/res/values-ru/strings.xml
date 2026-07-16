@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">Разрешение не получено</string>
     <string name="toast_permission_denied_notification">Разрешение на отображение уведомлений не получено</string>
     <string name="notification_action_more">Ещё…</string>
-    <string name="toast_services_start">Запуск служб</string>
-    <string name="toast_services_stop">Остановка служб</string>
-    <string name="toast_services_success">Службы успешно запущены</string>
-    <string name="toast_services_failure">Сбой при запуске служб</string>
+    <string name="toast_services_start">Запуск службы…</string>
+    <string name="toast_services_stop">Служба остановлена</string>
+    <string name="toast_services_success">Служба запущена</string>
+    <string name="toast_services_failure">Не удалось запустить службу</string>
+    <string name="toast_services_failure_detail">Не удалось запустить службу: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">Профиль</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">Экспорт в буфер обмена</string>
     <string name="menu_item_import_proxy_app">Импорт из буфера обмена</string>
     <string name="per_app_proxy_settings">Выбор приложений</string>
-    <string name="per_app_proxy_settings_enable">Использовать выбор приложений</string>
+    <string name="per_app_proxy_settings_enable">Маршрутизация приложений</string>
     <string name="app_picker_unknown_app">Неизвестное приложение (неопознанный UID)</string>
 
     <!-- Preferences -->
@@ -187,7 +188,7 @@
     <string name="title_core_settings">Настройки ядра</string>
     <string name="title_vpn_settings">Настройки VPN</string>
     <string name="title_pref_per_app_proxy">Прокси для выбранных приложений</string>
-    <string name="summary_pref_per_app_proxy">Основной: выбранное приложение соединяется через прокси, не выбранное — напрямую;\nРежим обхода: выбранное приложение соединяется напрямую, не выбранное — через прокси.\nВ меню можно автоматически выбрать приложения, которые должны использовать прокси.</string>
+    <string name="summary_pref_per_app_proxy">Маршрутизация приложений определяет, какие приложения используют VPN.\n\nВ обычном режиме выбранные приложения используют VPN, а остальные подключаются напрямую. В режиме обхода выбранные приложения подключаются напрямую, а остальные используют VPN. Автоматический выбор приложений доступен в меню «Ещё».</string>
     <string name="title_pref_is_booted">Автоподключение при запуске</string>
     <string name="summary_pref_is_booted">Автоматически подключаться к выбранному серверу при запуске приложения (может оказаться неудачным)</string>
 
@@ -329,6 +330,8 @@
     <string name="summary_root_lan_sharing">Направлять через VPN трафик устройств, подключённых к точке доступа Wi-Fi или по USB.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">Обновить</string>
     <string name="logcat_copy">Копировать</string>
     <string name="logcat_clear">Очистить</string>
     <string name="logcat_share">Поделиться журналом</string>

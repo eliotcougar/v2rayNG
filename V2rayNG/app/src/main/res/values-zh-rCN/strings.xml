@@ -18,10 +18,11 @@
     <string name="toast_permission_denied">无法取得权限</string>
     <string name="toast_permission_denied_notification">无法取得通知权限</string>
     <string name="notification_action_more">点击了解更多</string>
-    <string name="toast_services_start">启动服务</string>
-    <string name="toast_services_stop">关闭服务</string>
-    <string name="toast_services_success">启动服务成功</string>
-    <string name="toast_services_failure">启动服务失败</string>
+    <string name="toast_services_start">正在启动服务…</string>
+    <string name="toast_services_stop">服务已停止</string>
+    <string name="toast_services_success">服务已启动</string>
+    <string name="toast_services_failure">无法启动服务</string>
+    <string name="toast_services_failure_detail">无法启动服务：%1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">配置项</string>
@@ -178,7 +179,7 @@
     <string name="menu_item_export_proxy_app">导出至剪贴板</string>
     <string name="menu_item_import_proxy_app">从剪贴板导入</string>
     <string name="per_app_proxy_settings">分应用设置</string>
-    <string name="per_app_proxy_settings_enable">启用分应用</string>
+    <string name="per_app_proxy_settings_enable">分应用路由</string>
     <string name="app_picker_unknown_app">未知应用（无法识别 UID）</string>
 
     <!-- Preferences -->
@@ -186,8 +187,8 @@
     <string name="title_advanced">进阶设置</string>
     <string name="title_core_settings">核心设置</string>
     <string name="title_vpn_settings">VPN 设置</string>
-    <string name="title_pref_per_app_proxy">分应用代理</string>
-    <string name="summary_pref_per_app_proxy">常规：勾选的应用使用代理，未勾选的应用直连；\n绕行模式：勾选的应用直连，未勾选的应用使用代理。\n菜单中可自动选择需要使用代理的应用。</string>
+    <string name="title_pref_per_app_proxy">分应用</string>
+    <string name="summary_pref_per_app_proxy">分应用路由控制哪些应用使用 VPN。\n\n在常规模式下，已选择的应用使用 VPN，未选择的应用直接连接。在绕行模式下，已选择的应用直接连接，未选择的应用使用 VPN。可从“更多”菜单自动选择应用。</string>
     <string name="title_pref_is_booted">开机时自动连接</string>
     <string name="summary_pref_is_booted">开机时自动连接选择的服务器，可能会不成功</string>
 
@@ -314,7 +315,7 @@
     <string name="title_mode_help">点此查看更多帮助</string>
     <string name="title_language">语言</string>
     <string name="title_ui_settings">用户界面设置</string>
-    <string name="title_pref_ui_mode_night">深色模式</string>
+    <string name="title_pref_ui_mode_night">界面主题</string>
     <string name="title_pref_dynamic_color">开启莫奈取色</string>
     <string name="summary_pref_dynamic_color">仅在 Android 12+ 设备上工作</string>
     <string name="title_pref_use_hev_tunnel">启用 Hev TUN 功能</string>
@@ -329,6 +330,8 @@
     <string name="summary_root_lan_sharing">将 Wi-Fi 热点和 USB 网络共享设备的流量通过 VPN 转发。</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
+
+    <string name="logcat_update">更新</string>
     <string name="logcat_copy">复制</string>
     <string name="logcat_clear">清除</string>
     <string name="logcat_share">分享日志</string>
