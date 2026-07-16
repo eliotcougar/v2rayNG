@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.compose
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -26,13 +27,26 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -65,7 +79,7 @@ fun ConfirmDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(); onDismiss() },
-                modifier = Modifier.focusRequester(confirmFocusRequester)
+                modifier = Modifier.dpadFocusOutline(confirmFocusRequester)
             ) {
                 confirmIcon?.invoke()
                 if (confirmIcon != null) Spacer(Modifier.width(8.dp))
@@ -76,7 +90,7 @@ fun ConfirmDialog(
             {
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.focusRequester(dismissFocusRequester)
+                    modifier = Modifier.dpadFocusOutline(dismissFocusRequester)
                 ) {
                     Text(text)
                 }
@@ -124,6 +138,21 @@ fun InputDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
+    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+        Configuration.UI_MODE_TYPE_TELEVISION
+    var editingIndex by remember { mutableIntStateOf(-1) }
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(editingIndex) {
+        if (isTelevision && editingIndex >= 0) {
+            keyboardController?.show()
+        } else if (isTelevision) {
+            keyboardController?.hide()
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -139,6 +168,7 @@ fun InputDialog(
                         label = { Text(field.label) },
                         singleLine = false,
                         maxLines = 5,
+                        readOnly = isTelevision && editingIndex != index,
                         visualTransformation = field.visualTransformation,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = Color.Transparent,
@@ -149,16 +179,53 @@ fun InputDialog(
                                 backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
                             )
                         ),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged {
+                                if (!it.isFocused && editingIndex == index) editingIndex = -1
+                            }
+                            .onPreviewKeyEvent { event ->
+                                if (
+                                    isTelevision &&
+                                    event.type == KeyEventType.KeyDown &&
+                                    (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                                    editingIndex != index
+                                ) {
+                                    editingIndex = index
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            .dpadTextFieldNavigation(
+                                onMoveUp = {
+                                    editingIndex = -1
+                                    focusManager.moveFocus(FocusDirection.Up)
+                                },
+                                onMoveDown = {
+                                    editingIndex = -1
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                }
+                            )
+                            .then(
+                                if (index == 0) Modifier.focusRequester(firstFieldFocusRequester)
+                                else Modifier
+                            )
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirmText) }
+            TextButton(
+                onClick = onConfirm,
+                modifier = Modifier.dpadFocusOutline()
+            ) { Text(confirmText) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(dismissText) }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.dpadFocusOutline()
+            ) { Text(dismissText) }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -170,6 +237,7 @@ fun QRCodeDialog(
     onDismiss: () -> Unit
 ) {
     if (bitmap == null) return
+    val okFocusRequester = rememberDpadFocusRequester()
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
@@ -182,7 +250,10 @@ fun QRCodeDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.dpadFocusOutline(okFocusRequester)
+            ) { Text(stringResource(R.string.action_close)) }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -203,16 +274,24 @@ fun <T> SelectListDialog(
     selectedOption: T? = null,
     showRadio: Boolean = false
 ) {
+    val selectedIndex = if (showRadio) options.indexOf(selectedOption) else -1
+    val initialIndex = selectedIndex.takeIf { it >= 0 } ?: 0
+    val firstOptionFocusRequester = rememberDpadFocusRequester(requestFocus = options.isNotEmpty())
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
         text = {
             LazyColumn {
-                items(options) { option ->
+                items(options.size) { index ->
+                    val option = options[index]
                     val isSelected = option == selectedOption
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .dpadFocusOutline(
+                                focusRequester = if (index == initialIndex) firstOptionFocusRequester else null
+                            )
                             .then(
                                 if (showRadio) Modifier.selectable(
                                     selected = isSelected,
@@ -241,7 +320,10 @@ fun <T> SelectListDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.dpadFocusOutline()
+            ) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

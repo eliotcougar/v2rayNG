@@ -91,6 +91,7 @@ private fun SettingsItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .dpadFocusOutline()
             .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically

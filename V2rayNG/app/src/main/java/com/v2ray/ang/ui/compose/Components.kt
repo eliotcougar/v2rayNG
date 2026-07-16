@@ -66,15 +66,21 @@ import sh.calvin.reorderable.ReorderableCollectionItemScope
 fun AppTopBar(
     title: String,
     onBackClick: () -> Unit,
+    initialFocus: Boolean = true,
     isLoading: Boolean = false,
     isSearchActive: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
-    navigationIcon: @Composable (() -> Unit)? = null,
+    navigationIcon: @Composable ((Modifier) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    val navigationFocusRequester = rememberDpadFocusRequester(
+        requestFocus = initialFocus && !isSearchActive,
+        requestKey = isSearchActive
+    )
+
     Column {
         TopAppBar(
             title = {
@@ -90,9 +96,12 @@ fun AppTopBar(
             },
             navigationIcon = {
                 if (navigationIcon != null) {
-                    navigationIcon()
+                    navigationIcon(Modifier.dpadFocusOutline(navigationFocusRequester))
                 } else {
-                    IconButton(onClick = if (isSearchActive) onSearchClose else onBackClick) {
+                    IconButton(
+                        onClick = if (isSearchActive) onSearchClose else onBackClick,
+                        modifier = Modifier.dpadFocusOutline(navigationFocusRequester)
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back_24dp),
                             contentDescription = stringResource(R.string.acc_back)
@@ -170,6 +179,7 @@ fun AppListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .dpadFocusOutline()
             .clickable { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically

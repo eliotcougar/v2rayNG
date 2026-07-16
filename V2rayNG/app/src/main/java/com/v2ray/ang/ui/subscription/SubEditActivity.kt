@@ -1,24 +1,34 @@
 package com.v2ray.ang.ui.subscription
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.text.TextUtils
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -42,6 +52,7 @@ import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -146,6 +157,8 @@ fun SubEditScreen(
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
     val scrollState = rememberScrollState()
+    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+        Configuration.UI_MODE_TYPE_TELEVISION
 
     fun buildSubItem(): SubscriptionItem {
         val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
@@ -171,13 +184,19 @@ fun SubEditScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (editSubId.isNotEmpty()) {
-                        IconButton(onClick = {
-                            if (confirmRemove) showDeleteConfirm = true else onDelete()
-                        }) {
+                        IconButton(
+                            onClick = {
+                                if (confirmRemove) showDeleteConfirm = true else onDelete()
+                            },
+                            modifier = Modifier.dpadFocusOutline()
+                        ) {
                             Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
                         }
                     }
-                    IconButton(onClick = { buildSubItem()?.let { onSave(it) } }) {
+                    IconButton(
+                        onClick = { buildSubItem()?.let { onSave(it) } },
+                        modifier = Modifier.dpadFocusOutline()
+                    ) {
                         Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
                     }
                 }
@@ -195,6 +214,26 @@ fun SubEditScreen(
                 .padding(vertical = 8.dp)
                 .padding(bottom = 36.dp)
         ) {
+            if (isTelevision) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    FilledTonalButton(
+                        onClick = { buildSubItem()?.let { onSave(it) } },
+                        modifier = Modifier.dpadFocusOutline(cornerRadius = 24.dp)
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_fab_check),
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.menu_item_save_config))
+                    }
+                }
+            }
             FormTextField(stringResource(R.string.sub_setting_remarks), remarks, { remarks = it })
             FormTextField(stringResource(R.string.sub_setting_url), url, { url = it })
             FormTextField(stringResource(R.string.sub_setting_user_agent), userAgent, { userAgent = it })

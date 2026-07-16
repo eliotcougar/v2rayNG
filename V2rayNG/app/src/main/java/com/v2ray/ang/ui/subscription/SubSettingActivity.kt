@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.subscription
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import androidx.compose.foundation.clickable
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,9 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.colorFabActive
+import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
@@ -134,10 +138,16 @@ fun SubSettingScreen(
                 onBackClick = onBackClick,
                 isLoading = isLoading,
                 actions = {
-                    IconButton(onClick = onAddClick) {
+                    IconButton(
+                        onClick = onAddClick,
+                        modifier = Modifier.dpadFocusOutline()
+                    ) {
                         Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
                     }
-                    IconButton(onClick = { showUpdateDialog = true }) {
+                    IconButton(
+                        onClick = { showUpdateDialog = true },
+                        modifier = Modifier.dpadFocusOutline()
+                    ) {
                         Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.acc_update_subscriptions))
                     }
                 }
@@ -164,6 +174,8 @@ fun SubSettingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .dpadFocusOutline()
+                                .clickable { onEditSub(subCache.guid) }
                                 .padding(horizontal = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -198,25 +210,34 @@ fun SubSettingScreen(
                             ) {
                                 Row {
                                     if (subCache.subscription.url.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                        }) {
+                                        IconButton(
+                                            onClick = {
+                                                shareTarget = Pair(subCache.guid, subCache.subscription.url)
+                                            },
+                                            modifier = Modifier.dpadFocusOutline()
+                                        ) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_share_24dp),
                                                 contentDescription = stringResource(R.string.acc_share_subscription)
                                             )
                                         }
                                     }
-                                    IconButton(onClick = { onEditSub(subCache.guid) }) {
+                                    IconButton(
+                                        onClick = { onEditSub(subCache.guid) },
+                                        modifier = Modifier.dpadFocusOutline()
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_edit_24dp),
                                             contentDescription = stringResource(R.string.acc_edit)
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        if (confirmRemove) removeTarget = subCache.guid
-                                        else onRemoveSub(subCache.guid)
-                                    }) {
+                                    IconButton(
+                                        onClick = {
+                                            if (confirmRemove) removeTarget = subCache.guid
+                                            else onRemoveSub(subCache.guid)
+                                        },
+                                        modifier = Modifier.dpadFocusOutline()
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_delete_24dp),
                                             contentDescription = stringResource(R.string.acc_delete)
@@ -231,7 +252,9 @@ fun SubSettingScreen(
                                         updated.enabled = checked
                                         viewModel.update(subCache.guid, updated)
                                     },
-                                    modifier = Modifier.scale(0.7f),
+                                    modifier = Modifier
+                                        .scale(0.7f)
+                                        .dpadFocusOutline(),
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                         checkedTrackColor = MaterialTheme.colorScheme.secondary
