@@ -268,6 +268,7 @@ fun SettingsSwitchItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val isTelevision = isTelevisionDevice()
     SettingsItemRow(
         icon = icon,
         title = title,
@@ -281,7 +282,7 @@ fun SettingsSwitchItem(
             Switch(
                 checked = checked,
                 onCheckedChange = if (enabled) onCheckedChange else null,
-                modifier = Modifier.scale(0.8f),
+                modifier = Modifier.scale(if (isTelevision) 0.75f else 0.8f),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                     checkedTrackColor = MaterialTheme.colorScheme.secondary

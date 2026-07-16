@@ -251,7 +251,7 @@ fun PerAppProxyScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Switch(
                             checked = perAppProxyEnabled,
-                            modifier = Modifier.scale(0.65f),
+                            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
                             onCheckedChange = if (isTelevision) null else onPerAppProxyChanged,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
@@ -286,7 +286,7 @@ fun PerAppProxyScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Switch(
                             checked = bypassApps,
-                            modifier = Modifier.scale(0.65f),
+                            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
                             onCheckedChange = if (isTelevision) null else onBypassAppsChanged,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,

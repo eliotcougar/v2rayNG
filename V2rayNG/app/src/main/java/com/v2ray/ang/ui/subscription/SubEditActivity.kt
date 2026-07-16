@@ -2,24 +2,16 @@ package com.v2ray.ang.ui.subscription
 
 import android.os.Bundle
 import android.text.TextUtils
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,7 +32,6 @@ import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
-import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.SubscriptionItem
@@ -190,6 +181,13 @@ fun SubEditScreen(
                 title = stringResource(R.string.title_sub_setting),
                 onBackClick = onBackClick,
                 actions = {
+                    if (isTelevision) {
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_fab_check),
+                            label = stringResource(R.string.menu_item_save_config),
+                            onClick = { buildSubItem()?.let { onSave(it) } }
+                        )
+                    }
                     if (editSubId.isNotEmpty()) {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_delete_24dp),
@@ -225,28 +223,6 @@ fun SubEditScreen(
                 .padding(vertical = 8.dp)
                 .padding(bottom = 36.dp)
         ) {
-            if (isTelevision) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Button(
-                        onClick = { buildSubItem()?.let { onSave(it) } },
-                        modifier = Modifier.dpadFocusOutline(
-                            cornerRadius = 24.dp,
-                        )
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.menu_item_save_config))
-                    }
-                }
-            }
             FormTextField(stringResource(R.string.sub_setting_remarks), remarks, { remarks = it })
             FormTextField(stringResource(R.string.sub_setting_url), url, { url = it })
             FormTextField(stringResource(R.string.sub_setting_user_agent), userAgent, { userAgent = it })

@@ -51,6 +51,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppRowSwitch
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.ReorderableListItem
@@ -385,24 +386,16 @@ fun RoutingSettingScreen(
                                         onClick = { onEditRule(index) }
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Switch(
-                                        checked = ruleset.enabled ?: false,
+                                    AppRowSwitch(
+                                        checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
                                             viewModel.update(index, updated)
                                         },
-                                        modifier = Modifier
-                                            .dpadFocusOutline(
-                                                focusRequester = switchFocusRequester,
-                                                cornerRadius = 24.dp
-                                            )
-                                            .dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { editFocusRequester.requestFocus() },
-                                                onMoveRight = { switchFocusRequester.requestFocus() }
-                                            ),
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                            checkedTrackColor = colorFabActive
+                                        focusRequester = switchFocusRequester,
+                                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                                            onMoveLeft = { editFocusRequester.requestFocus() },
+                                            onMoveRight = { switchFocusRequester.requestFocus() }
                                         )
                                     )
                                 }
@@ -418,7 +411,7 @@ fun RoutingSettingScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Switch(
-                                    checked = ruleset.enabled ?: false,
+                                    checked = ruleset.enabled,
                                     onCheckedChange = { checked ->
                                         val updated = ruleset.copy(enabled = checked)
                                         viewModel.update(index, updated)

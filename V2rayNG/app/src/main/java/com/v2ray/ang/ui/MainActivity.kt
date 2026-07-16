@@ -103,6 +103,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -252,8 +253,6 @@ class MainActivity : HelperBaseComponentActivity() {
             onExportAll = ::exportAll,
             onRealPingAll = mainViewModel::testAllRealPing,
             onRestartService = ::restartV2Ray,
-            onDelAllConfig = ::delAllConfig,
-            onDelDuplicateConfig = ::delDuplicateConfig,
             onDelInvalidConfig = ::delInvalidConfig,
             onSortByTestResults = ::sortByTestResults,
             onEditServer = ::editServer,
@@ -465,46 +464,6 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
-    private fun delAllConfig() {
-        mainViewModel.setLoading(true)
-        lifecycleScope.launch {
-            try {
-                val ret = withContext(Dispatchers.IO) {
-                    mainViewModel.removeAllServer()
-                }
-                mainViewModel.setupGroupTab(forceRefresh = true)
-                toast(getString(R.string.title_del_config_count, ret))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Delete all failed", e)
-                toastError(R.string.toast_failure)
-            } finally {
-                mainViewModel.setLoading(false)
-            }
-        }
-    }
-
-    private fun delDuplicateConfig() {
-        mainViewModel.setLoading(true)
-        lifecycleScope.launch {
-            try {
-                val ret = withContext(Dispatchers.IO) {
-                    mainViewModel.removeDuplicateServer()
-                }
-                mainViewModel.setupGroupTab(forceRefresh = true)
-                toast(getString(R.string.title_del_duplicate_config_count, ret))
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "Delete duplicate failed", e)
-                toastError(R.string.toast_failure)
-            } finally {
-                mainViewModel.setLoading(false)
-            }
-        }
-    }
-
     private fun delInvalidConfig() {
         mainViewModel.setLoading(true)
         lifecycleScope.launch {
@@ -591,12 +550,6 @@ class MainActivity : HelperBaseComponentActivity() {
 
 @Composable
 private fun MainDialogs(
-    showDelAllConfirm: Boolean,
-    onDismissDelAll: () -> Unit,
-    onConfirmDelAll: () -> Unit,
-    showDelDuplicateConfirm: Boolean,
-    onDismissDelDuplicate: () -> Unit,
-    onConfirmDelDuplicate: () -> Unit,
     showDelInvalidConfirm: Boolean,
     onDismissDelInvalid: () -> Unit,
     onConfirmDelInvalid: () -> Unit,
@@ -604,24 +557,6 @@ private fun MainDialogs(
     onDismissRemove: () -> Unit,
     onConfirmRemove: (String) -> Unit,
 ) {
-    if (showDelAllConfirm) {
-        ConfirmDialog(
-            message = stringResource(R.string.del_config_comfirm),
-            confirmText = stringResource(android.R.string.ok),
-            dismissText = stringResource(android.R.string.cancel),
-            onConfirm = onConfirmDelAll,
-            onDismiss = onDismissDelAll
-        )
-    }
-    if (showDelDuplicateConfirm) {
-        ConfirmDialog(
-            message = stringResource(R.string.del_config_comfirm),
-            confirmText = stringResource(android.R.string.ok),
-            dismissText = stringResource(android.R.string.cancel),
-            onConfirm = onConfirmDelDuplicate,
-            onDismiss = onDismissDelDuplicate
-        )
-    }
     if (showDelInvalidConfirm) {
         ConfirmDialog(
             message = stringResource(R.string.del_invalid_config_comfirm),
@@ -1023,8 +958,6 @@ fun MainScreen(
     onExportAll: () -> Unit,
     onRealPingAll: () -> Unit,
     onRestartService: () -> Unit,
-    onDelAllConfig: () -> Unit,
-    onDelDuplicateConfig: () -> Unit,
     onDelInvalidConfig: () -> Unit,
     onSortByTestResults: () -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
@@ -1065,8 +998,6 @@ fun MainScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var showImportMenu by remember { mutableStateOf(false) }
-    var showDelAllConfirm by remember { mutableStateOf(false) }
-    var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
     var mainFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
@@ -1215,12 +1146,6 @@ fun MainScreen(
     }
 
     MainDialogs(
-        showDelAllConfirm = showDelAllConfirm,
-        onDismissDelAll = { showDelAllConfirm = false },
-        onConfirmDelAll = { showDelAllConfirm = false; onDelAllConfig() },
-        showDelDuplicateConfirm = showDelDuplicateConfirm,
-        onDismissDelDuplicate = { showDelDuplicateConfirm = false },
-        onConfirmDelDuplicate = { showDelDuplicateConfirm = false; onDelDuplicateConfig() },
         showDelInvalidConfirm = showDelInvalidConfirm,
         onDismissDelInvalid = { showDelInvalidConfirm = false },
         onConfirmDelInvalid = { showDelInvalidConfirm = false; onDelInvalidConfig() },
@@ -1603,14 +1528,23 @@ fun MainScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     modifier = Modifier
                                         .heightIn(max = maxMenuHeight)
+                                        .onPreviewKeyEvent { event ->
+                                            if (isTelevision &&
+                                                event.type == KeyEventType.KeyDown &&
+                                                event.key == Key.DirectionLeft
+                                            ) {
+                                                showMenu = false
+                                                addFocusRequester.requestFocus()
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
                                         .verticalScrollbar(moreMenuScrollState)
                                 ) {
                                     listOf(
                                         R.string.title_service_restart to {
                                             showMenu = false; onRestartService()
-                                        },
-                                        R.string.title_del_all_config to {
-                                            showMenu = false; showDelAllConfirm = true
                                         },
                                         R.string.title_del_invalid_config to {
                                             showMenu = false; showDelInvalidConfirm = true

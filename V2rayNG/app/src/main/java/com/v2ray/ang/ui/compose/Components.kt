@@ -40,6 +40,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -52,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -217,6 +220,72 @@ fun AppIconButton(
                 Text(
                     text = label,
                     color = resolvedContentColor,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1
+                )
+            }
+        }
+    }
+}
+
+/**
+ * A compact television row switch. The Material switch track is scaled from 32 dp to the
+ * same 24 dp height as an action icon, while the containing control keeps a remote-friendly
+ * 48 dp focus target. An optional label expands inside the focused outline.
+ */
+@Composable
+fun AppRowSwitch(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    label: String? = null,
+    enabled: Boolean = true
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(24.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .dpadFocusOutline(
+                focusRequester = focusRequester,
+                cornerRadius = 24.dp
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .animateContentSize()
+            .clip(shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Switch,
+                onClick = { onCheckedChange(!checked) }
+            )
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Switch(
+            checked = checked,
+            onCheckedChange = null,
+            enabled = enabled,
+            modifier = Modifier.scale(0.75f),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                checkedTrackColor = colorFabActive
+            )
+        )
+        AnimatedVisibility(
+            visible = isFocused && label != null,
+            enter = expandHorizontally() + fadeIn(),
+            exit = shrinkHorizontally() + fadeOut()
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = label.orEmpty(),
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
                     maxLines = 1
                 )
