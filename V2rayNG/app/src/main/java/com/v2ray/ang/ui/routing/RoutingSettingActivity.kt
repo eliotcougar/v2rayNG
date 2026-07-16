@@ -52,6 +52,7 @@ import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppRowSwitch
+import com.v2ray.ang.compose.ConfirmDialog
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.ReorderableListItem
@@ -225,6 +226,7 @@ fun RoutingSettingScreen(
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
+    var deleteRuleId by remember { mutableStateOf<String?>(null) }
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
@@ -298,6 +300,7 @@ fun RoutingSettingScreen(
             ) { index, ruleset ->
                 val rowFocusRequester = remember(ruleset.id) { FocusRequester() }
                 val editFocusRequester = remember(ruleset.id) { FocusRequester() }
+                val deleteFocusRequester = remember(ruleset.id) { FocusRequester() }
                 val switchFocusRequester = remember(ruleset.id) { FocusRequester() }
                 ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
                     ReorderableListItem(
@@ -381,20 +384,31 @@ fun RoutingSettingScreen(
                                         focusRequester = editFocusRequester,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = { rowFocusRequester.requestFocus() },
-                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                            onMoveRight = { deleteFocusRequester.requestFocus() }
                                         ),
                                         onClick = { onEditRule(index) }
                                     )
-                                    Spacer(modifier = Modifier.width(12.dp))
+                                    AppIconButton(
+                                        icon = painterResource(R.drawable.ic_delete_24dp),
+                                        label = "Delete",
+                                        focusRequester = deleteFocusRequester,
+                                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                                            onMoveLeft = { editFocusRequester.requestFocus() },
+                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                        ),
+                                        onClick = { deleteRuleId = ruleset.id }
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     AppRowSwitch(
                                         checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
                                             viewModel.update(index, updated)
                                         },
+                                        label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = switchFocusRequester,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { editFocusRequester.requestFocus() },
+                                            onMoveLeft = { deleteFocusRequester.requestFocus() },
                                             onMoveRight = { switchFocusRequester.requestFocus() }
                                         )
                                     )
@@ -434,6 +448,19 @@ fun RoutingSettingScreen(
         }
     }
 
+
+    deleteRuleId?.let { ruleId ->
+        ConfirmDialog(
+            message = stringResource(R.string.del_config_comfirm),
+            confirmText = stringResource(android.R.string.ok),
+            dismissText = stringResource(android.R.string.cancel),
+            onConfirm = {
+                val position = rulesets.indexOfFirst { it.id == ruleId }
+                if (position >= 0) viewModel.remove(position)
+            },
+            onDismiss = { deleteRuleId = null }
+        )
+    }
 
     if (showPresetDialog) {
         SelectListDialog(

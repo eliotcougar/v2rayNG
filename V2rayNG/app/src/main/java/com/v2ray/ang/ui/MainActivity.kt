@@ -14,7 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -95,9 +94,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -872,17 +874,43 @@ private fun GroupTabItem(
 
 @Composable
 private fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
+    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
     Surface(
         modifier = modifier
             .width(24.dp)
-            .height(88.dp),
+            .height(88.dp)
+            .drawWithContent {
+                drawContent()
+                val strokeWidth = 1.dp.toPx()
+                val inset = strokeWidth / 2f
+                val radius = 22.dp.toPx()
+                val borderPath = Path().apply {
+                    moveTo(inset, inset)
+                    lineTo(size.width - radius, inset)
+                    quadraticTo(
+                        size.width - inset,
+                        inset,
+                        size.width - inset,
+                        radius
+                    )
+                    lineTo(size.width - inset, size.height - radius)
+                    quadraticTo(
+                        size.width - inset,
+                        size.height - inset,
+                        size.width - radius,
+                        size.height - inset
+                    )
+                    lineTo(inset, size.height - inset)
+                }
+                drawPath(
+                    path = borderPath,
+                    color = borderColor,
+                    style = Stroke(width = strokeWidth)
+                )
+            },
         shape = RoundedCornerShape(topEnd = 22.dp, bottomEnd = 22.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-        ),
         tonalElevation = 3.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1391,21 +1419,29 @@ fun MainScreen(
                                 focusRequester = startFocusRequester,
                                 modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
                                     onMoveLeft = { openDrawerFrom(startFocusRequester) },
-                                    onMoveRight = { testFocusRequester.requestFocus() }
+                                    onMoveRight = {
+                                        if (isRunning) {
+                                            testFocusRequester.requestFocus()
+                                        } else {
+                                            searchFocusRequester.requestFocus()
+                                        }
+                                    }
                                 ),
                                 containerColor = if (isRunning) colorFabActive else Color.Transparent,
                                 contentColor = if (isRunning) Color.White else null
                             )
-                            AppIconButton(
-                                icon = painterResource(R.drawable.ic_check_update_24dp),
-                                label = stringResource(R.string.connection_test_pending),
-                                focusRequester = testFocusRequester,
-                                modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
-                                    onMoveLeft = { startFocusRequester.requestFocus() },
-                                    onMoveRight = { searchFocusRequester.requestFocus() }
-                                ),
-                                onClick = onTestClick
-                            )
+                            if (isRunning) {
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_check_update_24dp),
+                                    label = stringResource(R.string.connection_test_pending),
+                                    focusRequester = testFocusRequester,
+                                    modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                        onMoveLeft = { startFocusRequester.requestFocus() },
+                                        onMoveRight = { searchFocusRequester.requestFocus() }
+                                    ),
+                                    onClick = onTestClick
+                                )
+                            }
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_search_24dp),
                                 label = stringResource(R.string.menu_item_search),
@@ -1416,7 +1452,13 @@ fun MainScreen(
                                 },
                                 focusRequester = searchFocusRequester,
                                 modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
-                                    onMoveLeft = { testFocusRequester.requestFocus() },
+                                    onMoveLeft = {
+                                        if (isRunning) {
+                                            testFocusRequester.requestFocus()
+                                        } else {
+                                            startFocusRequester.requestFocus()
+                                        }
+                                    },
                                     onMoveRight = { addFocusRequester.requestFocus() }
                                 ),
                                 onClick = { showSearch = true }

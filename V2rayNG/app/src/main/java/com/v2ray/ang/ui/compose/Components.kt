@@ -263,7 +263,7 @@ fun AppRowSwitch(
                 role = Role.Switch,
                 onClick = { onCheckedChange(!checked) }
             )
-            .padding(horizontal = 4.dp),
+            .padding(start = 4.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Switch(

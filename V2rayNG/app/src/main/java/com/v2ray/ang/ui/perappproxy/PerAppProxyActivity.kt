@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,9 +39,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppDivider
@@ -142,6 +150,7 @@ fun PerAppProxyScreen(
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
+    var showInfoPopup by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isTelevision = isTelevisionDevice()
     val enableInteractionSource = remember { MutableInteractionSource() }
@@ -297,7 +306,9 @@ fun PerAppProxyScreen(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_about_24dp),
                         label = stringResource(R.string.acc_per_app_proxy_information),
-                        onClick = onInfoClick,
+                        onClick = {
+                            if (isTelevision) showInfoPopup = true else onInfoClick()
+                        },
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         contentDescription = stringResource(R.string.acc_per_app_proxy_information)
                     )
@@ -330,4 +341,46 @@ fun PerAppProxyScreen(
             }
         }
     }
+
+    if (showInfoPopup) {
+        TvPerAppInfoPopup(
+            message = stringResource(R.string.summary_pref_per_app_proxy),
+            onDismiss = { showInfoPopup = false }
+        )
+    }
+}
+
+@Composable
+private fun TvPerAppInfoPopup(
+    message: String,
+    onDismiss: () -> Unit
+) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        },
+        confirmButton = {},
+        modifier = Modifier
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyUp) onDismiss()
+                true
+            }
+            .focusRequester(focusRequester)
+            .focusable(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false
+        )
+    )
 }
