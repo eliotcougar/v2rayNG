@@ -598,6 +598,13 @@ private fun MainBottomBar(
     val isTelevision = isTelevisionDevice()
 
     if (isTelevision) {
+        val televisionDisplayText = if (
+            displayText == stringResource(R.string.connection_connected)
+        ) {
+            stringResource(R.string.connection_connected_tv)
+        } else {
+            displayText
+        }
         Column(modifier = Modifier.fillMaxWidth()) {
             AppDivider()
             Surface(
@@ -614,7 +621,10 @@ private fun MainBottomBar(
                         .padding(horizontal = 48.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = displayText, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = televisionDisplayText,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }
@@ -2097,7 +2107,19 @@ private fun ServerListItem(
                     else focusTargets.share.requestFocus()
                 }
             )
-            .tvMoveUpNavigation(isTelevision, onMoveUp)
+            .dpadVerticalFocusNavigation(
+                onMoveUp = {
+                    previousFocusTargets?.row?.requestFocus()
+                        ?: onMoveUp?.let { moveUp ->
+                            moveUp()
+                            true
+                        }
+                        ?: false
+                },
+                onMoveDown = {
+                    nextFocusTargets?.row?.requestFocus() ?: true
+                }
+            )
             .then(
                 if (isTelevision) {
                     Modifier.clickable(
@@ -2143,7 +2165,7 @@ private fun ServerListItem(
                             }
                         ).dpadVerticalFocusNavigation(
                             onMoveUp = { previousFocusTargets?.more?.requestFocus() ?: false },
-                            onMoveDown = { nextFocusTargets?.more?.requestFocus() ?: false }
+                            onMoveDown = { nextFocusTargets?.more?.requestFocus() ?: true }
                         )
                     )
                 } else {
@@ -2163,7 +2185,7 @@ private fun ServerListItem(
                             onRight = { focusTargets.edit.requestFocus() }
                         ).dpadVerticalFocusNavigation(
                             onMoveUp = { previousFocusTargets?.share?.requestFocus() ?: false },
-                            onMoveDown = { nextFocusTargets?.share?.requestFocus() ?: false }
+                            onMoveDown = { nextFocusTargets?.share?.requestFocus() ?: true }
                         )
                     )
                     AppIconButton(
@@ -2182,7 +2204,7 @@ private fun ServerListItem(
                             onRight = { focusTargets.delete.requestFocus() }
                         ).dpadVerticalFocusNavigation(
                             onMoveUp = { previousFocusTargets?.edit?.requestFocus() ?: false },
-                            onMoveDown = { nextFocusTargets?.edit?.requestFocus() ?: false }
+                            onMoveDown = { nextFocusTargets?.edit?.requestFocus() ?: true }
                         )
                     )
                     AppIconButton(
@@ -2201,7 +2223,7 @@ private fun ServerListItem(
                             onRight = { focusTargets.delete.requestFocus() }
                         ).dpadVerticalFocusNavigation(
                             onMoveUp = { previousFocusTargets?.delete?.requestFocus() ?: false },
-                            onMoveDown = { nextFocusTargets?.delete?.requestFocus() ?: false }
+                            onMoveDown = { nextFocusTargets?.delete?.requestFocus() ?: true }
                         )
                     )
                 }

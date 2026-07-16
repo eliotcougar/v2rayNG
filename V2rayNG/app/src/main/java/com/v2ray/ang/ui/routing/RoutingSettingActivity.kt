@@ -345,6 +345,14 @@ fun RoutingSettingScreen(
                                                 onMoveLeft = { focusTargets.row.requestFocus() },
                                                 onMoveRight = { focusTargets.edit.requestFocus() }
                                             )
+                                            .dpadVerticalFocusNavigation(
+                                                onMoveUp = {
+                                                    previousTargets?.row?.requestFocus() ?: false
+                                                },
+                                                onMoveDown = {
+                                                    nextTargets?.row?.requestFocus() ?: true
+                                                }
+                                            )
                                             .clickable { onEditRule(index) }
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -406,7 +414,7 @@ fun RoutingSettingScreen(
                                             onMoveRight = { focusTargets.delete.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: true }
                                         ),
                                         onClick = { onEditRule(index) }
                                     )
@@ -419,7 +427,7 @@ fun RoutingSettingScreen(
                                             onMoveRight = { focusTargets.toggle.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: true }
                                         ),
                                         onClick = { deleteRuleId = ruleset.id }
                                     )
@@ -437,7 +445,7 @@ fun RoutingSettingScreen(
                                             onMoveRight = { focusTargets.toggle.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: true }
                                         )
                                     )
                                 }

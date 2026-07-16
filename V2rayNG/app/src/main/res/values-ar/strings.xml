@@ -311,6 +311,12 @@
     <string name="title_outbound_domain_resolve_method">حل أسماء نطاقات الاتصالات الصادرة (outbound)</string>
     <string name="title_mode">الوضع</string>
     <string name="title_mode_help">انقر هنا للحصول على مزيد من المساعدة</string>
+    <string name="title_mode_settings">إعدادات الوضع</string>
+    <string name="title_root_mode_enabled">تمكين وضع Root (مستخدمو Root)</string>
+    <string name="summary_root_mode_enabled">تمكين الوكيل الشفاف منخفض المستوى باستخدام صلاحيات Root. يتجاوز هذا الوضع شبكة VPN القياسية في Android ويتولى كل حركة مرور الشبكة الأساسية مباشرةً. عند تمكينه، يصبح الوضع العادي وتوجيه التطبيقات وإعدادات VPN ذات الصلة غير فعالة تمامًا.</string>
+    <string name="toast_root_required">يلزم الوصول بصلاحيات Root لهذه الميزة</string>
+    <string name="title_root_lan_sharing">مشاركة LAN / الربط (مستخدمو Root)</string>
+    <string name="summary_root_lan_sharing">توجيه أجهزة نقطة اتصال Wi‑Fi والأجهزة المتصلة عبر USB من خلال VPN</string>
     <string name="title_language">اللغة</string>
     <string name="title_ui_settings">إعدادات واجهة المستخدم</string>
     <string name="title_pref_ui_mode_night">إعدادات وضع واجهة المستخدم ليلاً</string>
@@ -409,6 +415,7 @@
     <string name="connection_test_fail">الإنترنت غير متاح</string>
     <string name="connection_test_error_status_code">رمز الخطأ: #%d</string>
     <string name="connection_connected">متصل. اضغط للتحقق من الاتصال.</string>
+    <string name="connection_connected_tv">متصل</string>
     <string name="connection_not_connected">غير متصل</string>
     <string name="connection_running_task_left">الاختبارات قيد التشغيل: %s</string>
 

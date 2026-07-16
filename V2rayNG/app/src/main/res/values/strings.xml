@@ -197,7 +197,7 @@
     <string name="title_pref_auto_remove_invalid_after_test">Auto delete invalid config after testing</string>
     <string name="summary_pref_auto_remove_invalid_after_test">Test results may not be accurate; deleted config cannot be recovered.</string>
     <string name="title_pref_auto_sort_after_test">Auto sort after testing</string>
-    <string name="summary_pref_auto_sort_after_test">Test results may not be accurate;</string>
+    <string name="summary_pref_auto_sort_after_test">Test results may not be accurate.</string>
 
     <string name="title_mux_settings">Mux Settings</string>
     <string name="title_pref_mux_enabled">Enable Mux</string>
@@ -388,7 +388,7 @@
     <string name="routing_settings_import_rulesets_from_clipboard">Import ruleset from clipboard</string>
     <string name="routing_settings_import_rulesets_from_qrcode">Import ruleset from QR code</string>
     <string name="routing_settings_export_rulesets_to_clipboard">Export ruleset to clipboard</string>
-    <string name="routing_settings_locked">Locked; keep this rule when importing presets</string>
+    <string name="routing_settings_locked">Locked, keep this rule when importing presets</string>
     <string name="routing_settings_domain" translatable="false">domain</string>
     <string name="routing_settings_ip" translatable="false">ip</string>
     <string name="routing_settings_process">process (Package Name — only supported when using Xray TUN, routeOnly enabled, and Android 10+)</string>
@@ -409,6 +409,7 @@
     <string name="connection_test_fail">Internet unavailable</string>
     <string name="connection_test_error_status_code">Error code: #%d</string>
     <string name="connection_connected">Connected. Tap to check connection.</string>
+    <string name="connection_connected_tv">Connected</string>
     <string name="connection_not_connected">Not connected</string>
     <string name="connection_running_task_left">Tests running: %s</string>
 

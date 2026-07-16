@@ -409,6 +409,7 @@
     <string name="connection_test_fail">اینترنت من دسرس نؽ</string>
     <string name="connection_test_error_status_code">کود خطا: #%d</string>
     <string name="connection_connected">منپیز هڌ. سی واجۊری کیلیک کوݩ.</string>
+    <string name="connection_connected_tv">منپیز هڌ</string>
     <string name="connection_not_connected">منپیز نؽڌ</string>
     <string name="connection_running_task_left">آزمایشا هونی ٱنجوم ابۊن: %s</string>
 

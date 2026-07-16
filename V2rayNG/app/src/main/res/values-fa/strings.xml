@@ -311,6 +311,12 @@
     <string name="title_outbound_domain_resolve_method">روش نام‌گشایی دامنهٔ خروجی (outbound)</string>
     <string name="title_mode">حالت</string>
     <string name="title_mode_help">برای اطلاعات و راهنمایی بیشتر، روی این متن کلیک کنید</string>
+    <string name="title_mode_settings">تنظیمات حالت</string>
+    <string name="title_root_mode_enabled">فعال‌سازی حالت روت (کاربران روت)</string>
+    <string name="summary_root_mode_enabled">فعال‌سازی پروکسی شفاف سطح پایین با دسترسی روت. این حالت VPN استاندارد اندروید را دور می‌زند و مستقیماً تمام ترافیک زیربنایی شبکه را در اختیار می‌گیرد. پس از فعال‌سازی، حالت عادی، مسیریابی برای هر برنامه و تنظیمات مرتبط VPN کاملاً بی‌اثر می‌شوند.</string>
+    <string name="toast_root_required">برای این قابلیت دسترسی روت لازم است</string>
+    <string name="title_root_lan_sharing">اشتراک‌گذاری LAN / اتصال اینترنت (کاربران روت)</string>
+    <string name="summary_root_lan_sharing">دستگاه‌های متصل به نقطه اتصال Wi‑Fi و USB را از طریق VPN مسیریابی کنید</string>
     <string name="title_language">زبان</string>
     <string name="title_ui_settings">تنظیمات رابط کاربری</string>
     <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
@@ -409,6 +415,7 @@
     <string name="connection_test_fail">اینترنت در دسترس نیست</string>
     <string name="connection_test_error_status_code">کد خطا: #%d</string>
     <string name="connection_connected">متصل است.\nبرای بررسی اتصال ضربه بزنید.</string>
+    <string name="connection_connected_tv">متصل است</string>
     <string name="connection_not_connected">متصل نیست</string>
     <string name="connection_running_task_left">آزمایش‌های در حال اجرا: %s</string>
 

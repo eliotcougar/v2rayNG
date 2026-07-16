@@ -225,6 +225,14 @@ fun SubSettingScreen(
                                                     }
                                                 }
                                             )
+                                            .dpadVerticalFocusNavigation(
+                                                onMoveUp = {
+                                                    previousTargets?.row?.requestFocus() ?: false
+                                                },
+                                                onMoveDown = {
+                                                    nextTargets?.row?.requestFocus() ?: true
+                                                }
+                                            )
                                             .clickable { onEditSub(subCache.guid) }
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -275,12 +283,16 @@ fun SubSettingScreen(
                                                 onMoveUp = {
                                                     if (previousSub?.subscription?.url?.isNotEmpty() == true) {
                                                         previousTargets?.share?.requestFocus() ?: false
-                                                    } else false
+                                                    } else {
+                                                        previousTargets?.edit?.requestFocus() ?: false
+                                                    }
                                                 },
                                                 onMoveDown = {
                                                     if (nextSub?.subscription?.url?.isNotEmpty() == true) {
-                                                        nextTargets?.share?.requestFocus() ?: false
-                                                    } else false
+                                                        nextTargets?.share?.requestFocus() ?: true
+                                                    } else {
+                                                        nextTargets?.edit?.requestFocus() ?: true
+                                                    }
                                                 }
                                             ),
                                             onClick = {
@@ -303,7 +315,7 @@ fun SubSettingScreen(
                                             onMoveRight = { focusTargets.delete.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: true }
                                         ),
                                         onClick = { onEditSub(subCache.guid) }
                                     )
@@ -316,7 +328,7 @@ fun SubSettingScreen(
                                             onMoveRight = { focusTargets.toggle.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: true }
                                         ),
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
@@ -338,7 +350,7 @@ fun SubSettingScreen(
                                             onMoveRight = { focusTargets.toggle.requestFocus() }
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: false }
+                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: true }
                                         )
                                     )
                                 }

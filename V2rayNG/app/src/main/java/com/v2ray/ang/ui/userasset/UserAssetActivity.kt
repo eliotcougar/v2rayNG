@@ -367,13 +367,6 @@ internal fun UserAssetScreen(
                     onSelected = { onGeoSourceSelected(it) }
                 )
             }
-            item {
-                Text(
-                    text = stringResource(R.string.title_user_asset_setting),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
             itemsIndexed(items = uiState.assets, key = { _, item -> item.guid }) { _, item ->
                 UserAssetItem(
                     item = item,
