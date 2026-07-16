@@ -179,6 +179,7 @@ import com.v2ray.ang.viewmodel.MainViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -345,7 +346,8 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun restartV2Ray() {
-        if (mainViewModel.uiState.value.isRunning) CoreServiceManager.stopVService(this)
+        if (!mainViewModel.uiState.value.isRunning) return
+        CoreServiceManager.stopVService(this)
         lifecycleScope.launch { delay(500); startV2Ray() }
     }
 
@@ -547,7 +549,17 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun exitApp() {
-        finishAndRemoveTask()
+        if (!mainViewModel.uiState.value.isRunning) {
+            finishAndRemoveTask()
+            return
+        }
+
+        val stopGeneration = mainViewModel.serviceStopGeneration.value
+        CoreServiceManager.stopVService(this)
+        lifecycleScope.launch {
+            mainViewModel.serviceStopGeneration.first { it > stopGeneration }
+            finishAndRemoveTask()
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -1601,7 +1613,13 @@ fun MainScreen(
                                     focusRequester = addFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
                                         onMoveLeft = { searchFocusRequester.requestFocus() },
-                                        onMoveRight = { restartFocusRequester.requestFocus() }
+                                        onMoveRight = {
+                                            if (isRunning) {
+                                                restartFocusRequester.requestFocus()
+                                            } else {
+                                                moreFocusRequester.requestFocus()
+                                            }
+                                        }
                                     ),
                                     onClick = { showImportMenu = true }
                                 )
@@ -1663,7 +1681,7 @@ fun MainScreen(
                                     }
                                 }
                             }
-                            if (isTelevision) {
+                            if (isTelevision && isRunning) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_restore_24dp),
                                     label = stringResource(R.string.title_service_restart),
@@ -1686,7 +1704,13 @@ fun MainScreen(
                                     },
                                     focusRequester = moreFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
-                                        onMoveLeft = { restartFocusRequester.requestFocus() },
+                                        onMoveLeft = {
+                                            if (isRunning) {
+                                                restartFocusRequester.requestFocus()
+                                            } else {
+                                                addFocusRequester.requestFocus()
+                                            }
+                                        },
                                         onMoveRight = { moreFocusRequester.requestFocus() }
                                     ),
                                     onClick = { showMenu = true }
@@ -1700,12 +1724,16 @@ fun MainScreen(
                                         .heightIn(max = maxMenuHeight)
                                         .dpadPopupHorizontalNavigation(onMovePrevious = {
                                             showMenu = false
-                                            restartFocusRequester.requestFocus()
+                                            if (isRunning) {
+                                                restartFocusRequester.requestFocus()
+                                            } else {
+                                                addFocusRequester.requestFocus()
+                                            }
                                         })
                                         .verticalScrollbar(moreMenuScrollState)
                                 ) {
                                     buildList<Pair<Int, () -> Unit>> {
-                                        if (!isTelevision) {
+                                        if (!isTelevision && isRunning) {
                                             add(R.string.title_service_restart to {
                                                 showMenu = false; onRestartService()
                                             })

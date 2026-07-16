@@ -23,6 +23,7 @@ import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.root.RootLanSharing
 import com.v2ray.ang.util.LogUtil
+import com.v2ray.ang.util.MessageUtil
 import com.v2ray.ang.util.Utils
 import java.lang.ref.SoftReference
 import java.util.concurrent.atomic.AtomicBoolean
@@ -72,6 +73,7 @@ class CoreVpnService : VpnService(), ServiceControl {
 
         unlockStart()
         NotificationManager.cancelNotification()
+        MessageUtil.sendMsg2UI(this, AppConfig.MSG_STATE_STOP_COMPLETE, "")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

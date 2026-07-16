@@ -11,6 +11,7 @@ import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.root.RootProxyManager
 import com.v2ray.ang.util.LogUtil
+import com.v2ray.ang.util.MessageUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -77,6 +78,7 @@ class CoreRootService : Service(), ServiceControl {
         // to a dead listener. Synchronous on purpose — leaving rules behind breaks the net.
         RootProxyManager.stop(this)
         CoreServiceManager.stopCoreLoop()
+        MessageUtil.sendMsg2UI(this, AppConfig.MSG_STATE_STOP_COMPLETE, "")
     }
 
     override fun getService(): Service = this

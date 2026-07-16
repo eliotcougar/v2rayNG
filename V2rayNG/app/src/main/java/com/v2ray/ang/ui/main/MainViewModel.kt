@@ -69,6 +69,9 @@ class MainViewModel(
     val serviceStatusMessages: SharedFlow<ServiceStatusMessage> =
         _serviceStatusMessages.asSharedFlow()
 
+    private val _serviceStopGeneration = MutableStateFlow(0L)
+    val serviceStopGeneration: StateFlow<Long> = _serviceStopGeneration.asStateFlow()
+
     // ---------- Keyword filtering ----------
     @Volatile
     private var keywordFilter: String = ""
@@ -132,6 +135,10 @@ class MainViewModel(
                     ServiceStatusMessage(R.string.toast_services_stop)
                 )
                 updateRunningState(false)
+            }
+
+            MainServiceEvent.StateStopComplete -> {
+                _serviceStopGeneration.update { it + 1L }
             }
 
             is MainServiceEvent.MeasureDelayResult -> {
