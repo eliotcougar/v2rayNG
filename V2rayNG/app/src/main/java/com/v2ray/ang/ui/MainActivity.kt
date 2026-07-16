@@ -262,6 +262,7 @@ class MainActivity : HelperBaseComponentActivity() {
             onExportAll = ::exportAll,
             onRealPingAll = mainViewModel::testAllRealPing,
             onRestartService = ::restartV2Ray,
+            onExit = ::exitApp,
             onDelInvalidConfig = ::delInvalidConfig,
             onSortByTestResults = ::sortByTestResults,
             onEditServer = ::editServer,
@@ -541,6 +542,10 @@ class MainActivity : HelperBaseComponentActivity() {
             mainViewModel.updateSelectedGuid(guid)
             if (mainViewModel.uiState.value.isRunning) restartV2Ray()
         }
+    }
+
+    private fun exitApp() {
+        finishAndRemoveTask()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -1050,6 +1055,7 @@ fun MainScreen(
     onExportAll: () -> Unit,
     onRealPingAll: () -> Unit,
     onRestartService: () -> Unit,
+    onExit: () -> Unit,
     onDelInvalidConfig: () -> Unit,
     onSortByTestResults: () -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
@@ -1069,7 +1075,7 @@ fun MainScreen(
     val groups = uiState.groups
     val isLoading = uiState.isLoading
     val isRunning = uiState.isRunning
-    val displayText = uiState.statusText
+    val displayText = uiState.statusTextRes?.let { stringResource(it) } ?: uiState.statusText
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove
@@ -1667,29 +1673,34 @@ fun MainScreen(
                                         })
                                         .verticalScrollbar(moreMenuScrollState)
                                 ) {
-                                    listOf(
-                                        R.string.title_service_restart to {
+                                    buildList<Pair<Int, () -> Unit>> {
+                                        add(R.string.title_service_restart to {
                                             showMenu = false; onRestartService()
-                                        },
-                                        R.string.title_del_invalid_config to {
+                                        })
+                                        add(R.string.title_del_invalid_config to {
                                             showMenu = false; showDelInvalidConfirm = true
-                                        },
-                                        R.string.title_export_all to {
+                                        })
+                                        add(R.string.title_export_all to {
                                             showMenu = false; onExportAll()
-                                        },
-                                        R.string.title_real_ping_all_server to {
+                                        })
+                                        add(R.string.title_real_ping_all_server to {
                                             showMenu = false; onRealPingAll()
-                                        },
-                                        R.string.title_locate_selected_config to {
+                                        })
+                                        add(R.string.title_locate_selected_config to {
                                             showMenu = false; onLocateSelectedServer()
-                                        },
-                                        R.string.title_sort_by_test_results to {
+                                        })
+                                        add(R.string.title_sort_by_test_results to {
                                             showMenu = false; onSortByTestResults()
-                                        },
-                                        R.string.title_sub_update to {
+                                        })
+                                        add(R.string.title_sub_update to {
                                             showMenu = false; onSubUpdate()
-                                        },
-                                    ).forEach { (stringRes, action) ->
+                                        })
+                                        if (isTelevision) {
+                                            add(R.string.action_exit to {
+                                                showMenu = false; onExit()
+                                            })
+                                        }
+                                    }.forEach { (stringRes, action) ->
                                         DropdownMenuItem(
                                             text = { Text(stringResource(stringRes)) },
                                             modifier = Modifier.tvMenuItemFocus(),

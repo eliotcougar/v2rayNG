@@ -33,6 +33,7 @@
     <string name="action_back">Назад</string>
     <string name="action_menu">Меню</string>
     <string name="action_more">Ещё</string>
+    <string name="action_exit">Выход</string>
     <string name="action_clear">Очистить</string>
     <string name="action_edit">Изменить</string>
     <string name="action_share">Поделиться</string>

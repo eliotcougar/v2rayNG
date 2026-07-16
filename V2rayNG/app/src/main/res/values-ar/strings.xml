@@ -33,6 +33,7 @@
     <string name="action_back">رجوع</string>
     <string name="action_menu">القائمة</string>
     <string name="action_more">المزيد</string>
+    <string name="action_exit">خروج</string>
     <string name="action_clear">مسح</string>
     <string name="action_edit">تعديل</string>
     <string name="action_share">مشاركة</string>
