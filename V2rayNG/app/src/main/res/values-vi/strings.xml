@@ -29,6 +29,7 @@
     <string name="menu_item_save_config">Lưu cấu hình</string>
     <string name="menu_item_edit_config">Chỉnh sửa cấu hình</string>
     <string name="menu_item_del_config">Xoá cấu hình</string>
+    <string name="action_delete">Xoá</string>
     <string name="menu_item_import_config_qrcode">Nhập cấu hình từ mã QR</string>
     <string name="menu_item_import_config_clipboard">Nhập cấu hình từ bảng tạm</string>
     <string name="menu_item_import_config_local">Nhập cấu hình từ thiết bị</string>

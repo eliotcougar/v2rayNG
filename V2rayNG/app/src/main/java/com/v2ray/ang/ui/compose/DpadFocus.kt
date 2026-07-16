@@ -19,6 +19,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -27,7 +28,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -70,13 +73,15 @@ fun rememberDpadFocusRequester(
 @Composable
 fun Modifier.dpadFocusOutline(
     focusRequester: FocusRequester? = null,
-    cornerRadius: Dp = 12.dp
+    cornerRadius: Dp = 12.dp,
+    focusContainerColor: Color? = null
 ): Modifier {
     if (!isTelevisionDevice()) return this
 
     var isFocused by remember { mutableStateOf(false) }
     val focusColor = MaterialTheme.colorScheme.primary
-    val focusContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val resolvedFocusContainerColor =
+        focusContainerColor ?: MaterialTheme.colorScheme.primaryContainer
     val shape = RoundedCornerShape(cornerRadius)
     val requesterModifier = if (focusRequester != null) {
         Modifier.focusRequester(focusRequester)
@@ -86,7 +91,7 @@ fun Modifier.dpadFocusOutline(
 
     val focusDecoration = if (isFocused) {
         Modifier
-            .background(focusContainerColor, shape)
+            .background(resolvedFocusContainerColor, shape)
             .border(width = 2.dp, color = focusColor, shape = shape)
     } else {
         Modifier
@@ -123,17 +128,66 @@ fun Modifier.dpadHorizontalFocusNavigation(
     onMoveRight: () -> Unit
 ): Modifier {
     if (!isTelevisionDevice()) return this
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
         when (event.key) {
             Key.DirectionLeft -> {
-                onMoveLeft()
+                if (isRtl) onMoveRight() else onMoveLeft()
                 true
             }
             Key.DirectionRight -> {
-                onMoveRight()
+                if (isRtl) onMoveLeft() else onMoveRight()
                 true
             }
+            else -> false
+        }
+    }
+}
+
+/**
+ * Handles horizontal popup exits in visual order. Compose mirrors popup/tool-bar placement in
+ * RTL layouts, so Previous is Left in LTR and Right in RTL (and Next is the opposite).
+ */
+@Composable
+fun Modifier.dpadPopupHorizontalNavigation(
+    onMovePrevious: () -> Unit,
+    onMoveNext: (() -> Unit)? = null
+): Modifier {
+    if (!isTelevisionDevice()) return this
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val previousKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
+    val nextKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
+    return onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        when (event.key) {
+            previousKey -> {
+                onMovePrevious()
+                true
+            }
+            nextKey -> {
+                if (onMoveNext == null) false else {
+                    onMoveNext()
+                    true
+                }
+            }
+            else -> false
+        }
+    }
+}
+
+/** Gives TV controls an explicit up/down focus chain while preserving spatial fallback. */
+@Composable
+fun Modifier.dpadVerticalFocusNavigation(
+    onMoveUp: () -> Boolean,
+    onMoveDown: () -> Boolean
+): Modifier {
+    if (!isTelevisionDevice()) return this
+    return onKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+        when (event.key) {
+            Key.DirectionUp -> onMoveUp()
+            Key.DirectionDown -> onMoveDown()
             else -> false
         }
     }

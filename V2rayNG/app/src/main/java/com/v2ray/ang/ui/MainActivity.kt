@@ -58,6 +58,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerValue
@@ -83,6 +84,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -97,6 +99,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -105,7 +108,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -123,6 +125,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
@@ -143,6 +148,8 @@ import com.v2ray.ang.compose.colorFabInactiveLight
 import com.v2ray.ang.compose.colorPing
 import com.v2ray.ang.compose.colorPingRed
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.rememberDpadFocusRequester
@@ -686,21 +693,23 @@ private suspend fun PagerState.navigateToPageOptimized(
     }
 }
 
+@Composable
 private fun Modifier.tvHorizontalFocusNavigation(
     isTelevision: Boolean,
     onLeft: () -> Unit,
     onRight: () -> Unit
 ): Modifier {
     if (!isTelevision) return this
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
         when (event.key) {
             Key.DirectionLeft -> {
-                onLeft()
+                if (isRtl) onRight() else onLeft()
                 true
             }
             Key.DirectionRight -> {
-                onRight()
+                if (isRtl) onLeft() else onRight()
                 true
             }
             else -> false
@@ -737,6 +746,7 @@ private fun Modifier.tvMoveDownNavigation(
     }
 }
 
+@Composable
 private fun Modifier.tvDrawerFocusNavigation(
     isTelevision: Boolean,
     onMoveUp: () -> Unit,
@@ -744,6 +754,11 @@ private fun Modifier.tvDrawerFocusNavigation(
     onMoveRight: () -> Unit
 ): Modifier {
     if (!isTelevision) return this
+    val towardContentKey = if (LocalLayoutDirection.current == LayoutDirection.Rtl) {
+        Key.DirectionLeft
+    } else {
+        Key.DirectionRight
+    }
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
         when (event.key) {
@@ -755,7 +770,7 @@ private fun Modifier.tvDrawerFocusNavigation(
                 onMoveDown()
                 true
             }
-            Key.DirectionRight -> {
+            towardContentKey -> {
                 onMoveRight()
                 true
             }
@@ -776,8 +791,6 @@ private fun GroupTabBar(
     modifier: Modifier = Modifier
 ) {
     val isTelevision = isTelevisionDevice()
-    val layoutDirection = LocalLayoutDirection.current
-
     PrimaryScrollableTabRow(
         selectedTabIndex = selectedTabIndex.coerceIn(0, groups.lastIndex),
         modifier = modifier.fillMaxWidth(),
@@ -800,8 +813,8 @@ private fun GroupTabBar(
         divider = {}
     ) {
         groups.forEachIndexed { index, group ->
-            val leftTarget = if (layoutDirection == LayoutDirection.Ltr) index - 1 else index + 1
-            val rightTarget = if (layoutDirection == LayoutDirection.Ltr) index + 1 else index - 1
+            val leftTarget = index - 1
+            val rightTarget = index + 1
             val tabModifier = if (isTelevision) {
                 Modifier
                     .dpadFocusOutline(
@@ -872,9 +885,58 @@ private fun GroupTabItem(
     )
 }
 
+private fun Path.addDrawerPeekPath(
+    width: Float,
+    height: Float,
+    layoutDirection: LayoutDirection,
+    closePath: Boolean
+) {
+    val radius = minOf(width * (22f / 24f), height / 2f)
+    if (layoutDirection == LayoutDirection.Ltr) {
+        moveTo(0f, 0f)
+        lineTo(width - radius, 0f)
+        arcTo(
+            rect = Rect(width - radius * 2f, 0f, width, radius * 2f),
+            startAngleDegrees = -90f,
+            sweepAngleDegrees = 90f,
+            forceMoveTo = false
+        )
+        lineTo(width, height - radius)
+        arcTo(
+            rect = Rect(width - radius * 2f, height - radius * 2f, width, height),
+            startAngleDegrees = 0f,
+            sweepAngleDegrees = 90f,
+            forceMoveTo = false
+        )
+        lineTo(0f, height)
+    } else {
+        moveTo(width, 0f)
+        lineTo(radius, 0f)
+        arcTo(
+            rect = Rect(0f, 0f, radius * 2f, radius * 2f),
+            startAngleDegrees = -90f,
+            sweepAngleDegrees = -90f,
+            forceMoveTo = false
+        )
+        lineTo(0f, height - radius)
+        arcTo(
+            rect = Rect(0f, height - radius * 2f, radius * 2f, height),
+            startAngleDegrees = 180f,
+            sweepAngleDegrees = -90f,
+            forceMoveTo = false
+        )
+        lineTo(width, height)
+    }
+    if (closePath) close()
+}
+
 @Composable
 private fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+    val layoutDirection = LocalLayoutDirection.current
+    val shape = GenericShape { size, direction ->
+        addDrawerPeekPath(size.width, size.height, direction, closePath = true)
+    }
     Surface(
         modifier = modifier
             .width(24.dp)
@@ -882,25 +944,13 @@ private fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
             .drawWithContent {
                 drawContent()
                 val strokeWidth = 1.dp.toPx()
-                val inset = strokeWidth / 2f
-                val radius = 22.dp.toPx()
                 val borderPath = Path().apply {
-                    moveTo(inset, inset)
-                    lineTo(size.width - radius, inset)
-                    quadraticTo(
-                        size.width - inset,
-                        inset,
-                        size.width - inset,
-                        radius
+                    addDrawerPeekPath(
+                        size.width,
+                        size.height,
+                        layoutDirection,
+                        closePath = false
                     )
-                    lineTo(size.width - inset, size.height - radius)
-                    quadraticTo(
-                        size.width - inset,
-                        size.height - inset,
-                        size.width - radius,
-                        size.height - inset
-                    )
-                    lineTo(inset, size.height - inset)
                 }
                 drawPath(
                     path = borderPath,
@@ -908,7 +958,7 @@ private fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
                     style = Stroke(width = strokeWidth)
                 )
             },
-        shape = RoundedCornerShape(topEnd = 22.dp, bottomEnd = 22.dp),
+        shape = shape,
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         tonalElevation = 3.dp
@@ -1013,14 +1063,6 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val drawerFocusRequesters = remember { List(10) { FocusRequester() } }
-    LaunchedEffect(drawerState.targetValue) {
-        if (drawerState.targetValue == DrawerValue.Open) {
-            repeat(8) {
-                if (drawerFocusRequesters.first().requestFocus()) return@LaunchedEffect
-                withFrameNanos { }
-            }
-        }
-    }
     val scope = rememberCoroutineScope()
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -1052,6 +1094,37 @@ fun MainScreen(
     val searchFocusRequester = remember { FocusRequester() }
     val addFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeFocusGeneration by remember { mutableIntStateOf(0) }
+
+    DisposableEffect(lifecycleOwner, isTelevision) {
+        if (!isTelevision) return@DisposableEffect onDispose { }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeFocusGeneration++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(drawerState.targetValue, resumeFocusGeneration, isTelevision) {
+        if (!isTelevision) return@LaunchedEffect
+        val requester = if (drawerState.targetValue == DrawerValue.Open) {
+            drawerFocusRequesters.first()
+        } else {
+            mainFocusToRestore ?: startFocusRequester
+        }
+        val fallbackRequester = if (
+            drawerState.targetValue == DrawerValue.Closed && requester !== startFocusRequester
+        ) {
+            startFocusRequester
+        } else null
+        repeat(30) {
+            if (requester.requestFocus() || fallbackRequester?.requestFocus() == true) {
+                return@LaunchedEffect
+            }
+            withFrameNanos { }
+        }
+    }
 
     BackHandler(enabled = isTelevision && showSearch) {
         searchQuery = ""
@@ -1570,18 +1643,10 @@ fun MainScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     modifier = Modifier
                                         .heightIn(max = maxMenuHeight)
-                                        .onPreviewKeyEvent { event ->
-                                            if (isTelevision &&
-                                                event.type == KeyEventType.KeyDown &&
-                                                event.key == Key.DirectionLeft
-                                            ) {
-                                                showMenu = false
-                                                addFocusRequester.requestFocus()
-                                                true
-                                            } else {
-                                                false
-                                            }
-                                        }
+                                        .dpadPopupHorizontalNavigation(onMovePrevious = {
+                                            showMenu = false
+                                            addFocusRequester.requestFocus()
+                                        })
                                         .verticalScrollbar(moreMenuScrollState)
                                 ) {
                                     listOf(
@@ -1630,8 +1695,6 @@ fun MainScreen(
             },
             floatingActionButton = {},
         ) { innerPadding ->
-            val layoutDirection = LocalLayoutDirection.current
-
             if (groups.isNotEmpty()) {
                 Column(
                     modifier = Modifier
@@ -1717,6 +1780,14 @@ fun MainScreen(
     }
 }
 
+private class ServerRowFocusTargets {
+    val row = FocusRequester()
+    val more = FocusRequester()
+    val share = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+}
+
 @Composable
 private fun ServerListPage(
     servers: List<ServersCache>,
@@ -1738,6 +1809,9 @@ private fun ServerListPage(
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
+    val rowFocusTargets = remember(groupId, servers.map { it.guid }, doubleColumnDisplay) {
+        servers.associate { it.guid to ServerRowFocusTargets() }
+    }
     if (doubleColumnDisplay) {
         val gridState = remember(groupId) {
             lazyGridStates.getOrPut(groupId) { LazyGridState() }
@@ -1757,6 +1831,19 @@ private fun ServerListPage(
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = servers, key = { _, item -> item.guid }) { index, serverCache ->
+                val focusTargets = rowFocusTargets.getValue(serverCache.guid)
+                val previousTargets = servers.getOrNull(index - 2)?.let { rowFocusTargets[it.guid] }
+                val nextTargets = servers.getOrNull(index + 2)?.let { rowFocusTargets[it.guid] }
+                val previousColumnTargets = if (index % 2 == 1) {
+                    servers.getOrNull(index - 1)?.let { rowFocusTargets[it.guid] }
+                } else {
+                    null
+                }
+                val nextColumnTargets = if (index % 2 == 0) {
+                    servers.getOrNull(index + 1)?.let { rowFocusTargets[it.guid] }
+                } else {
+                    null
+                }
                 val content: @Composable () -> Unit = {
                     ServerItemColumn(
                         serverCache = serverCache,
@@ -1768,8 +1855,14 @@ private fun ServerListPage(
                         onShareServer = onShareServer,
                         onMoreServer = onMoreServer,
                         onRemoveServer = onRemoveServer,
-                        onMoveLeft = onMoveLeftFromRow,
-                        onMoveUp = if (index < 2) onMoveUpFromFirstRow else null
+                        onMoveLeft = previousColumnTargets?.let { previousColumn ->
+                            { previousColumn.more.requestFocus() }
+                        } ?: onMoveLeftFromRow,
+                        onMoveUp = if (index < 2) onMoveUpFromFirstRow else null,
+                        focusTargets = focusTargets,
+                        previousFocusTargets = previousTargets,
+                        nextFocusTargets = nextTargets,
+                        nextColumnFocusTargets = nextColumnTargets
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
@@ -1805,6 +1898,9 @@ private fun ServerListPage(
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = servers, key = { _, item -> item.guid }) { index, serverCache ->
+                val focusTargets = rowFocusTargets.getValue(serverCache.guid)
+                val previousTargets = servers.getOrNull(index - 1)?.let { rowFocusTargets[it.guid] }
+                val nextTargets = servers.getOrNull(index + 1)?.let { rowFocusTargets[it.guid] }
                 if (canReorder && reorderableState != null) {
                     ReorderableItem(
                         reorderableState,
@@ -1824,7 +1920,10 @@ private fun ServerListPage(
                                 onMoreServer = onMoreServer,
                                 onRemoveServer = onRemoveServer,
                                 onMoveLeft = onMoveLeftFromRow,
-                                onMoveUp = if (index == 0) onMoveUpFromFirstRow else null
+                                onMoveUp = if (index == 0) onMoveUpFromFirstRow else null,
+                                focusTargets = focusTargets,
+                                previousFocusTargets = previousTargets,
+                                nextFocusTargets = nextTargets
                             )
                         }
                         AppDivider(modifier = Modifier.padding(horizontal = 12.dp))
@@ -1840,7 +1939,10 @@ private fun ServerListPage(
                         onMoreServer = onMoreServer,
                         onRemoveServer = onRemoveServer,
                         onMoveLeft = onMoveLeftFromRow,
-                        onMoveUp = if (index == 0) onMoveUpFromFirstRow else null
+                        onMoveUp = if (index == 0) onMoveUpFromFirstRow else null,
+                        focusTargets = focusTargets,
+                        previousFocusTargets = previousTargets,
+                        nextFocusTargets = nextTargets
                     )
                     AppDivider(modifier = Modifier.padding(horizontal = 12.dp))
                 }
@@ -1860,7 +1962,10 @@ private fun ServerItemRow(
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
     onMoveLeft: (FocusRequester) -> Unit,
-    onMoveUp: (() -> Unit)?
+    onMoveUp: (() -> Unit)?,
+    focusTargets: ServerRowFocusTargets,
+    previousFocusTargets: ServerRowFocusTargets?,
+    nextFocusTargets: ServerRowFocusTargets?
 ) {
     val profile = serverCache.profile
     val subRemarks = if (subscriptionId.isEmpty()) {
@@ -1884,7 +1989,10 @@ private fun ServerItemRow(
         onRemove = { onRemoveServer(serverCache.guid) },
         onMore = { onMoreServer(serverCache.guid, profile) },
         onMoveLeft = onMoveLeft,
-        onMoveUp = onMoveUp
+        onMoveUp = onMoveUp,
+        focusTargets = focusTargets,
+        previousFocusTargets = previousFocusTargets,
+        nextFocusTargets = nextFocusTargets
     )
 }
 
@@ -1900,7 +2008,11 @@ private fun ServerItemColumn(
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
     onMoveLeft: (FocusRequester) -> Unit,
-    onMoveUp: (() -> Unit)?
+    onMoveUp: (() -> Unit)?,
+    focusTargets: ServerRowFocusTargets,
+    previousFocusTargets: ServerRowFocusTargets?,
+    nextFocusTargets: ServerRowFocusTargets?,
+    nextColumnFocusTargets: ServerRowFocusTargets?
 ) {
     val profile = serverCache.profile
     val subRemarks = if (subscriptionId.isEmpty()) {
@@ -1923,14 +2035,18 @@ private fun ServerItemColumn(
             onRemove = { onRemoveServer(serverCache.guid) },
             onMore = { onMoreServer(serverCache.guid, profile) },
             onMoveLeft = onMoveLeft,
-            onMoveUp = onMoveUp
+            onMoveUp = onMoveUp,
+            focusTargets = focusTargets,
+            previousFocusTargets = previousFocusTargets,
+            nextFocusTargets = nextFocusTargets,
+            nextColumnFocusTargets = nextColumnFocusTargets
         )
         AppDivider(modifier = Modifier.padding(horizontal = 12.dp))
     }
 }
 
 @Composable
-fun ServerListItem(
+private fun ServerListItem(
     remarks: String,
     statistics: String,
     typeDescription: String,
@@ -1946,15 +2062,14 @@ fun ServerListItem(
     onMore: () -> Unit,
     onMoveLeft: ((FocusRequester) -> Unit)? = null,
     onMoveUp: (() -> Unit)? = null,
+    focusTargets: ServerRowFocusTargets,
+    previousFocusTargets: ServerRowFocusTargets?,
+    nextFocusTargets: ServerRowFocusTargets?,
+    nextColumnFocusTargets: ServerRowFocusTargets? = null,
     modifier: Modifier = Modifier,
     dragModifier: Modifier = Modifier
 ) {
     val isTelevision = isTelevisionDevice()
-    val rowFocusRequester = remember { FocusRequester() }
-    val moreFocusRequester = remember { FocusRequester() }
-    val shareFocusRequester = remember { FocusRequester() }
-    val editFocusRequester = remember { FocusRequester() }
-    val deleteFocusRequester = remember { FocusRequester() }
     val rowInteractionSource = remember { MutableInteractionSource() }
     val compactActionModifier = if (isTelevision) Modifier else Modifier.size(36.dp)
 
@@ -1962,16 +2077,16 @@ fun ServerListItem(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .dpadFocusOutline(rowFocusRequester)
+            .dpadFocusOutline(focusTargets.row)
             .tvHorizontalFocusNavigation(
                 isTelevision = isTelevision,
                 onLeft = {
-                    if (onMoveLeft != null) onMoveLeft(rowFocusRequester)
-                    else rowFocusRequester.requestFocus()
+                    if (onMoveLeft != null) onMoveLeft(focusTargets.row)
+                    else focusTargets.row.requestFocus()
                 },
                 onRight = {
-                    if (doubleColumnDisplay) moreFocusRequester.requestFocus()
-                    else shareFocusRequester.requestFocus()
+                    if (doubleColumnDisplay) focusTargets.more.requestFocus()
+                    else focusTargets.share.requestFocus()
                 }
             )
             .tvMoveUpNavigation(isTelevision, onMoveUp)
@@ -2006,11 +2121,17 @@ fun ServerListItem(
                         label = "More",
                         contentDescription = if (isTelevision) "More" else null,
                         onClick = onMore,
-                        focusRequester = moreFocusRequester,
+                        focusRequester = focusTargets.more,
                         modifier = compactActionModifier.tvHorizontalFocusNavigation(
                             isTelevision = isTelevision,
-                            onLeft = { rowFocusRequester.requestFocus() },
-                            onRight = { moreFocusRequester.requestFocus() }
+                            onLeft = { focusTargets.row.requestFocus() },
+                            onRight = {
+                                nextColumnFocusTargets?.row?.requestFocus()
+                                    ?: focusTargets.more.requestFocus()
+                            }
+                        ).dpadVerticalFocusNavigation(
+                            onMoveUp = { previousFocusTargets?.more?.requestFocus() ?: false },
+                            onMoveDown = { nextFocusTargets?.more?.requestFocus() ?: false }
                         )
                     )
                 } else {
@@ -2023,11 +2144,14 @@ fun ServerListItem(
                             null
                         },
                         onClick = onShare,
-                        focusRequester = shareFocusRequester,
+                        focusRequester = focusTargets.share,
                         modifier = compactActionModifier.tvHorizontalFocusNavigation(
                             isTelevision = isTelevision,
-                            onLeft = { rowFocusRequester.requestFocus() },
-                            onRight = { editFocusRequester.requestFocus() }
+                            onLeft = { focusTargets.row.requestFocus() },
+                            onRight = { focusTargets.edit.requestFocus() }
+                        ).dpadVerticalFocusNavigation(
+                            onMoveUp = { previousFocusTargets?.share?.requestFocus() ?: false },
+                            onMoveDown = { nextFocusTargets?.share?.requestFocus() ?: false }
                         )
                     )
                     AppIconButton(
@@ -2039,11 +2163,14 @@ fun ServerListItem(
                             null
                         },
                         onClick = onEdit,
-                        focusRequester = editFocusRequester,
+                        focusRequester = focusTargets.edit,
                         modifier = compactActionModifier.tvHorizontalFocusNavigation(
                             isTelevision = isTelevision,
-                            onLeft = { shareFocusRequester.requestFocus() },
-                            onRight = { deleteFocusRequester.requestFocus() }
+                            onLeft = { focusTargets.share.requestFocus() },
+                            onRight = { focusTargets.delete.requestFocus() }
+                        ).dpadVerticalFocusNavigation(
+                            onMoveUp = { previousFocusTargets?.edit?.requestFocus() ?: false },
+                            onMoveDown = { nextFocusTargets?.edit?.requestFocus() ?: false }
                         )
                     )
                     AppIconButton(
@@ -2055,11 +2182,14 @@ fun ServerListItem(
                             null
                         },
                         onClick = onRemove,
-                        focusRequester = deleteFocusRequester,
+                        focusRequester = focusTargets.delete,
                         modifier = compactActionModifier.tvHorizontalFocusNavigation(
                             isTelevision = isTelevision,
-                            onLeft = { editFocusRequester.requestFocus() },
-                            onRight = { deleteFocusRequester.requestFocus() }
+                            onLeft = { focusTargets.edit.requestFocus() },
+                            onRight = { focusTargets.delete.requestFocus() }
+                        ).dpadVerticalFocusNavigation(
+                            onMoveUp = { previousFocusTargets?.delete?.requestFocus() ?: false },
+                            onMoveDown = { nextFocusTargets?.delete?.requestFocus() ?: false }
                         )
                     )
                 }

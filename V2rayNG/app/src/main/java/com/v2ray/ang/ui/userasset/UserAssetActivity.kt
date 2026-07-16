@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,9 +47,13 @@ import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.rememberDpadFocusRequester
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.SettingsListItem
-import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.AssetUrlCache
@@ -266,6 +271,10 @@ internal fun UserAssetScreen(
     var showAddMenu by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<AssetDeleteTarget?>(null) }
     val listState = rememberLazyListState()
+    val isTelevision = isTelevisionDevice()
+    val backFocusRequester = rememberDpadFocusRequester()
+    val addFocusRequester = remember { FocusRequester() }
+    val downloadFocusRequester = remember { FocusRequester() }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -274,11 +283,28 @@ internal fun UserAssetScreen(
                 title = stringResource(R.string.title_user_asset_setting),
                 onBackClick = onBackClick,
                 isLoading = isLoading,
+                navigationIcon = {
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_arrow_back_24dp),
+                        label = "Back",
+                        onClick = onBackClick,
+                        focusRequester = backFocusRequester,
+                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                            onMoveLeft = { backFocusRequester.requestFocus() },
+                            onMoveRight = { addFocusRequester.requestFocus() }
+                        )
+                    )
+                },
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_add_24dp),
                             label = stringResource(R.string.acc_add_asset),
+                            focusRequester = addFocusRequester,
+                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                onMoveLeft = { backFocusRequester.requestFocus() },
+                                onMoveRight = { downloadFocusRequester.requestFocus() }
+                            ),
                             onClick = { showAddMenu = true }
                         )
                         DropdownMenu(
@@ -286,7 +312,18 @@ internal fun UserAssetScreen(
                             onDismissRequest = { showAddMenu = false },
                             containerColor = MaterialTheme.colorScheme.surface,
                             offset = DpOffset(x = 0.dp, y = 0.dp),
-                            modifier = Modifier.wrapContentWidth(Alignment.End)
+                            modifier = Modifier
+                                .wrapContentWidth(Alignment.End)
+                                .dpadPopupHorizontalNavigation(
+                                    onMovePrevious = {
+                                        showAddMenu = false
+                                        backFocusRequester.requestFocus()
+                                    },
+                                    onMoveNext = {
+                                        showAddMenu = false
+                                        downloadFocusRequester.requestFocus()
+                                    }
+                                )
                         ) {
                             AppDropdownMenuItems(AddAssetMenuAction.entries, { it.labelRes }) { action ->
                                 showAddMenu = false
@@ -301,6 +338,11 @@ internal fun UserAssetScreen(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_cloud_download_24dp),
                         label = stringResource(R.string.acc_download_file),
+                        focusRequester = downloadFocusRequester,
+                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                            onMoveLeft = { addFocusRequester.requestFocus() },
+                            onMoveRight = { downloadFocusRequester.requestFocus() }
+                        ),
                         onClick = onDownloadClick
                     )
                 }

@@ -29,6 +29,7 @@
     <string name="menu_item_save_config">زفت کردن کانفیگ</string>
     <string name="menu_item_edit_config">آلشتکاری کانفیگ</string>
     <string name="menu_item_del_config">پاک کردن کانفیگ</string>
+    <string name="action_delete">پاک کردن</string>
     <string name="menu_item_import_config_qrcode">و من ٱووردن کانفیگ ز کود QR</string>
     <string name="menu_item_import_config_clipboard">و من ٱووردن کانفیگ ز کلیپ بورد</string>
     <string name="menu_item_import_config_local">و من ٱووردن کانفیگ ز محلی</string>

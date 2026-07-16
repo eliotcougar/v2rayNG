@@ -5,18 +5,24 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +44,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -62,35 +69,38 @@ fun ConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val confirmFocusRequester = remember { FocusRequester() }
-    val dismissFocusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(dismissText) {
-        if (dismissText != null) dismissFocusRequester.requestFocus()
-        else confirmFocusRequester.requestFocus()
-    }
+    val dismissFocusRequester = rememberDpadFocusRequester()
+    val isTelevision = isTelevisionDevice()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
-            TextButton(
-                onClick = { onConfirm(); onDismiss() },
-                modifier = Modifier.dpadFocusOutline(confirmFocusRequester)
-            ) {
-                confirmIcon?.invoke()
-                if (confirmIcon != null) Spacer(Modifier.width(8.dp))
-                Text(confirmText)
+            if (isTelevision) {
+                TvConfirmDialogButton(
+                    text = stringResource(R.string.action_delete),
+                    icon = painterResource(R.drawable.ic_delete_24dp),
+                    onClick = { onConfirm(); onDismiss() }
+                )
+            } else {
+                TextButton(onClick = { onConfirm(); onDismiss() }) {
+                    confirmIcon?.invoke()
+                    if (confirmIcon != null) Spacer(Modifier.width(8.dp))
+                    Text(confirmText)
+                }
             }
         },
         dismissButton = dismissText?.let { text ->
             {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.dpadFocusOutline(dismissFocusRequester)
-                ) {
-                    Text(text)
+                if (isTelevision) {
+                    TvConfirmDialogButton(
+                        text = text,
+                        onClick = onDismiss,
+                        focusRequester = dismissFocusRequester
+                    )
+                } else {
+                    TextButton(onClick = onDismiss) { Text(text) }
                 }
             }
         },
@@ -117,6 +127,51 @@ fun DeleteConfirmDialog(
         onConfirm = onConfirm,
         onDismiss = onDismiss
     )
+}
+
+@Composable
+private fun TvConfirmDialogButton(
+    text: String,
+    icon: Painter? = null,
+    onClick: () -> Unit,
+    focusRequester: FocusRequester? = null
+) {
+    val shape = RoundedCornerShape(24.dp)
+    // Android's en-XC test locale surrounds platform button labels with more than one hundred
+    // LRM/RLM controls. They have no visible content but skew Compose's native text measurement.
+    // Keep legitimate bidi marks intact and discard only the pseudo-locale's marker flood.
+    val directionMarkCount = text.count { it == '\u200e' || it == '\u200f' }
+    val displayText = if (directionMarkCount > text.length / 2) {
+        text.filterNot { it == '\u200e' || it == '\u200f' }
+    } else {
+        text
+    }
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .height(48.dp)
+            .widthIn(min = 96.dp)
+            .dpadFocusOutline(
+                focusRequester = focusRequester,
+                cornerRadius = 24.dp
+            ),
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp)
+    ) {
+        if (icon != null) {
+            Icon(
+                painter = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        Text(text = displayText, maxLines = 1)
+    }
 }
 
 data class InputField(

@@ -57,6 +57,8 @@ import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.colorFabActive
 import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.verticalScrollbar
@@ -155,6 +157,8 @@ fun PerAppProxyScreen(
     val isTelevision = isTelevisionDevice()
     val enableInteractionSource = remember { MutableInteractionSource() }
     val bypassInteractionSource = remember { MutableInteractionSource() }
+    val searchFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -184,6 +188,11 @@ fun PerAppProxyScreen(
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
+                            focusRequester = searchFocusRequester,
+                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            ),
                             onClick = { showSearch = true }
                         )
                     }
@@ -192,12 +201,21 @@ fun PerAppProxyScreen(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
                             label = stringResource(R.string.acc_more),
                             contentDescription = if (isTelevision) stringResource(R.string.acc_more) else null,
+                            focusRequester = moreFocusRequester,
+                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            ),
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                                showMenu = false
+                                searchFocusRequester.requestFocus()
+                            })
                         ) {
                             AppDropdownMenuItems(PerAppMenuAction.entries, { it.labelRes }) { action ->
                                 showMenu = false

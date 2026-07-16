@@ -62,6 +62,8 @@ import com.v2ray.ang.compose.colorConfigType
 import com.v2ray.ang.compose.colorFabActive
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
@@ -208,6 +210,13 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
     }
 }
 
+private class RoutingRowFocusTargets {
+    val row = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+    val toggle = FocusRequester()
+}
+
 @Composable
 fun RoutingSettingScreen(
     viewModel: RoutingSettingsViewModel,
@@ -223,10 +232,15 @@ fun RoutingSettingScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
+    val rowFocusTargets = remember(rulesets.map { it.id }) {
+        rulesets.associate { it.id to RoutingRowFocusTargets() }
+    }
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
     var deleteRuleId by remember { mutableStateOf<String?>(null) }
+    val addFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
@@ -247,18 +261,24 @@ fun RoutingSettingScreen(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_add_24dp),
                         label = stringResource(R.string.routing_settings_add_rule),
+                        focusRequester = addFocusRequester,
                         onClick = onAddRule
                     )
                     Box {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
                             label = stringResource(R.string.acc_more),
+                            focusRequester = moreFocusRequester,
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                                showMenu = false
+                                addFocusRequester.requestFocus()
+                            })
                         ) {
                             AppDropdownMenuItems(RoutingMenuAction.entries, { it.labelRes }) { action ->
                                 showMenu = false
@@ -298,10 +318,9 @@ fun RoutingSettingScreen(
                 items = rulesets,
                 key = { _, ruleset -> ruleset.id }
             ) { index, ruleset ->
-                val rowFocusRequester = remember(ruleset.id) { FocusRequester() }
-                val editFocusRequester = remember(ruleset.id) { FocusRequester() }
-                val deleteFocusRequester = remember(ruleset.id) { FocusRequester() }
-                val switchFocusRequester = remember(ruleset.id) { FocusRequester() }
+                val focusTargets = rowFocusTargets.getValue(ruleset.id)
+                val previousTargets = rulesets.getOrNull(index - 1)?.let { rowFocusTargets[it.id] }
+                val nextTargets = rulesets.getOrNull(index + 1)?.let { rowFocusTargets[it.id] }
                 ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
                     ReorderableListItem(
                         scope = this,
@@ -319,12 +338,12 @@ fun RoutingSettingScreen(
                                                 shape = RoundedCornerShape(16.dp)
                                             )
                                             .dpadFocusOutline(
-                                                focusRequester = rowFocusRequester,
+                                                focusRequester = focusTargets.row,
                                                 cornerRadius = 16.dp
                                             )
                                             .dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { rowFocusRequester.requestFocus() },
-                                                onMoveRight = { editFocusRequester.requestFocus() }
+                                                onMoveLeft = { focusTargets.row.requestFocus() },
+                                                onMoveRight = { focusTargets.edit.requestFocus() }
                                             )
                                             .clickable { onEditRule(index) }
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
@@ -381,20 +400,26 @@ fun RoutingSettingScreen(
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = "Edit",
-                                        focusRequester = editFocusRequester,
+                                        focusRequester = focusTargets.edit,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { rowFocusRequester.requestFocus() },
-                                            onMoveRight = { deleteFocusRequester.requestFocus() }
+                                            onMoveLeft = { focusTargets.row.requestFocus() },
+                                            onMoveRight = { focusTargets.delete.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: false }
                                         ),
                                         onClick = { onEditRule(index) }
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
                                         label = "Delete",
-                                        focusRequester = deleteFocusRequester,
+                                        focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { editFocusRequester.requestFocus() },
-                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                            onMoveLeft = { focusTargets.edit.requestFocus() },
+                                            onMoveRight = { focusTargets.toggle.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: false }
                                         ),
                                         onClick = { deleteRuleId = ruleset.id }
                                     )
@@ -406,10 +431,13 @@ fun RoutingSettingScreen(
                                             viewModel.update(index, updated)
                                         },
                                         label = stringResource(R.string.routing_settings_enable_rule),
-                                        focusRequester = switchFocusRequester,
+                                        focusRequester = focusTargets.toggle,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { deleteFocusRequester.requestFocus() },
-                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                            onMoveLeft = { focusTargets.delete.requestFocus() },
+                                            onMoveRight = { focusTargets.toggle.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: false }
                                         )
                                     )
                                 }

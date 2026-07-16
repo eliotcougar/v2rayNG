@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -65,6 +64,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
@@ -115,6 +115,14 @@ class SubSettingActivity : BaseComponentActivity() {
     }
 }
 
+private class SubscriptionRowFocusTargets {
+    val row = FocusRequester()
+    val share = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+    val toggle = FocusRequester()
+}
+
 @Composable
 fun SubSettingScreen(
     viewModel: SubscriptionsViewModel,
@@ -130,6 +138,9 @@ fun SubSettingScreen(
     val isTelevision = isTelevisionDevice()
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
     var showUpdateDialog by remember { mutableStateOf(false) }
+    val rowFocusTargets = remember(subscriptions.map { it.guid }) {
+        subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
+    }
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
@@ -178,12 +189,12 @@ fun SubSettingScreen(
             itemsIndexed(
                 items = subscriptions,
                 key = { _, item -> item.guid }
-            ) { _, subCache ->
-                val rowFocusRequester = remember(subCache.guid) { FocusRequester() }
-                val shareFocusRequester = remember(subCache.guid) { FocusRequester() }
-                val editFocusRequester = remember(subCache.guid) { FocusRequester() }
-                val deleteFocusRequester = remember(subCache.guid) { FocusRequester() }
-                val switchFocusRequester = remember(subCache.guid) { FocusRequester() }
+            ) { index, subCache ->
+                val focusTargets = rowFocusTargets.getValue(subCache.guid)
+                val previousSub = subscriptions.getOrNull(index - 1)
+                val previousTargets = previousSub?.let { rowFocusTargets[it.guid] }
+                val nextSub = subscriptions.getOrNull(index + 1)
+                val nextTargets = nextSub?.let { rowFocusTargets[it.guid] }
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
                     ReorderableListItem(
                         scope = this,
@@ -201,16 +212,16 @@ fun SubSettingScreen(
                                                 shape = RoundedCornerShape(16.dp)
                                             )
                                             .dpadFocusOutline(
-                                                focusRequester = rowFocusRequester,
+                                                focusRequester = focusTargets.row,
                                                 cornerRadius = 16.dp
                                             )
                                             .dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { rowFocusRequester.requestFocus() },
+                                                onMoveLeft = { focusTargets.row.requestFocus() },
                                                 onMoveRight = {
                                                     if (subCache.subscription.url.isNotEmpty()) {
-                                                        shareFocusRequester.requestFocus()
+                                                        focusTargets.share.requestFocus()
                                                     } else {
-                                                        editFocusRequester.requestFocus()
+                                                        focusTargets.edit.requestFocus()
                                                     }
                                                 }
                                             )
@@ -256,10 +267,21 @@ fun SubSettingScreen(
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_share_24dp),
                                             label = stringResource(R.string.acc_share_subscription),
-                                            focusRequester = shareFocusRequester,
+                                            focusRequester = focusTargets.share,
                                             modifier = Modifier.dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { rowFocusRequester.requestFocus() },
-                                                onMoveRight = { editFocusRequester.requestFocus() }
+                                                onMoveLeft = { focusTargets.row.requestFocus() },
+                                                onMoveRight = { focusTargets.edit.requestFocus() }
+                                            ).dpadVerticalFocusNavigation(
+                                                onMoveUp = {
+                                                    if (previousSub?.subscription?.url?.isNotEmpty() == true) {
+                                                        previousTargets?.share?.requestFocus() ?: false
+                                                    } else false
+                                                },
+                                                onMoveDown = {
+                                                    if (nextSub?.subscription?.url?.isNotEmpty() == true) {
+                                                        nextTargets?.share?.requestFocus() ?: false
+                                                    } else false
+                                                }
                                             ),
                                             onClick = {
                                                 shareTarget = Pair(subCache.guid, subCache.subscription.url)
@@ -269,26 +291,32 @@ fun SubSettingScreen(
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = stringResource(R.string.acc_edit),
-                                        focusRequester = editFocusRequester,
+                                        focusRequester = focusTargets.edit,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = {
                                                 if (subCache.subscription.url.isNotEmpty()) {
-                                                    shareFocusRequester.requestFocus()
+                                                    focusTargets.share.requestFocus()
                                                 } else {
-                                                    rowFocusRequester.requestFocus()
+                                                    focusTargets.row.requestFocus()
                                                 }
                                             },
-                                            onMoveRight = { deleteFocusRequester.requestFocus() }
+                                            onMoveRight = { focusTargets.delete.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: false }
                                         ),
                                         onClick = { onEditSub(subCache.guid) }
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
                                         label = stringResource(R.string.acc_delete),
-                                        focusRequester = deleteFocusRequester,
+                                        focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { editFocusRequester.requestFocus() },
-                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                            onMoveLeft = { focusTargets.edit.requestFocus() },
+                                            onMoveRight = { focusTargets.toggle.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: false }
                                         ),
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
@@ -304,10 +332,13 @@ fun SubSettingScreen(
                                             viewModel.update(subCache.guid, updated)
                                         },
                                         label = stringResource(R.string.sub_setting_enable),
-                                        focusRequester = switchFocusRequester,
+                                        focusRequester = focusTargets.toggle,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { deleteFocusRequester.requestFocus() },
-                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                            onMoveLeft = { focusTargets.delete.requestFocus() },
+                                            onMoveRight = { focusTargets.toggle.requestFocus() }
+                                        ).dpadVerticalFocusNavigation(
+                                            onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
+                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: false }
                                         )
                                     )
                                 }

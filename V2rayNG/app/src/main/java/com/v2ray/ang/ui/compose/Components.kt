@@ -189,7 +189,8 @@ fun AppIconButton(
             .background(containerColor, shape)
             .dpadFocusOutline(
                 focusRequester = focusRequester,
-                cornerRadius = 24.dp
+                cornerRadius = 24.dp,
+                focusContainerColor = containerColor.takeUnless { it == Color.Transparent }
             )
             .onFocusChanged { isFocused = it.isFocused }
             .animateContentSize()

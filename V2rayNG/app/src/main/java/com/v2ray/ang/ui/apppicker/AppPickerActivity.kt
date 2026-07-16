@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +34,8 @@ import com.v2ray.ang.compose.AppListItem
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
@@ -129,6 +132,8 @@ fun AppPickerScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val searchFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -158,6 +163,11 @@ fun AppPickerScreen(
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
+                            focusRequester = searchFocusRequester,
+                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            ),
                             onClick = { showSearch = true }
                         )
                     }
@@ -165,12 +175,21 @@ fun AppPickerScreen(
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
                             label = stringResource(R.string.acc_more),
+                            focusRequester = moreFocusRequester,
+                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            ),
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                                showMenu = false
+                                searchFocusRequester.requestFocus()
+                            })
                         ) {
                             AppDropdownMenuItems(AppPickerMenuAction.entries, { it.labelRes }) { action ->
                                 showMenu = false

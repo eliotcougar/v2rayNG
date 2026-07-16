@@ -29,6 +29,7 @@
     <string name="menu_item_save_config">Save config</string>
     <string name="menu_item_edit_config">Edit config</string>
     <string name="menu_item_del_config">Delete config</string>
+    <string name="action_delete">Delete</string>
     <string name="menu_item_import_config_qrcode">Import from QR code</string>
     <string name="menu_item_import_config_clipboard">Import from Clipboard</string>
     <string name="menu_item_import_config_local">Import from a local file</string>
@@ -162,8 +163,8 @@
     <string name="menu_item_export_proxy_app">Export to Clipboard</string>
     <string name="menu_item_import_proxy_app">Import from Clipboard</string>
     <string name="per_app_proxy_settings">Per-app settings</string>
-    <string name="per_app_proxy_settings_enable">Enable per-app</string>
-    <string name="app_picker_unknown_app">Unknown app (UID not recognized)</string>
+    <string name="per_app_proxy_settings_enable">Per-app routing</string>
+    <string name="app_picker_unknown_app">Unknown app (unidentified UID)</string>
 
     <!-- Preferences -->
     <string name="title_settings">Settings</string>
@@ -171,7 +172,7 @@
     <string name="title_core_settings">Core Settings</string>
     <string name="title_vpn_settings">VPN Settings</string>
     <string name="title_pref_per_app_proxy">Per-app proxy</string>
-    <string name="summary_pref_per_app_proxy">General: checked apps use the proxy, and unchecked apps connect directly;\nBypass mode: checked apps connect directly, and unchecked apps use the proxy.\nThe option to automatically select apps that should use the proxy is in the menu.</string>
+    <string name="summary_pref_per_app_proxy">Per-app routing controls which apps use the VPN.\n\nIn General mode, selected apps use the VPN and unselected apps connect directly. In Bypass mode, selected apps connect directly and unselected apps use the VPN. Automatic app selection is available from More.</string>
     <string name="title_pref_is_booted">Auto connect at startup</string>
     <string name="summary_pref_is_booted">Automatically connects to the selected server at startup, which may be unsuccessful</string>
 
@@ -321,8 +322,8 @@
     <string name="title_del_duplicate_config">Delete duplicate configs</string>
     <string name="title_del_invalid_config">Delete invalid configs</string>
     <string name="title_export_all">Export configs to clipboard</string>
-    <string name="title_sub_setting">Subscriptions</string>
     <string name="sub_setting_remarks">Remarks</string>
+    <string name="title_sub_setting">Subscription group settings</string>
     <string name="sub_setting_url">Optional URL</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
     <string name="sub_setting_request_headers">Request Headers (JSON format)</string>
@@ -336,9 +337,9 @@
     <string name="sub_setting_entry_proxy_tip">The selected proxy is added before every profile in this subscription as the entry link in the proxy chain for that profile.</string>
     <string name="sub_setting_exit_proxy_tip">The selected proxy is added after every profile in this subscription as the exit link in the proxy chain for that profile.</string>
     <string name="toast_invalid_update_interval">Invalid update interval. Minimum is 15 minutes.</string>
-    <string name="title_sub_update">Update subscription</string>
-    <string name="title_ping_all_server">Test TCP delays (TCPing)</string>
-    <string name="title_real_ping_all_server">Test real delays</string>
+    <string name="title_sub_update">Update subscriptions</string>
+    <string name="title_ping_all_server">Tcping config</string>
+    <string name="title_real_ping_all_server">Real delay config</string>
     <string name="title_user_asset_setting">Asset files</string>
     <string name="title_sort_by_test_results">Sort by test results</string>
     <string name="title_filter_config">Filter configs</string>

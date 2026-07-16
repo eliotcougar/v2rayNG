@@ -29,6 +29,7 @@
     <string name="menu_item_save_config">Сохранить профиль</string>
     <string name="menu_item_edit_config">Изменить профиль</string>
     <string name="menu_item_del_config">Удалить профиль</string>
+    <string name="action_delete">Удалить</string>
     <string name="menu_item_import_config_qrcode">Импорт из QR-кода</string>
     <string name="menu_item_import_config_clipboard">Импорт из буфера обмена</string>
     <string name="menu_item_import_config_local">Импорт из файла</string>
