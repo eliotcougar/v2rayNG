@@ -266,7 +266,7 @@ fun SubSettingScreen(
                                     if (subCache.subscription.url.isNotEmpty()) {
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_share_24dp),
-                                            label = stringResource(R.string.acc_share_subscription),
+                                            label = stringResource(R.string.action_share),
                                             focusRequester = focusTargets.share,
                                             modifier = Modifier.dpadHorizontalFocusNavigation(
                                                 onMoveLeft = { focusTargets.row.requestFocus() },
@@ -290,7 +290,7 @@ fun SubSettingScreen(
                                     }
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
-                                        label = stringResource(R.string.acc_edit),
+                                        label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = {
@@ -309,7 +309,7 @@ fun SubSettingScreen(
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
-                                        label = stringResource(R.string.acc_delete),
+                                        label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = { focusTargets.edit.requestFocus() },
@@ -351,7 +351,7 @@ fun SubSettingScreen(
                                         if (subCache.subscription.url.isNotEmpty()) {
                                             AppIconButton(
                                                 icon = painterResource(R.drawable.ic_share_24dp),
-                                                label = "Share",
+                                                label = stringResource(R.string.action_share),
                                                 onClick = {
                                                     shareTarget = Pair(
                                                         subCache.guid,
@@ -362,12 +362,12 @@ fun SubSettingScreen(
                                         }
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_edit_24dp),
-                                            label = "Edit",
+                                            label = stringResource(R.string.action_edit),
                                             onClick = { onEditSub(subCache.guid) }
                                         )
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_delete_24dp),
-                                            label = "Delete",
+                                            label = stringResource(R.string.action_delete),
                                             onClick = {
                                                 if (confirmRemove) removeTarget = subCache.guid
                                                 else onRemoveSub(subCache.guid)

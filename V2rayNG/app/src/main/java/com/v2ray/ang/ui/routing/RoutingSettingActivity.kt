@@ -267,7 +267,7 @@ fun RoutingSettingScreen(
                     Box {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
-                            label = stringResource(R.string.acc_more),
+                            label = stringResource(R.string.action_more),
                             focusRequester = moreFocusRequester,
                             onClick = { showMenu = true }
                         )
@@ -365,7 +365,7 @@ fun RoutingSettingScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Icon(
                                             painter = painterResource(R.drawable.ic_lock_24dp),
-                                            contentDescription = "Locked",
+                                            contentDescription = stringResource(R.string.action_locked),
                                             modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -399,7 +399,7 @@ fun RoutingSettingScreen(
                                 ) {
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
-                                        label = "Edit",
+                                        label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = { focusTargets.row.requestFocus() },
@@ -412,7 +412,7 @@ fun RoutingSettingScreen(
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
-                                        label = "Delete",
+                                        label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadHorizontalFocusNavigation(
                                             onMoveLeft = { focusTargets.edit.requestFocus() },
@@ -448,7 +448,7 @@ fun RoutingSettingScreen(
                                 ) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_edit_24dp),
-                                    label = "Edit",
+                                    label = stringResource(R.string.action_edit),
                                     onClick = { onEditRule(index) }
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))

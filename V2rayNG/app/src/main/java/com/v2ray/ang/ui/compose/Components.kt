@@ -121,7 +121,7 @@ fun AppTopBar(
                 } else {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_arrow_back_24dp),
-                        label = stringResource(R.string.acc_back),
+                        label = stringResource(R.string.action_back),
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
                         focusRequester = navigationFocusRequester
                     )
@@ -329,7 +329,7 @@ private fun SearchInputField(
         if (query.isNotEmpty()) {
             AppIconButton(
                 icon = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
-                label = "Clear",
+                label = stringResource(R.string.action_clear),
                 onClick = { onQueryChange("") }
             )
         }

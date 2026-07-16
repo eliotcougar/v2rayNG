@@ -199,8 +199,12 @@ fun PerAppProxyScreen(
                     Box {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
-                            label = stringResource(R.string.acc_more),
-                            contentDescription = if (isTelevision) stringResource(R.string.acc_more) else null,
+                            label = stringResource(R.string.action_more),
+                            contentDescription = if (isTelevision) {
+                                stringResource(R.string.action_more)
+                            } else {
+                                null
+                            },
                             focusRequester = moreFocusRequester,
                             modifier = Modifier.dpadHorizontalFocusNavigation(
                                 onMoveLeft = { searchFocusRequester.requestFocus() },
@@ -323,7 +327,7 @@ fun PerAppProxyScreen(
                     }
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_about_24dp),
-                        label = stringResource(R.string.acc_per_app_proxy_information),
+                        label = stringResource(R.string.action_info),
                         onClick = {
                             if (isTelevision) showInfoPopup = true else onInfoClick()
                         },

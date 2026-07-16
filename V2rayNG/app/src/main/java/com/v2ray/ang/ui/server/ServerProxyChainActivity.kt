@@ -261,7 +261,10 @@ fun ProxyChainScreen(
                     .offset(y = -20.dp)
                     .navigationBarsPadding()
             ) {
-                Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_member))
+                Icon(
+                    painterResource(R.drawable.ic_add_24dp),
+                    contentDescription = stringResource(R.string.action_add_member)
+                )
             }
         }
     ) { innerPadding ->
@@ -327,7 +330,7 @@ fun ProxyChainScreen(
                             )
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_delete_24dp),
-                                label = stringResource(R.string.acc_remove),
+                                label = stringResource(R.string.action_remove),
                                 onClick = {
                                     if (member.isBlank()) {
                                         members = members.toMutableList().also { it.removeAt(index) }

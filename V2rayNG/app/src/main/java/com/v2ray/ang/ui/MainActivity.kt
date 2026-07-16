@@ -660,7 +660,11 @@ private fun MainBottomBar(
             Icon(
                 painter = if (isRunning) painterResource(R.drawable.ic_stop_24dp)
                 else painterResource(R.drawable.ic_play_24dp),
-                contentDescription = if (isRunning) "Stop" else "Start",
+                contentDescription = if (isRunning) {
+                    stringResource(R.string.action_stop_service)
+                } else {
+                    stringResource(R.string.tasker_start_service)
+                },
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
@@ -1456,7 +1460,7 @@ fun MainScreen(
                         if (showSearch) {
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_arrow_back_24dp),
-                                label = "Back",
+                                label = stringResource(R.string.action_back),
                                 onClick = {
                                     searchQuery = ""
                                     mainViewModel.filterConfig("")
@@ -1468,7 +1472,7 @@ fun MainScreen(
                         } else if (!isTelevision) {
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_menu_24dp),
-                                label = "Menu",
+                                label = stringResource(R.string.action_menu),
                                 onClick = openDrawerWithoutRestore,
                                 focusRequester = navigationFocusRequester,
                                 modifier = topBarDownNavigationModifier
@@ -1521,7 +1525,7 @@ fun MainScreen(
                                 contentDescription = if (isTelevision) {
                                     stringResource(R.string.menu_item_search)
                                 } else {
-                                    "filter"
+                                    stringResource(R.string.menu_item_search)
                                 },
                                 focusRequester = searchFocusRequester,
                                 modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
@@ -1543,7 +1547,7 @@ fun MainScreen(
                                 contentDescription = if (isTelevision) {
                                     stringResource(R.string.menu_item_search)
                                 } else {
-                                    "filter"
+                                    stringResource(R.string.menu_item_search)
                                 },
                                 modifier = topBarDownNavigationModifier,
                                 onClick = { showSearch = true }
@@ -1557,7 +1561,7 @@ fun MainScreen(
                                     contentDescription = if (isTelevision) {
                                         stringResource(R.string.menu_item_add_config)
                                     } else {
-                                        "Add"
+                                        stringResource(R.string.menu_item_add_config)
                                     },
                                     focusRequester = addFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
@@ -1627,8 +1631,12 @@ fun MainScreen(
                             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_more_vert_24dp),
-                                    label = "More",
-                                    contentDescription = if (isTelevision) "More" else null,
+                                    label = stringResource(R.string.action_more),
+                                    contentDescription = if (isTelevision) {
+                                        stringResource(R.string.action_more)
+                                    } else {
+                                        null
+                                    },
                                     focusRequester = moreFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
                                         onMoveLeft = { addFocusRequester.requestFocus() },
@@ -2118,8 +2126,12 @@ private fun ServerListItem(
                 if (doubleColumnDisplay) {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_more_vert_24dp),
-                        label = "More",
-                        contentDescription = if (isTelevision) "More" else null,
+                        label = stringResource(R.string.action_more),
+                        contentDescription = if (isTelevision) {
+                            stringResource(R.string.action_more)
+                        } else {
+                            null
+                        },
                         onClick = onMore,
                         focusRequester = focusTargets.more,
                         modifier = compactActionModifier.tvHorizontalFocusNavigation(

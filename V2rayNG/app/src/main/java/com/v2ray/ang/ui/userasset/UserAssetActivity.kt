@@ -286,7 +286,7 @@ internal fun UserAssetScreen(
                 navigationIcon = {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_arrow_back_24dp),
-                        label = "Back",
+                        label = stringResource(R.string.action_back),
                         onClick = onBackClick,
                         focusRequester = backFocusRequester,
                         modifier = Modifier.dpadHorizontalFocusNavigation(

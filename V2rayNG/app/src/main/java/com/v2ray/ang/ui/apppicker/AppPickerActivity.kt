@@ -174,7 +174,7 @@ fun AppPickerScreen(
                     Box {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
-                            label = stringResource(R.string.acc_more),
+                            label = stringResource(R.string.action_more),
                             focusRequester = moreFocusRequester,
                             modifier = Modifier.dpadHorizontalFocusNavigation(
                                 onMoveLeft = { searchFocusRequester.requestFocus() },
