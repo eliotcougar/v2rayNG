@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -46,23 +47,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppIconButton
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.ItemDivider
-import com.v2ray.ang.compose.QRCodeDialog
-import com.v2ray.ang.compose.ReorderableListItem
-import com.v2ray.ang.compose.SelectListDialog
-import com.v2ray.ang.compose.SettingsSwitchItem
-import com.v2ray.ang.compose.colorFabActive
-import com.v2ray.ang.compose.dpadFocusOutline
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
-import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
@@ -74,6 +63,7 @@ import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
@@ -255,11 +245,11 @@ fun SubSettingScreen(
                                 )
                             }
 
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                modifier = Modifier.padding(start = 8.dp)
-                            ) {
-                                Row {
+                            if (isTelevision) {
+                                Row(
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     if (subCache.subscription.url.isNotEmpty()) {
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_share_24dp),
@@ -300,34 +290,76 @@ fun SubSettingScreen(
                                             else onRemoveSub(subCache.guid)
                                         }
                                     )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Switch(
-                                    checked = subCache.subscription.enabled,
-                                    onCheckedChange = { checked ->
-                                        val updated = subCache.subscription.copy()
-                                        updated.enabled = checked
-                                        viewModel.update(subCache.guid, updated)
-                                    },
-                                    modifier = Modifier
-                                        .then(
-                                            if (isTelevision) {
-                                                Modifier.dpadFocusOutline(
-                                                    focusRequester = switchFocusRequester,
-                                                    cornerRadius = 24.dp
-                                                ).dpadHorizontalFocusNavigation(
-                                                    onMoveLeft = { deleteFocusRequester.requestFocus() },
-                                                    onMoveRight = { switchFocusRequester.requestFocus() }
-                                                )
-                                            } else {
-                                                Modifier.scale(0.7f)
-                                            }
-                                        ),
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                        checkedTrackColor = MaterialTheme.colorScheme.secondary
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Switch(
+                                        checked = subCache.subscription.enabled,
+                                        onCheckedChange = { checked ->
+                                            val updated = subCache.subscription.copy()
+                                            updated.enabled = checked
+                                            viewModel.update(subCache.guid, updated)
+                                        },
+                                        modifier = Modifier
+                                            .dpadFocusOutline(
+                                                focusRequester = switchFocusRequester,
+                                                cornerRadius = 24.dp
+                                            )
+                                            .dpadHorizontalFocusNavigation(
+                                                onMoveLeft = { deleteFocusRequester.requestFocus() },
+                                                onMoveRight = { switchFocusRequester.requestFocus() }
+                                            ),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                            checkedTrackColor = MaterialTheme.colorScheme.secondary
+                                        )
                                     )
-                                )
+                                }
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Row {
+                                        if (subCache.subscription.url.isNotEmpty()) {
+                                            AppIconButton(
+                                                icon = painterResource(R.drawable.ic_share_24dp),
+                                                label = "Share",
+                                                onClick = {
+                                                    shareTarget = Pair(
+                                                        subCache.guid,
+                                                        subCache.subscription.url
+                                                    )
+                                                }
+                                            )
+                                        }
+                                        AppIconButton(
+                                            icon = painterResource(R.drawable.ic_edit_24dp),
+                                            label = "Edit",
+                                            onClick = { onEditSub(subCache.guid) }
+                                        )
+                                        AppIconButton(
+                                            icon = painterResource(R.drawable.ic_delete_24dp),
+                                            label = "Delete",
+                                            onClick = {
+                                                if (confirmRemove) removeTarget = subCache.guid
+                                                else onRemoveSub(subCache.guid)
+                                            }
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Switch(
+                                        checked = subCache.subscription.enabled,
+                                        onCheckedChange = { checked ->
+                                            val updated = subCache.subscription.copy()
+                                            updated.enabled = checked
+                                            viewModel.update(subCache.guid, updated)
+                                        },
+                                        modifier = Modifier.scale(0.7f),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                            checkedTrackColor = MaterialTheme.colorScheme.secondary
+                                        )
+                                    )
+                                }
                             }
                         }
                     }

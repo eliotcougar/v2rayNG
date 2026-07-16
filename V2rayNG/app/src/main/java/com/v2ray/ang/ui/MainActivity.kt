@@ -91,6 +91,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -833,6 +834,7 @@ private fun GroupTabBar(
     mainViewModel: MainViewModel,
     onTabClick: (Int) -> Unit,
     onOpenDrawer: (FocusRequester) -> Unit,
+    onMoveUp: () -> Unit,
     tabFocusRequesters: List<FocusRequester>,
     modifier: Modifier = Modifier
 ) {
@@ -879,6 +881,10 @@ private fun GroupTabBar(
                                 ?: onOpenDrawer(tabFocusRequesters[index])
                         },
                         onRight = { tabFocusRequesters.getOrNull(rightTarget)?.requestFocus() }
+                    )
+                    .tvMoveUpNavigation(
+                        isTelevision = true,
+                        onMoveUp = onMoveUp
                     )
             } else {
                 Modifier
@@ -1046,10 +1052,12 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val drawerFocusRequesters = remember { List(10) { FocusRequester() } }
-    LaunchedEffect(drawerState.isOpen) {
-        if (drawerState.isOpen) {
-            delay(350L)
-            drawerFocusRequesters.first().requestFocus()
+    LaunchedEffect(drawerState.targetValue) {
+        if (drawerState.targetValue == DrawerValue.Open) {
+            repeat(8) {
+                if (drawerFocusRequesters.first().requestFocus()) return@LaunchedEffect
+                withFrameNanos { }
+            }
         }
     }
     val scope = rememberCoroutineScope()
@@ -1250,8 +1258,7 @@ fun MainScreen(
         QRCodeDialog(bitmap = showQRCodeBitmap, onDismiss = { showQRCodeBitmap = null })
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        ModalNavigationDrawer(
+    ModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = {
             ModalDrawerSheet(
@@ -1379,6 +1386,7 @@ fun MainScreen(
             }
             }
         ) {
+            Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
@@ -1399,6 +1407,25 @@ fun MainScreen(
                         showSearch = false
                     },
                     searchPlaceholder = stringResource(R.string.menu_item_search),
+                    titleContent = if (isTelevision) {
+                        {
+                            Box(
+                                modifier = Modifier.height(48.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.app_name),
+                                    fontFamily = FontFamily(Font(R.font.montserrat_thin)),
+                                    fontWeight = FontWeight.Thin,
+                                    fontSize = 40.sp,
+                                    lineHeight = 48.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
                     navigationIcon = { navigationFocusRequester ->
                         if (showSearch) {
                             AppIconButton(
@@ -1642,6 +1669,7 @@ fun MainScreen(
                             mainViewModel = mainViewModel,
                             tabFocusRequesters = groupTabFocusRequesters,
                             onOpenDrawer = openDrawerFrom,
+                            onMoveUp = { startFocusRequester.requestFocus() },
                             onTabClick = { targetIndex ->
                                 scope.launch {
                                     pagerState.navigateToPageOptimized(
@@ -1695,7 +1723,7 @@ fun MainScreen(
                             },
                             contentPadding = PaddingValues(
                                 start = if (isTelevision) 48.dp else 0.dp,
-                                top = if (isTelevision) 12.dp else 0.dp,
+                                top = if (isTelevision) 16.dp else 0.dp,
                                 end = if (isTelevision) 48.dp else 0.dp,
                                 bottom = 80.dp
                             )
@@ -1703,12 +1731,12 @@ fun MainScreen(
                     }
                 }
             }
-        }
-        }
-        if (isTelevision && drawerState.isClosed && !showSearch) {
-            TvDrawerEdgePeek(
-                modifier = Modifier.align(Alignment.CenterStart)
-            )
+            }
+            if (isTelevision && !showSearch) {
+                TvDrawerEdgePeek(
+                    modifier = Modifier.align(Alignment.CenterStart)
+                )
+            }
         }
     }
 }

@@ -4,6 +4,8 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -54,6 +58,9 @@ import com.v2ray.ang.compose.SelectListDialog
 import com.v2ray.ang.compose.SettingsListItem
 import com.v2ray.ang.compose.colorConfigType
 import com.v2ray.ang.compose.colorFabActive
+import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.enums.RoutingType
@@ -212,6 +219,7 @@ fun RoutingSettingScreen(
     onImportQRcode: () -> Unit,
     onExportClipboard: () -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
     val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
@@ -282,33 +290,152 @@ fun RoutingSettingScreen(
                     onSelected = { onDomainStrategySelected(it) }
                 )
             }
-            item {
-                Text(
-                    text = stringResource(R.string.routing_settings_rule_title),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
 
             itemsIndexed(
                 items = rulesets,
                 key = { _, ruleset -> ruleset.id }
             ) { index, ruleset ->
+                val rowFocusRequester = remember(ruleset.id) { FocusRequester() }
+                val editFocusRequester = remember(ruleset.id) { FocusRequester() }
+                val switchFocusRequester = remember(ruleset.id) { FocusRequester() }
                 ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
                     ReorderableListItem(
                         scope = this,
                         isDragging = isDragging
                     ) {
-                        RoutingRulesetItem(
-                            ruleset = ruleset,
-                            onEdit = { onEditRule(index) },
-                            onEnabledChange = { checked ->
-                                val updated = ruleset.copy(enabled = checked)
-                                viewModel.update(index, updated)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (isTelevision) {
+                                        Modifier
+                                            .padding(vertical = 8.dp)
+                                            .background(
+                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                shape = RoundedCornerShape(16.dp)
+                                            )
+                                            .dpadFocusOutline(
+                                                focusRequester = rowFocusRequester,
+                                                cornerRadius = 16.dp
+                                            )
+                                            .dpadHorizontalFocusNavigation(
+                                                onMoveLeft = { rowFocusRequester.requestFocus() },
+                                                onMoveRight = { editFocusRequester.requestFocus() }
+                                            )
+                                            .clickable { onEditRule(index) }
+                                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                                    } else {
+                                        Modifier.padding(horizontal = 16.dp)
+                                    }
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = ruleset.remarks ?: "",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (ruleset.locked == true) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_lock_24dp),
+                                            contentDescription = "Locked",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                val domainIpInfo = (ruleset.domain ?: ruleset.ip ?: ruleset.process ?: ruleset.port)?.toString() ?: ""
+                                if (domainIpInfo.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = domainIpInfo,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                if (!ruleset.outboundTag.isNullOrEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = ruleset.outboundTag,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = colorConfigType
+                                    )
+                                }
                             }
-                        )
+
+                            if (isTelevision) {
+                                Row(
+                                    modifier = Modifier.padding(start = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    AppIconButton(
+                                        icon = painterResource(R.drawable.ic_edit_24dp),
+                                        label = "Edit",
+                                        focusRequester = editFocusRequester,
+                                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                                            onMoveLeft = { rowFocusRequester.requestFocus() },
+                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                        ),
+                                        onClick = { onEditRule(index) }
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Switch(
+                                        checked = ruleset.enabled ?: false,
+                                        onCheckedChange = { checked ->
+                                            val updated = ruleset.copy(enabled = checked)
+                                            viewModel.update(index, updated)
+                                        },
+                                        modifier = Modifier
+                                            .dpadFocusOutline(
+                                                focusRequester = switchFocusRequester,
+                                                cornerRadius = 24.dp
+                                            )
+                                            .dpadHorizontalFocusNavigation(
+                                                onMoveLeft = { editFocusRequester.requestFocus() },
+                                                onMoveRight = { switchFocusRequester.requestFocus() }
+                                            ),
+                                        colors = SwitchDefaults.colors(
+                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                            checkedTrackColor = colorFabActive
+                                        )
+                                    )
+                                }
+                            } else {
+                                Column(
+                                    horizontalAlignment = Alignment.End,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_edit_24dp),
+                                    label = "Edit",
+                                    onClick = { onEditRule(index) }
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Switch(
+                                    checked = ruleset.enabled ?: false,
+                                    onCheckedChange = { checked ->
+                                        val updated = ruleset.copy(enabled = checked)
+                                        viewModel.update(index, updated)
+                                    },
+                                    modifier = Modifier.scale(0.7f),
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                        checkedTrackColor = colorFabActive
+                                    )
+                                )
+                                }
+                            }
+                        }
                     }
-                    ItemDivider()
+                    if (!isTelevision) {
+                        ItemDivider()
+                    }
                 }
             }
         }
