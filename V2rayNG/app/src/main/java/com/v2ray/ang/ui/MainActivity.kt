@@ -1131,6 +1131,7 @@ fun MainScreen(
     val testFocusRequester = remember { FocusRequester() }
     val searchFocusRequester = remember { FocusRequester() }
     val addFocusRequester = remember { FocusRequester() }
+    val restartFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
     val lifecycleOwner = LocalLifecycleOwner.current
     var resumeFocusGeneration by remember { mutableIntStateOf(0) }
@@ -1543,7 +1544,7 @@ fun MainScreen(
                             )
                             if (isRunning) {
                                 AppIconButton(
-                                    icon = painterResource(R.drawable.ic_check_update_24dp),
+                                    icon = painterResource(R.drawable.ic_stopwatch_24dp),
                                     label = stringResource(R.string.connection_test_pending),
                                     focusRequester = testFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
@@ -1600,7 +1601,7 @@ fun MainScreen(
                                     focusRequester = addFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
                                         onMoveLeft = { searchFocusRequester.requestFocus() },
-                                        onMoveRight = { moreFocusRequester.requestFocus() }
+                                        onMoveRight = { restartFocusRequester.requestFocus() }
                                     ),
                                     onClick = { showImportMenu = true }
                                 )
@@ -1662,6 +1663,18 @@ fun MainScreen(
                                     }
                                 }
                             }
+                            if (isTelevision) {
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_restore_24dp),
+                                    label = stringResource(R.string.title_service_restart),
+                                    focusRequester = restartFocusRequester,
+                                    modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                        onMoveLeft = { addFocusRequester.requestFocus() },
+                                        onMoveRight = { moreFocusRequester.requestFocus() }
+                                    ),
+                                    onClick = onRestartService
+                                )
+                            }
                             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_more_vert_24dp),
@@ -1673,7 +1686,7 @@ fun MainScreen(
                                     },
                                     focusRequester = moreFocusRequester,
                                     modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
-                                        onMoveLeft = { addFocusRequester.requestFocus() },
+                                        onMoveLeft = { restartFocusRequester.requestFocus() },
                                         onMoveRight = { moreFocusRequester.requestFocus() }
                                     ),
                                     onClick = { showMenu = true }
@@ -1687,14 +1700,16 @@ fun MainScreen(
                                         .heightIn(max = maxMenuHeight)
                                         .dpadPopupHorizontalNavigation(onMovePrevious = {
                                             showMenu = false
-                                            addFocusRequester.requestFocus()
+                                            restartFocusRequester.requestFocus()
                                         })
                                         .verticalScrollbar(moreMenuScrollState)
                                 ) {
                                     buildList<Pair<Int, () -> Unit>> {
-                                        add(R.string.title_service_restart to {
-                                            showMenu = false; onRestartService()
-                                        })
+                                        if (!isTelevision) {
+                                            add(R.string.title_service_restart to {
+                                                showMenu = false; onRestartService()
+                                            })
+                                        }
                                         add(R.string.title_del_invalid_config to {
                                             showMenu = false; showDelInvalidConfirm = true
                                         })

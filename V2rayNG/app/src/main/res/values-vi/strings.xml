@@ -161,7 +161,9 @@
     <string name="menu_item_add_url">Thêm URL</string>
     <string name="menu_item_scan_qrcode">Quét mã QR</string>
     <string name="title_url" translatable="false">URL</string>
-    <string name="menu_item_download_file">Tải xuống tệp tin</string>
+    <string name="menu_item_download_file">Tải xuống tệp địa lý</string>
+    <string name="menu_item_edit_asset">Sửa tài nguyên</string>
+    <string name="menu_item_del_asset">Xóa tài nguyên</string>
     <string name="title_user_asset_add_url">Thêm URL tài nguyên</string>
     <string name="msg_file_not_found">Không tìm thấy tập tin!</string>
     <string name="msg_remark_is_duplicate">Tên này đã tồn tại!</string>

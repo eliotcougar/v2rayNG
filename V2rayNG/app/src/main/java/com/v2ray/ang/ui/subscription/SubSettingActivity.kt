@@ -166,8 +166,8 @@ fun SubSettingScreen(
                         onClick = onAddClick
                     )
                     AppIconButton(
-                        icon = painterResource(R.drawable.ic_restore_24dp),
-                        label = stringResource(R.string.acc_update_subscriptions),
+                        icon = painterResource(R.drawable.ic_cloud_download_24dp),
+                        label = stringResource(R.string.title_sub_update),
                         onClick = { showUpdateDialog = true }
                     )
                 }

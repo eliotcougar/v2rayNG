@@ -161,7 +161,9 @@
     <string name="menu_item_add_url">URL যোগ করুন</string>
     <string name="menu_item_scan_qrcode">QR কোড স্ক্যান করুন</string>
     <string name="title_url" translatable="false">URL</string>
-    <string name="menu_item_download_file">ফাইল ডাউনলোড করুন</string>
+    <string name="menu_item_download_file">জিও ফাইল ডাউনলোড করুন</string>
+    <string name="menu_item_edit_asset">অ্যাসেট সম্পাদনা করুন</string>
+    <string name="menu_item_del_asset">অ্যাসেট মুছুন</string>
     <string name="title_user_asset_add_url">অ্যাসেট URL যোগ করুন</string>
     <string name="msg_file_not_found">ফাইল খুঁজে পাওয়া যায়নি</string>
     <string name="msg_remark_is_duplicate">মন্তব্য ইতিমধ্যে বিদ্যমান</string>
@@ -361,9 +363,9 @@
     <string name="sub_setting_entry_proxy_tip">নির্বাচিত প্রক্সিটি এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের আগে সেই প্রোফাইলের প্রক্সি চেইনের প্রবেশ লিঙ্ক হিসেবে যোগ করা হবে।</string>
     <string name="sub_setting_exit_proxy_tip">নির্বাচিত প্রক্সিটি এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের পরে সেই প্রোফাইলের প্রক্সি চেইনের প্রস্থান লিঙ্ক হিসেবে যোগ করা হবে।</string>
     <string name="toast_invalid_update_interval">আপডেটের বিরতি সঠিক নয়। সর্বনিম্ন ১৫ মিনিট।</string>
-    <string name="title_sub_update">সাবস্ক্রিপশন আপডেট</string>
-    <string name="title_ping_all_server">TCP বিলম্ব পরীক্ষা করুন (TCPing)</string>
-    <string name="title_real_ping_all_server">প্রকৃত বিলম্ব পরীক্ষা করুন</string>
+    <string name="title_sub_update">সাবস্ক্রিপশন আপডেট করুন</string>
+    <string name="title_ping_all_server">সব কনফিগারেশন TCPing</string>
+    <string name="title_real_ping_all_server">সব কনফিগারেশন প্রকৃত বিলম্ব</string>
     <string name="title_user_asset_setting">অ্যাসেট ফাইল</string>
     <string name="title_sort_by_test_results">টেস্ট ফলাফল দ্বারা সাজানো</string>
     <string name="title_filter_config">কনফিগারেশন ফাইল ফিল্টার করুন</string>

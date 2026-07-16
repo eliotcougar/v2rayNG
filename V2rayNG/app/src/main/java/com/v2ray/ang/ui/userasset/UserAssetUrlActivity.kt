@@ -157,7 +157,7 @@ fun UserAssetUrlScreen(
                     if (editAssetId.isNotEmpty()) {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_delete_24dp),
-                            label = stringResource(R.string.acc_delete),
+                            label = stringResource(R.string.menu_item_del_asset),
                             onClick = { showDeleteConfirm = true }
                         )
                     }

@@ -439,13 +439,13 @@ private fun UserAssetItem(
         if (showEditButton) {
             AppIconButton(
                 icon = painterResource(R.drawable.ic_edit_24dp),
-                label = stringResource(R.string.acc_edit),
+                label = stringResource(R.string.menu_item_edit_asset),
                 onClick = onEdit
             )
         }
         AppIconButton(
             icon = painterResource(R.drawable.ic_delete_24dp),
-            label = stringResource(R.string.acc_delete),
+            label = stringResource(R.string.menu_item_del_asset),
             onClick = onDeleteClick
         )
     }

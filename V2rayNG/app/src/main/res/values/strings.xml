@@ -161,7 +161,11 @@
     <string name="menu_item_add_url">Add URL</string>
     <string name="menu_item_scan_qrcode">Scan QR code</string>
     <string name="title_url" translatable="false">URL</string>
-    <string name="menu_item_download_file">Download files</string>
+    <string name="menu_item_download_file">Download geo files</string>
+
+    <string name="menu_item_edit_asset">Edit asset</string>
+
+    <string name="menu_item_del_asset">Delete asset</string>
     <string name="title_user_asset_add_url">Add asset URL</string>
     <string name="msg_file_not_found">File not found</string>
     <string name="msg_remark_is_duplicate">This name already exists</string>
@@ -336,9 +340,9 @@
     <string name="logcat_clear">Clear</string>
     <string name="logcat_share">Share log</string>
     <string name="title_service_restart">Restart service</string>
-    <string name="title_del_all_config">Delete configs</string>
-    <string name="title_del_duplicate_config">Delete duplicate configs</string>
-    <string name="title_del_invalid_config">Delete invalid configs</string>
+    <string name="title_del_all_config">Delete config</string>
+    <string name="title_del_duplicate_config">Delete duplicate config</string>
+    <string name="title_del_invalid_config">Delete invalid config</string>
     <string name="title_export_all">Export configs to clipboard</string>
     <string name="sub_setting_remarks">Remarks</string>
     <string name="title_sub_setting">Subscription group settings</string>
