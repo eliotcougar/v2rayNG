@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -137,6 +138,7 @@ import com.v2ray.ang.compose.colorFabInactiveDark
 import com.v2ray.ang.compose.colorFabInactiveLight
 import com.v2ray.ang.compose.colorPing
 import com.v2ray.ang.compose.colorPingRed
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.rememberDpadFocusRequester
@@ -800,7 +802,8 @@ private fun Modifier.tvMoveDownNavigation(
 private fun Modifier.tvDrawerFocusNavigation(
     isTelevision: Boolean,
     onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit
+    onMoveDown: () -> Unit,
+    onMoveRight: () -> Unit
 ): Modifier {
     if (!isTelevision) return this
     return onKeyEvent { event ->
@@ -814,6 +817,10 @@ private fun Modifier.tvDrawerFocusNavigation(
                 onMoveDown()
                 true
             }
+            Key.DirectionRight -> {
+                onMoveRight()
+                true
+            }
             else -> false
         }
     }
@@ -825,6 +832,7 @@ private fun GroupTabBar(
     selectedTabIndex: Int,
     mainViewModel: MainViewModel,
     onTabClick: (Int) -> Unit,
+    onOpenDrawer: (FocusRequester) -> Unit,
     tabFocusRequesters: List<FocusRequester>,
     modifier: Modifier = Modifier
 ) {
@@ -866,7 +874,10 @@ private fun GroupTabBar(
                     }
                     .tvHorizontalFocusNavigation(
                         isTelevision = true,
-                        onLeft = { tabFocusRequesters.getOrNull(leftTarget)?.requestFocus() },
+                        onLeft = {
+                            tabFocusRequesters.getOrNull(leftTarget)?.requestFocus()
+                                ?: onOpenDrawer(tabFocusRequesters[index])
+                        },
                         onRight = { tabFocusRequesters.getOrNull(rightTarget)?.requestFocus() }
                     )
             } else {
@@ -919,6 +930,31 @@ private fun GroupTabItem(
 }
 
 @Composable
+private fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .width(24.dp)
+            .height(88.dp),
+        shape = RoundedCornerShape(topEnd = 22.dp, bottomEnd = 22.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        border = BorderStroke(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+        ),
+        tonalElevation = 3.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(R.drawable.ic_menu_24dp),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun GroupPagerPage(
     groupId: String,
     mainViewModel: MainViewModel,
@@ -933,6 +969,7 @@ private fun GroupPagerPage(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onOpenDrawer: (FocusRequester) -> Unit,
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
@@ -959,6 +996,7 @@ private fun GroupPagerPage(
         onMoreServer = onMoreServer,
         onRemoveServer = onRemoveServer,
         onSwapServer = mainViewModel::swapServer,
+        onMoveLeftFromRow = onOpenDrawer,
         onMoveUpFromFirstRow = onMoveUpFromFirstRow,
         contentPadding = contentPadding
     )
@@ -1023,11 +1061,38 @@ fun MainScreen(
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
+    var mainFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
+    val openDrawerFrom: (FocusRequester) -> Unit = { focusRequester ->
+        mainFocusToRestore = focusRequester
+        scope.launch { drawerState.open() }
+    }
+    val openDrawerWithoutRestore: () -> Unit = {
+        mainFocusToRestore = null
+        scope.launch { drawerState.open() }
+    }
+    val closeDrawerAndRestore: () -> Unit = {
+        val focusRequester = mainFocusToRestore
+        scope.launch {
+            drawerState.close()
+            focusRequester?.requestFocus()
+        }
+    }
+    val startFocusRequester = rememberDpadFocusRequester(
+        requestFocus = isTelevision && !showSearch,
+        requestKey = showSearch
+    )
+    val testFocusRequester = remember { FocusRequester() }
+    val searchFocusRequester = remember { FocusRequester() }
+    val addFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
 
     BackHandler(enabled = isTelevision && showSearch) {
         searchQuery = ""
         mainViewModel.filterConfig("")
         showSearch = false
+    }
+    BackHandler(enabled = isTelevision && drawerState.isOpen) {
+        closeDrawerAndRestore()
     }
 
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
@@ -1185,9 +1250,10 @@ fun MainScreen(
         QRCodeDialog(bitmap = showQRCodeBitmap, onDismiss = { showQRCodeBitmap = null })
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
+    Box(modifier = Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier
                     .fillMaxWidth(if (isTelevision) 0.38f else 0.75f)
@@ -1217,7 +1283,10 @@ fun MainScreen(
                             Text(
                                 text = stringResource(R.string.app_name),
                                 style = if (isTelevision) {
-                                    MaterialTheme.typography.titleMedium
+                                    MaterialTheme.typography.titleLarge.copy(
+                                        fontFamily = FontFamily(Font(R.font.montserrat_thin)),
+                                        fontWeight = FontWeight.Thin
+                                    )
                                 } else {
                                     MaterialTheme.typography.headlineLarge.copy(
                                         fontFamily = FontFamily(Font(R.font.montserrat_thin)),
@@ -1261,7 +1330,11 @@ fun MainScreen(
                             onMoveDown = {
                                 drawerFocusRequesters[(index + 1).coerceAtMost(9)].requestFocus()
                             },
-                            onClick = { scope.launch { drawerState.close() }; onNavigate(route) }
+                            onMoveRight = closeDrawerAndRestore,
+                            onClick = {
+                                if (!isTelevision) scope.launch { drawerState.close() }
+                                onNavigate(route)
+                            }
                         )
                     }
                     AppDivider(modifier = Modifier.padding(vertical = 4.dp))
@@ -1295,19 +1368,24 @@ fun MainScreen(
                             onMoveDown = {
                                 drawerFocusRequesters[(focusIndex + 1).coerceAtMost(9)].requestFocus()
                             },
-                            onClick = { scope.launch { drawerState.close() }; onNavigate(route) }
+                            onMoveRight = closeDrawerAndRestore,
+                            onClick = {
+                                if (!isTelevision) scope.launch { drawerState.close() }
+                                onNavigate(route)
+                            }
                         )
                     }
                 }
             }
-        }
-    ) {
-        Scaffold(
+            }
+        ) {
+            Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {
                 AppTopBar(
                     title = stringResource(R.string.title_server),
                     onBackClick = {},
+                    initialFocus = !isTelevision,
                     isLoading = isLoading,
                     isSearchActive = showSearch,
                     searchQuery = searchQuery,
@@ -1334,11 +1412,11 @@ fun MainScreen(
                                 focusRequester = navigationFocusRequester,
                                 modifier = topBarDownNavigationModifier
                             )
-                        } else {
+                        } else if (!isTelevision) {
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_menu_24dp),
                                 label = "Menu",
-                                onClick = { scope.launch { drawerState.open() } },
+                                onClick = openDrawerWithoutRestore,
                                 focusRequester = navigationFocusRequester,
                                 modifier = topBarDownNavigationModifier
                             )
@@ -1358,14 +1436,22 @@ fun MainScreen(
                                     stringResource(R.string.tasker_start_service)
                                 },
                                 onClick = onFabClick,
-                                modifier = topBarDownNavigationModifier,
+                                focusRequester = startFocusRequester,
+                                modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                    onMoveLeft = { openDrawerFrom(startFocusRequester) },
+                                    onMoveRight = { testFocusRequester.requestFocus() }
+                                ),
                                 containerColor = if (isRunning) colorFabActive else Color.Transparent,
                                 contentColor = if (isRunning) Color.White else null
                             )
                             AppIconButton(
                                 icon = painterResource(R.drawable.ic_check_update_24dp),
                                 label = stringResource(R.string.connection_test_pending),
-                                modifier = topBarDownNavigationModifier,
+                                focusRequester = testFocusRequester,
+                                modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                    onMoveLeft = { startFocusRequester.requestFocus() },
+                                    onMoveRight = { searchFocusRequester.requestFocus() }
+                                ),
                                 onClick = onTestClick
                             )
                             AppIconButton(
@@ -1376,7 +1462,11 @@ fun MainScreen(
                                 } else {
                                     "filter"
                                 },
-                                modifier = topBarDownNavigationModifier,
+                                focusRequester = searchFocusRequester,
+                                modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                    onMoveLeft = { testFocusRequester.requestFocus() },
+                                    onMoveRight = { addFocusRequester.requestFocus() }
+                                ),
                                 onClick = { showSearch = true }
                             )
                         } else if (!showSearch) {
@@ -1402,7 +1492,11 @@ fun MainScreen(
                                     } else {
                                         "Add"
                                     },
-                                    modifier = topBarDownNavigationModifier,
+                                    focusRequester = addFocusRequester,
+                                    modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                        onMoveLeft = { searchFocusRequester.requestFocus() },
+                                        onMoveRight = { moreFocusRequester.requestFocus() }
+                                    ),
                                     onClick = { showImportMenu = true }
                                 )
                                 DropdownMenu(
@@ -1468,7 +1562,11 @@ fun MainScreen(
                                     icon = painterResource(R.drawable.ic_more_vert_24dp),
                                     label = "More",
                                     contentDescription = if (isTelevision) "More" else null,
-                                    modifier = topBarDownNavigationModifier,
+                                    focusRequester = moreFocusRequester,
+                                    modifier = topBarDownNavigationModifier.dpadHorizontalFocusNavigation(
+                                        onMoveLeft = { addFocusRequester.requestFocus() },
+                                        onMoveRight = { moreFocusRequester.requestFocus() }
+                                    ),
                                     onClick = { showMenu = true }
                                 )
                                 DropdownMenu(
@@ -1543,6 +1641,7 @@ fun MainScreen(
                             selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
                             mainViewModel = mainViewModel,
                             tabFocusRequesters = groupTabFocusRequesters,
+                            onOpenDrawer = openDrawerFrom,
                             onTabClick = { targetIndex ->
                                 scope.launch {
                                     pagerState.navigateToPageOptimized(
@@ -1584,6 +1683,7 @@ fun MainScreen(
                                 if (confirmRemove) showRemoveConfirm = guid
                                 else onRemoveServer(guid)
                             },
+                            onOpenDrawer = openDrawerFrom,
                             onMoveUpFromFirstRow = if (groups.size > 1) {
                                 {
                                     groupTabFocusRequesters
@@ -1603,6 +1703,12 @@ fun MainScreen(
                     }
                 }
             }
+        }
+        }
+        if (isTelevision && drawerState.isClosed && !showSearch) {
+            TvDrawerEdgePeek(
+                modifier = Modifier.align(Alignment.CenterStart)
+            )
         }
     }
 }
@@ -1624,6 +1730,7 @@ private fun ServerListPage(
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
     onSwapServer: (Int, Int) -> Unit,
+    onMoveLeftFromRow: (FocusRequester) -> Unit,
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
@@ -1657,6 +1764,7 @@ private fun ServerListPage(
                         onShareServer = onShareServer,
                         onMoreServer = onMoreServer,
                         onRemoveServer = onRemoveServer,
+                        onMoveLeft = onMoveLeftFromRow,
                         onMoveUp = if (index < 2) onMoveUpFromFirstRow else null
                     )
                 }
@@ -1711,6 +1819,7 @@ private fun ServerListPage(
                                 onShareServer = onShareServer,
                                 onMoreServer = onMoreServer,
                                 onRemoveServer = onRemoveServer,
+                                onMoveLeft = onMoveLeftFromRow,
                                 onMoveUp = if (index == 0) onMoveUpFromFirstRow else null
                             )
                         }
@@ -1726,6 +1835,7 @@ private fun ServerListPage(
                         onShareServer = onShareServer,
                         onMoreServer = onMoreServer,
                         onRemoveServer = onRemoveServer,
+                        onMoveLeft = onMoveLeftFromRow,
                         onMoveUp = if (index == 0) onMoveUpFromFirstRow else null
                     )
                     AppDivider(modifier = Modifier.padding(horizontal = 12.dp))
@@ -1745,6 +1855,7 @@ private fun ServerItemRow(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onMoveLeft: (FocusRequester) -> Unit,
     onMoveUp: (() -> Unit)?
 ) {
     val profile = serverCache.profile
@@ -1768,6 +1879,7 @@ private fun ServerItemRow(
         onEdit = { onEditServer(serverCache.guid, profile) },
         onRemove = { onRemoveServer(serverCache.guid) },
         onMore = { onMoreServer(serverCache.guid, profile) },
+        onMoveLeft = onMoveLeft,
         onMoveUp = onMoveUp
     )
 }
@@ -1783,6 +1895,7 @@ private fun ServerItemColumn(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onMoveLeft: (FocusRequester) -> Unit,
     onMoveUp: (() -> Unit)?
 ) {
     val profile = serverCache.profile
@@ -1805,6 +1918,7 @@ private fun ServerItemColumn(
             onShare = { onShareServer(serverCache.guid, profile) },
             onRemove = { onRemoveServer(serverCache.guid) },
             onMore = { onMoreServer(serverCache.guid, profile) },
+            onMoveLeft = onMoveLeft,
             onMoveUp = onMoveUp
         )
         AppDivider(modifier = Modifier.padding(horizontal = 12.dp))
@@ -1826,6 +1940,7 @@ fun ServerListItem(
     onShare: () -> Unit,
     onRemove: () -> Unit,
     onMore: () -> Unit,
+    onMoveLeft: ((FocusRequester) -> Unit)? = null,
     onMoveUp: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     dragModifier: Modifier = Modifier
@@ -1846,7 +1961,10 @@ fun ServerListItem(
             .dpadFocusOutline(rowFocusRequester)
             .tvHorizontalFocusNavigation(
                 isTelevision = isTelevision,
-                onLeft = { rowFocusRequester.requestFocus() },
+                onLeft = {
+                    if (onMoveLeft != null) onMoveLeft(rowFocusRequester)
+                    else rowFocusRequester.requestFocus()
+                },
                 onRight = {
                     if (doubleColumnDisplay) moreFocusRequester.requestFocus()
                     else shareFocusRequester.requestFocus()
@@ -1986,7 +2104,8 @@ fun DrawerMenuItem(
     selected: Boolean = false,
     focusRequester: FocusRequester? = null,
     onMoveUp: () -> Unit = {},
-    onMoveDown: () -> Unit = {}
+    onMoveDown: () -> Unit = {},
+    onMoveRight: () -> Unit = {}
 ) {
     val isTelevision = isTelevisionDevice()
     val interactionSource = remember { MutableInteractionSource() }
@@ -1999,7 +2118,8 @@ fun DrawerMenuItem(
             .tvDrawerFocusNavigation(
                 isTelevision = isTelevision,
                 onMoveUp = onMoveUp,
-                onMoveDown = onMoveDown
+                onMoveDown = onMoveDown,
+                onMoveRight = onMoveRight
             )
             .then(
                 if (isTelevision) {

@@ -63,6 +63,8 @@ fun rememberDpadFocusRequester(
  * Adds a TV-style focus treatment while keeping the component's existing click/focus node.
  * Unfocused controls are left completely untouched; focused controls receive a restrained
  * tonal lift and thin accent edge that read clearly at TV distance without changing layout size.
+ * The same rounded shape clips descendant indications so Material focus/ripple layers cannot
+ * escape the border as square corners.
  * Apply this before clickable/focusable modifiers so it observes their focus state.
  */
 @Composable
@@ -94,6 +96,7 @@ fun Modifier.dpadFocusOutline(
         .then(requesterModifier)
         .onFocusChanged { isFocused = it.isFocused }
         .then(focusDecoration)
+        .clip(shape)
 }
 
 /** Keeps TV popup-menu focus borders inside the popup's clipped bounds. */
