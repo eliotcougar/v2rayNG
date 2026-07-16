@@ -63,6 +63,8 @@ import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.enums.PermissionType
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
@@ -161,7 +163,14 @@ fun ScannerScreen(
                 title = stringResource(R.string.menu_item_import_config_qrcode),
                 onBackClick = onBackClick,
                 actions = {
-                    IconButton(
+                    AppIconButton(
+                        icon = painterResource(
+                            if (isScanning) R.drawable.ic_stop_24dp
+                            else R.drawable.ic_scan_24dp
+                        ),
+                        label = stringResource(
+                            if (isScanning) R.string.acc_stop_scanner else R.string.acc_start_scanner
+                        ),
                         onClick = {
                             if (isScanning) {
                                 if (torchEnabled) {
@@ -173,42 +182,27 @@ fun ScannerScreen(
                                 onStartScan()
                             }
                         }
-                    ) {
-                        Icon(
-                            painterResource(
-                                if (isScanning) R.drawable.ic_stop_24dp
-                                else R.drawable.ic_scan_24dp
-                            ),
-                            contentDescription = stringResource(
-                                if (isScanning) R.string.acc_stop_scanner else R.string.acc_start_scanner
-                            )
-                        )
-                    }
+                    )
                     if (isScanning && hasTorch) {
-                        IconButton(
+                        AppIconButton(
+                            icon = painterResource(
+                                if (torchEnabled) R.drawable.ic_flash_on_24dp
+                                else R.drawable.ic_flash_off_24dp
+                            ),
+                            label = stringResource(
+                                if (torchEnabled) R.string.acc_turn_torch_off else R.string.acc_turn_torch_on
+                            ),
                             onClick = {
                                 torchEnabled = !torchEnabled
                                 cameraControl?.enableTorch(torchEnabled)
                             }
-                        ) {
-                            Icon(
-                                painterResource(
-                                    if (torchEnabled) R.drawable.ic_flash_on_24dp
-                                    else R.drawable.ic_flash_off_24dp
-                                ),
-                                contentDescription = stringResource(
-                                    if (torchEnabled) R.string.acc_turn_torch_off
-                                    else R.string.acc_turn_torch_on
-                                )
-                            )
-                        }
-                    }
-                    IconButton(onClick = onSelectPhoto) {
-                        Icon(
-                            painterResource(R.drawable.ic_image_24dp),
-                            contentDescription = stringResource(R.string.acc_select_image)
                         )
                     }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_image_24dp),
+                        label = stringResource(R.string.acc_select_image),
+                        onClick = onSelectPhoto
+                    )
                 }
             )
         }

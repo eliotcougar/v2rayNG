@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -83,17 +84,40 @@ private fun SettingsItemRow(
     modifier: Modifier = Modifier,
     trailing: @Composable (() -> Unit)? = null
 ) {
-    val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface
-    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    val descriptionColor = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+    val isTelevision = isTelevisionDevice()
+    val disabledAlpha = if (isTelevision) 0.38f else 1f
+    val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
+    }
+    val descriptionColor = if (enabled || !isTelevision) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
+    }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
-            .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
-            .padding(16.dp),
+            .then(
+                if (onClick == null) {
+                    Modifier
+                } else if (isTelevision) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        enabled = enabled,
+                        onClick = onClick
+                    )
+                } else {
+                    Modifier.clickable(enabled = enabled, onClick = onClick)
+                }
+            )
+            .padding(
+                horizontal = if (isTelevision) 24.dp else 16.dp,
+                vertical = 16.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {

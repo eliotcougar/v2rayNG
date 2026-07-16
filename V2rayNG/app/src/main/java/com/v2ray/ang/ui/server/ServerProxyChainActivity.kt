@@ -37,6 +37,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownField
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.reorderableDragHandle
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isComplexType
@@ -229,13 +237,17 @@ fun ProxyChainScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (showDelete) {
-                        IconButton(onClick = { showProfileDeleteConfirm = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showProfileDeleteConfirm = true }
+                        )
                     }
-                    IconButton(onClick = { onSave(remarks, members) }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(remarks, members) }
+                    )
                 }
             )
         },
@@ -260,7 +272,8 @@ fun ProxyChainScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
-                .verticalScrollbar(lazyListState),
+                .verticalScrollbar(lazyListState)
+                .tvContentPadding(),
             contentPadding = PaddingValues(
                 top = 8.dp,
                 start = 16.dp,
@@ -312,19 +325,18 @@ fun ProxyChainScreen(
                                 editable = true,
                                 modifier = Modifier.weight(1f)
                             )
-                            IconButton(onClick = {
-                                if (member.isBlank()) {
-                                    members = members.toMutableList().also { it.removeAt(index) }
-                                    memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
-                                } else {
-                                    memberToDeleteIndex = index
+                            AppIconButton(
+                                icon = painterResource(R.drawable.ic_delete_24dp),
+                                label = stringResource(R.string.acc_remove),
+                                onClick = {
+                                    if (member.isBlank()) {
+                                        members = members.toMutableList().also { it.removeAt(index) }
+                                        memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
+                                    } else {
+                                        memberToDeleteIndex = index
+                                    }
                                 }
-                            }) {
-                                Icon(
-                                    painterResource(R.drawable.ic_delete_24dp),
-                                    contentDescription = stringResource(R.string.acc_remove)
-                                )
-                            }
+                            )
                         }
                     }
                 }

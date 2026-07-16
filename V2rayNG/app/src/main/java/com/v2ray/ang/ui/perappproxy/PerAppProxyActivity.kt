@@ -3,9 +3,12 @@ package com.v2ray.ang.ui.perappproxy
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -18,7 +21,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -40,6 +42,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppDivider
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppListItem
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.colorFabActive
+import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.tvMenuItemFocus
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.extension.toastInfo
 import com.v2ray.ang.extension.toastSuccess
@@ -131,6 +143,9 @@ fun PerAppProxyScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val isTelevision = isTelevisionDevice()
+    val enableInteractionSource = remember { MutableInteractionSource() }
+    val bypassInteractionSource = remember { MutableInteractionSource() }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -157,20 +172,19 @@ fun PerAppProxyScreen(
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_search_24dp),
+                            label = stringResource(R.string.menu_item_search),
+                            onClick = { showSearch = true }
+                        )
                     }
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = stringResource(R.string.acc_more)
-                            )
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_more_vert_24dp),
+                            label = stringResource(R.string.acc_more),
+                            contentDescription = if (isTelevision) stringResource(R.string.acc_more) else null,
+                            onClick = { showMenu = true }
+                        )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
@@ -204,13 +218,30 @@ fun PerAppProxyScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(
+                            horizontal = if (isTelevision) 48.dp else 16.dp,
+                            vertical = if (isTelevision) 12.dp else 8.dp
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (isTelevision) {
+                                    Modifier
+                                        .dpadFocusOutline(cornerRadius = 16.dp)
+                                        .clickable(
+                                            interactionSource = enableInteractionSource,
+                                            indication = null
+                                        ) { onPerAppProxyChanged(!perAppProxyEnabled) }
+                                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                                } else {
+                                    Modifier
+                                }
+                            )
                     ) {
                         Text(
                             text = stringResource(R.string.per_app_proxy_settings_enable),
@@ -221,7 +252,7 @@ fun PerAppProxyScreen(
                         Switch(
                             checked = perAppProxyEnabled,
                             modifier = Modifier.scale(0.65f),
-                            onCheckedChange = onPerAppProxyChanged,
+                            onCheckedChange = if (isTelevision) null else onPerAppProxyChanged,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                 checkedTrackColor = MaterialTheme.colorScheme.secondary
@@ -231,7 +262,21 @@ fun PerAppProxyScreen(
                     Spacer(modifier = Modifier.width(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .then(
+                                if (isTelevision) {
+                                    Modifier
+                                        .dpadFocusOutline(cornerRadius = 16.dp)
+                                        .clickable(
+                                            interactionSource = bypassInteractionSource,
+                                            indication = null
+                                        ) { onBypassAppsChanged(!bypassApps) }
+                                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                                } else {
+                                    Modifier
+                                }
+                            )
                     ) {
                         Text(
                             text = stringResource(R.string.switch_bypass_apps_mode),
@@ -242,20 +287,20 @@ fun PerAppProxyScreen(
                         Switch(
                             checked = bypassApps,
                             modifier = Modifier.scale(0.65f),
-                            onCheckedChange = onBypassAppsChanged,
+                            onCheckedChange = if (isTelevision) null else onBypassAppsChanged,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                 checkedTrackColor = MaterialTheme.colorScheme.secondary
                             )
                         )
                     }
-                    IconButton(onClick = onInfoClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_about_24dp),
-                            contentDescription = stringResource(R.string.acc_per_app_proxy_information),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_about_24dp),
+                        label = stringResource(R.string.acc_per_app_proxy_information),
+                        onClick = onInfoClick,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        contentDescription = stringResource(R.string.acc_per_app_proxy_information)
+                    )
                 }
             }
             AppDivider()
@@ -265,7 +310,11 @@ fun PerAppProxyScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScrollbar(listState),
-                contentPadding = NavigationBarsBottomPadding()
+                contentPadding = if (isTelevision) {
+                    PaddingValues(horizontal = 48.dp, vertical = 8.dp)
+                } else {
+                    NavigationBarsBottomPadding()
+                }
             ) {
                 items(items = apps, key = { it.packageName }) { app ->
                     val checked = blacklist.contains(app.packageName)

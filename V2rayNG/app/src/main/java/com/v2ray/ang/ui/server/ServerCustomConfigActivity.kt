@@ -55,6 +55,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.horizontalScrollbar
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toast
@@ -318,19 +325,17 @@ fun ServerCustomConfigScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (showDelete) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(remarks, textFieldState.text.toString()) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
                         )
                     }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(remarks, textFieldState.text.toString()) }
+                    )
                 }
             )
         },
@@ -341,6 +346,7 @@ fun ServerCustomConfigScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
+                .tvContentPadding()
         ) {
             FormTextField(
                 label = stringResource(R.string.server_lab_remarks),

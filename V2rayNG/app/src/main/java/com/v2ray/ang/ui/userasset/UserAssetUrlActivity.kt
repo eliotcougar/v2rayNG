@@ -20,6 +20,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastSuccess
@@ -150,19 +155,17 @@ fun UserAssetUrlScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (editAssetId.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(remarks, url) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
                         )
                     }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(remarks, url) }
+                    )
                 }
             )
         }
@@ -171,6 +174,7 @@ fun UserAssetUrlScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
                 .padding(vertical = 8.dp)
         ) {
             FormTextField(

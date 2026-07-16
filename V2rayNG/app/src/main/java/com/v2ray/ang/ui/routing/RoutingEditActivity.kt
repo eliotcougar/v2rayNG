@@ -35,6 +35,14 @@ import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownField
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.extension.toast
@@ -186,19 +194,17 @@ fun RoutingEditScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (position >= 0) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(buildRuleset()) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
                         )
                     }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(buildRuleset()) }
+                    )
                 }
             )
         }
@@ -209,6 +215,7 @@ fun RoutingEditScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
+                .tvContentPadding()
                 .verticalScroll(scrollState)
                 .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)

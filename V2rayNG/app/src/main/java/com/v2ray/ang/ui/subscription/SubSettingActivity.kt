@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -36,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,6 +46,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.QRCodeDialog
+import com.v2ray.ang.compose.ReorderableListItem
+import com.v2ray.ang.compose.SelectListDialog
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.colorFabActive
+import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
@@ -143,18 +158,16 @@ fun SubSettingScreen(
                 onBackClick = onBackClick,
                 isLoading = isLoading,
                 actions = {
-                    IconButton(
-                        onClick = onAddClick,
-                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
-                    ) {
-                        Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
-                    }
-                    IconButton(
-                        onClick = { showUpdateDialog = true },
-                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
-                    ) {
-                        Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.acc_update_subscriptions))
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_add_24dp),
+                        label = stringResource(R.string.acc_add_subscription),
+                        onClick = onAddClick
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_restore_24dp),
+                        label = stringResource(R.string.acc_update_subscriptions),
+                        onClick = { showUpdateDialog = true }
+                    )
                 }
             )
         }
@@ -175,6 +188,10 @@ fun SubSettingScreen(
                 items = subscriptions,
                 key = { _, item -> item.guid }
             ) { _, subCache ->
+                val rowFocusRequester = remember(subCache.guid) { FocusRequester() }
+                val shareFocusRequester = remember(subCache.guid) { FocusRequester() }
+                val deleteFocusRequester = remember(subCache.guid) { FocusRequester() }
+                val switchFocusRequester = remember(subCache.guid) { FocusRequester() }
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
                     ReorderableListItem(
                         scope = this,
@@ -191,7 +208,20 @@ fun SubSettingScreen(
                                                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                                                 shape = RoundedCornerShape(16.dp)
                                             )
-                                            .dpadFocusOutline(cornerRadius = 16.dp)
+                                            .dpadFocusOutline(
+                                                focusRequester = rowFocusRequester,
+                                                cornerRadius = 16.dp
+                                            )
+                                            .dpadHorizontalFocusNavigation(
+                                                onMoveLeft = { rowFocusRequester.requestFocus() },
+                                                onMoveRight = {
+                                                    if (subCache.subscription.url.isNotEmpty()) {
+                                                        shareFocusRequester.requestFocus()
+                                                    } else {
+                                                        deleteFocusRequester.requestFocus()
+                                                    }
+                                                }
+                                            )
                                             .clickable { onEditSub(subCache.guid) }
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -231,38 +261,45 @@ fun SubSettingScreen(
                             ) {
                                 Row {
                                     if (subCache.subscription.url.isNotEmpty()) {
-                                        IconButton(
+                                        AppIconButton(
+                                            icon = painterResource(R.drawable.ic_share_24dp),
+                                            label = stringResource(R.string.acc_share_subscription),
+                                            focusRequester = shareFocusRequester,
+                                            modifier = Modifier.dpadHorizontalFocusNavigation(
+                                                onMoveLeft = { rowFocusRequester.requestFocus() },
+                                                onMoveRight = { deleteFocusRequester.requestFocus() }
+                                            ),
                                             onClick = {
                                                 shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                            },
-                                            modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_share_24dp),
-                                                contentDescription = stringResource(R.string.acc_share_subscription)
-                                            )
-                                        }
+                                            }
+                                        )
                                     }
                                     if (!isTelevision) {
-                                        IconButton(onClick = { onEditSub(subCache.guid) }) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_edit_24dp),
-                                                contentDescription = stringResource(R.string.acc_edit)
-                                            )
-                                        }
+                                        AppIconButton(
+                                            icon = painterResource(R.drawable.ic_edit_24dp),
+                                            label = stringResource(R.string.acc_edit),
+                                            onClick = { onEditSub(subCache.guid) }
+                                        )
                                     }
-                                    IconButton(
+                                    AppIconButton(
+                                        icon = painterResource(R.drawable.ic_delete_24dp),
+                                        label = stringResource(R.string.acc_delete),
+                                        focusRequester = deleteFocusRequester,
+                                        modifier = Modifier.dpadHorizontalFocusNavigation(
+                                            onMoveLeft = {
+                                                if (subCache.subscription.url.isNotEmpty()) {
+                                                    shareFocusRequester.requestFocus()
+                                                } else {
+                                                    rowFocusRequester.requestFocus()
+                                                }
+                                            },
+                                            onMoveRight = { switchFocusRequester.requestFocus() }
+                                        ),
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
                                             else onRemoveSub(subCache.guid)
-                                        },
-                                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_delete_24dp),
-                                            contentDescription = stringResource(R.string.acc_delete)
-                                        )
-                                    }
+                                        }
+                                    )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Switch(
@@ -276,8 +313,11 @@ fun SubSettingScreen(
                                         .then(
                                             if (isTelevision) {
                                                 Modifier.dpadFocusOutline(
-                                                    cornerRadius = 24.dp,
-                                                    focusedScale = 1.05f
+                                                    focusRequester = switchFocusRequester,
+                                                    cornerRadius = 24.dp
+                                                ).dpadHorizontalFocusNavigation(
+                                                    onMoveLeft = { deleteFocusRequester.requestFocus() },
+                                                    onMoveRight = { switchFocusRequester.requestFocus() }
                                                 )
                                             } else {
                                                 Modifier.scale(0.7f)

@@ -41,9 +41,11 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -160,33 +162,27 @@ fun LogcatScreen(
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { viewModel.copyLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_copy),
-                            contentDescription = stringResource(R.string.acc_copy_log)
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_search_24dp),
+                            label = stringResource(R.string.menu_item_search),
+                            onClick = { showSearch = true }
                         )
                     }
-                    IconButton(onClick = { onShareLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            contentDescription = stringResource(R.string.acc_share_log)
-                        )
-                    }
-                    IconButton(onClick = {
-                        scope.launch(Dispatchers.IO) { viewModel.clearLogcat() }
-                    }) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            contentDescription = stringResource(R.string.acc_clear_log)
-                        )
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_copy),
+                        label = stringResource(R.string.logcat_copy),
+                        onClick = { viewModel.copyLogcat() }
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_share_24dp),
+                        label = stringResource(R.string.logcat_share),
+                        onClick = onShareLogcat
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_delete_24dp),
+                        label = stringResource(R.string.logcat_clear),
+                        onClick = { scope.launch(Dispatchers.IO) { viewModel.clearLogcat() } }
+                    )
                 }
             )
         },
@@ -205,6 +201,7 @@ fun LogcatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
         ) {
             LazyColumn(
                 state = listState,

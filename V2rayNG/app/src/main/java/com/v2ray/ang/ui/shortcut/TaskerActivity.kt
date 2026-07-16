@@ -31,6 +31,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -134,9 +139,11 @@ fun TaskerScreen(
                 title = "",
                 onBackClick = onBackClick,
                 actions = {
-                    IconButton(onClick = onSave) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = onSave
+                    )
                 }
             )
         }
@@ -145,6 +152,7 @@ fun TaskerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
         ) {
             SettingsSwitchItem(
                 title = stringResource(R.string.tasker_start_service),

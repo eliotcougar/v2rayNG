@@ -34,6 +34,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownField
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toLongEx
@@ -182,19 +191,20 @@ fun SubEditScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (editSubId.isNotEmpty()) {
-                        IconButton(
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
                             onClick = {
                                 if (confirmRemove) showDeleteConfirm = true else onDelete()
-                            },
-                            modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
-                        ) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
-                        }
+                            }
+                        )
                     }
                     if (!isTelevision) {
-                        IconButton(onClick = { buildSubItem()?.let { onSave(it) } }) {
-                            Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_fab_check),
+                            label = stringResource(R.string.acc_save),
+                            onClick = { buildSubItem()?.let { onSave(it) } }
+                        )
                     }
                 }
             )
@@ -226,7 +236,6 @@ fun SubEditScreen(
                         onClick = { buildSubItem()?.let { onSave(it) } },
                         modifier = Modifier.dpadFocusOutline(
                             cornerRadius = 24.dp,
-                            focusedScale = 1.05f
                         )
                     ) {
                         Icon(

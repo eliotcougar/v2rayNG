@@ -11,6 +11,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -50,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -173,6 +175,7 @@ fun AppIconButton(
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(24.dp)
     val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
+    val interactionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = modifier
@@ -180,12 +183,18 @@ fun AppIconButton(
             .background(containerColor, shape)
             .dpadFocusOutline(
                 focusRequester = focusRequester,
-                cornerRadius = 24.dp,
-                focusedScale = 1.05f
+                cornerRadius = 24.dp
             )
             .onFocusChanged { isFocused = it.isFocused }
             .animateContentSize()
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .clip(shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick
+            )
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -245,9 +254,11 @@ private fun SearchInputField(
                 .focusRequester(focusRequester)
         )
         if (query.isNotEmpty()) {
-            IconButton(onClick = { onQueryChange("") }) {
-                Icon(painterResource(android.R.drawable.ic_menu_close_clear_cancel), "Clear")
-            }
+            AppIconButton(
+                icon = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
+                label = "Clear",
+                onClick = { onQueryChange("") }
+            )
         }
     }
 }
@@ -262,11 +273,22 @@ fun AppListItem(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isTelevision = isTelevisionDevice()
+    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
-            .clickable { onCheckedChange(!checked) }
+            .then(
+                if (isTelevision) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) { onCheckedChange(!checked) }
+                } else {
+                    Modifier.clickable { onCheckedChange(!checked) }
+                }
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

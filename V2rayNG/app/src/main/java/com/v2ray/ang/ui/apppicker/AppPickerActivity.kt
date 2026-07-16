@@ -29,6 +29,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppListItem
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.tvMenuItemFocus
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDropdownMenuItems
@@ -148,20 +155,18 @@ fun AppPickerScreen(
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 actions = {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_search_24dp),
+                            label = stringResource(R.string.menu_item_search),
+                            onClick = { showSearch = true }
+                        )
                     }
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = null
-                            )
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_more_vert_24dp),
+                            label = stringResource(R.string.acc_more),
+                            onClick = { showMenu = true }
+                        )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
@@ -185,6 +190,7 @@ fun AppPickerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {

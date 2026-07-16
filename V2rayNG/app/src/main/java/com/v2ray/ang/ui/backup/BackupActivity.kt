@@ -32,6 +32,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.InputDialog
+import com.v2ray.ang.compose.InputField
+import com.v2ray.ang.compose.SelectListDialog
+import com.v2ray.ang.compose.SettingsMenuItem
 import com.v2ray.ang.dto.entities.WebDavConfig
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
@@ -216,6 +222,7 @@ fun BackupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             SettingsMenuItem(

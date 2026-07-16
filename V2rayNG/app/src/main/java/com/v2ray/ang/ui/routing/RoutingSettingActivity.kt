@@ -44,6 +44,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.tvMenuItemFocus
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.ReorderableListItem
+import com.v2ray.ang.compose.SelectListDialog
+import com.v2ray.ang.compose.SettingsListItem
+import com.v2ray.ang.compose.colorConfigType
+import com.v2ray.ang.compose.colorFabActive
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.enums.RoutingType
 import com.v2ray.ang.extension.toastError
@@ -222,19 +233,17 @@ fun RoutingSettingScreen(
                 title = stringResource(R.string.routing_settings_title),
                 onBackClick = onBackClick,
                 actions = {
-                    IconButton(onClick = onAddRule) {
-                        Icon(
-                            painterResource(R.drawable.ic_add_24dp),
-                            contentDescription = stringResource(R.string.acc_add_rule)
-                        )
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_add_24dp),
+                        label = stringResource(R.string.routing_settings_add_rule),
+                        onClick = onAddRule
+                    )
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = stringResource(R.string.acc_more)
-                            )
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_more_vert_24dp),
+                            label = stringResource(R.string.acc_more),
+                            onClick = { showMenu = true }
+                        )
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
@@ -260,6 +269,7 @@ fun RoutingSettingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
                 .verticalScrollbar(lazyListState),
             contentPadding = NavigationBarsBottomPadding()
         ) {
@@ -374,12 +384,11 @@ private fun RoutingRulesetItem(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            IconButton(onClick = onEdit) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_edit_24dp),
-                    contentDescription = stringResource(R.string.acc_edit)
-                )
-            }
+            AppIconButton(
+                icon = painterResource(R.drawable.ic_edit_24dp),
+                label = stringResource(R.string.acc_edit),
+                onClick = onEdit
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Switch(
                 checked = ruleset.enabled ?: false,

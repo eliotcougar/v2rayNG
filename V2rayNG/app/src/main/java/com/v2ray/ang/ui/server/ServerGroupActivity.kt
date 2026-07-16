@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +24,13 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownField
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BalancerStrategyType
 import com.v2ray.ang.enums.EConfigType
@@ -245,17 +250,21 @@ fun ServerGroupScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (showDelete) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
+                        )
+                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = {
+                            val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
+                            val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
+                            onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
                         }
-                    }
-                    IconButton(onClick = {
-                        val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
-                        val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
-                        onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    )
                 }
             )
         }
@@ -266,6 +275,7 @@ fun ServerGroupScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
+                .tvContentPadding()
                 .padding(vertical = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {

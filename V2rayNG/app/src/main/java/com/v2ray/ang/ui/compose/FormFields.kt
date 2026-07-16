@@ -235,7 +235,7 @@ fun FormDropdownField(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
-                    modifier = Modifier.dpadFocusOutline(),
+                    modifier = Modifier.tvMenuItemFocus(),
                     onClick = {
                         onValueChange(option)
                         expanded = false

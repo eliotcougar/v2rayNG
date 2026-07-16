@@ -43,6 +43,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.ItemDivider
+import com.v2ray.ang.compose.SettingsListItem
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.tvMenuItemFocus
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.AssetUrlCache
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.extension.toTrafficString
@@ -268,9 +276,11 @@ internal fun UserAssetScreen(
                 isLoading = isLoading,
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                        IconButton(onClick = { showAddMenu = true }) {
-                            Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_asset))
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_add_24dp),
+                            label = stringResource(R.string.acc_add_asset),
+                            onClick = { showAddMenu = true }
+                        )
                         DropdownMenu(
                             expanded = showAddMenu,
                             onDismissRequest = { showAddMenu = false },
@@ -288,9 +298,11 @@ internal fun UserAssetScreen(
                             }
                         }
                     }
-                    IconButton(onClick = onDownloadClick) {
-                        Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = stringResource(R.string.acc_download_file))
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_cloud_download_24dp),
+                        label = stringResource(R.string.acc_download_file),
+                        onClick = onDownloadClick
+                    )
                 }
             )
         }
@@ -300,6 +312,7 @@ internal fun UserAssetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvContentPadding()
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {
@@ -389,20 +402,16 @@ private fun UserAssetItem(
             )
         }
         if (showEditButton) {
-            IconButton(onClick = onEdit) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_edit_24dp),
-                    contentDescription = stringResource(R.string.acc_edit),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-        IconButton(onClick = onDeleteClick) {
-            Icon(
-                painter = painterResource(R.drawable.ic_delete_24dp),
-                contentDescription = stringResource(R.string.acc_delete),
-                modifier = Modifier.size(24.dp)
+            AppIconButton(
+                icon = painterResource(R.drawable.ic_edit_24dp),
+                label = stringResource(R.string.acc_edit),
+                onClick = onEdit
             )
         }
+        AppIconButton(
+            icon = painterResource(R.drawable.ic_delete_24dp),
+            label = stringResource(R.string.acc_delete),
+            onClick = onDeleteClick
+        )
     }
 }

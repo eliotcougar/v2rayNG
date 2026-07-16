@@ -36,6 +36,14 @@ import com.v2ray.ang.AppConfig.TLS
 import com.v2ray.ang.AppConfig.WIREGUARD_LOCAL_ADDRESS_V4
 import com.v2ray.ang.AppConfig.WIREGUARD_LOCAL_MTU
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownField
+import com.v2ray.ang.compose.FormTextField
+import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.enums.NetworkType
@@ -348,15 +356,17 @@ fun ServerScreen(
                 onBackClick = onBackClick,
                 actions = {
                     if (guid.isNotEmpty() && !isRunning) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete))
-                        }
+                        AppIconButton(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteDialog = true }
+                        )
                     }
-                    IconButton(onClick = {
-                        onSave(buildProfileItem())
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save))
-                    }
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(buildProfileItem()) }
+                    )
                 }
             )
         }
@@ -368,6 +378,7 @@ fun ServerScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
+                .tvContentPadding()
                 .verticalScrollbar(listState),
             contentPadding = PaddingValues(bottom = 36.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
