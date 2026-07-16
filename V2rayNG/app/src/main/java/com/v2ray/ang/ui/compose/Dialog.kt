@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.compose
 
-import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -44,7 +43,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -139,17 +137,14 @@ fun InputDialog(
     onDismiss: () -> Unit
 ) {
     val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
-    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
+    val isTelevision = isTelevisionDevice()
     var editingIndex by remember { mutableIntStateOf(-1) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    LaunchedEffect(editingIndex) {
-        if (isTelevision && editingIndex >= 0) {
-            keyboardController?.show()
-        } else if (isTelevision) {
-            keyboardController?.hide()
+    if (isTelevision) {
+        LaunchedEffect(editingIndex) {
+            if (editingIndex >= 0) keyboardController?.show() else keyboardController?.hide()
         }
     }
 
@@ -181,35 +176,46 @@ fun InputDialog(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .onFocusChanged {
-                                if (!it.isFocused && editingIndex == index) editingIndex = -1
-                            }
-                            .onPreviewKeyEvent { event ->
-                                if (
-                                    isTelevision &&
-                                    event.type == KeyEventType.KeyDown &&
-                                    (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                                    editingIndex != index
-                                ) {
-                                    editingIndex = index
-                                    true
-                                } else {
-                                    false
-                                }
-                            }
-                            .dpadTextFieldNavigation(
-                                onMoveUp = {
-                                    editingIndex = -1
-                                    focusManager.moveFocus(FocusDirection.Up)
-                                },
-                                onMoveDown = {
-                                    editingIndex = -1
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
                             .then(
-                                if (index == 0) Modifier.focusRequester(firstFieldFocusRequester)
-                                else Modifier
+                                if (isTelevision) {
+                                    Modifier
+                                        .onFocusChanged {
+                                            if (!it.isFocused && editingIndex == index) {
+                                                editingIndex = -1
+                                            }
+                                        }
+                                        .onPreviewKeyEvent { event ->
+                                            if (
+                                                event.type == KeyEventType.KeyDown &&
+                                                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                                                editingIndex != index
+                                            ) {
+                                                editingIndex = index
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        }
+                                        .dpadTextFieldNavigation(
+                                            onMoveUp = {
+                                                editingIndex = -1
+                                                focusManager.moveFocus(FocusDirection.Up)
+                                            },
+                                            onMoveDown = {
+                                                editingIndex = -1
+                                                focusManager.moveFocus(FocusDirection.Down)
+                                            }
+                                        )
+                                        .then(
+                                            if (index == 0) {
+                                                Modifier.focusRequester(firstFieldFocusRequester)
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                } else {
+                                    Modifier
+                                }
                             )
                     )
                 }

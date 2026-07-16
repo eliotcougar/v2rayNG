@@ -76,6 +76,7 @@ fun AppTopBar(
     navigationIcon: @Composable ((Modifier) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    val isTelevision = isTelevisionDevice()
     val navigationFocusRequester = rememberDpadFocusRequester(
         requestFocus = initialFocus && !isSearchActive,
         requestKey = isSearchActive
@@ -96,11 +97,19 @@ fun AppTopBar(
             },
             navigationIcon = {
                 if (navigationIcon != null) {
-                    navigationIcon(Modifier.dpadFocusOutline(navigationFocusRequester))
+                    navigationIcon(
+                        Modifier.dpadFocusOutline(
+                            focusRequester = navigationFocusRequester,
+                            focusedScale = 1.05f
+                        )
+                    )
                 } else {
                     IconButton(
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        modifier = Modifier.dpadFocusOutline(navigationFocusRequester)
+                        modifier = Modifier.dpadFocusOutline(
+                            focusRequester = navigationFocusRequester,
+                            focusedScale = 1.05f
+                        )
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back_24dp),
@@ -115,7 +124,12 @@ fun AppTopBar(
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.onSurface
-            )
+            ),
+            modifier = if (isTelevision) {
+                Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
+            } else {
+                Modifier
+            }
         )
         AnimatedVisibility(
             visible = isLoading,

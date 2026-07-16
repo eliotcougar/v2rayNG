@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.compose
 
+import android.content.res.Configuration
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -24,22 +25,31 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+@Composable
+fun isTelevisionDevice(): Boolean {
+    return LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+        Configuration.UI_MODE_TYPE_TELEVISION
+}
+
 /**
  * Requests focus after the target has entered the composition. Android TV does not have a
  * touch event to bootstrap Compose focus, so every screen needs a deterministic first target.
+ * On phones and tablets this deliberately does nothing, preserving the existing touch UI.
  */
 @Composable
 fun rememberDpadFocusRequester(
     requestFocus: Boolean = true,
     requestKey: Any? = Unit
 ): FocusRequester {
+    val isTelevision = isTelevisionDevice()
     val requester = remember { FocusRequester() }
-    LaunchedEffect(requestFocus, requestKey) {
-        if (requestFocus) {
+    LaunchedEffect(isTelevision, requestFocus, requestKey) {
+        if (isTelevision && requestFocus) {
             repeat(6) {
                 withFrameNanos { }
                 if (requester.requestFocus()) return@LaunchedEffect
@@ -58,13 +68,17 @@ fun rememberDpadFocusRequester(
 @Composable
 fun Modifier.dpadFocusOutline(
     focusRequester: FocusRequester? = null,
-    cornerRadius: Dp = 8.dp
+    cornerRadius: Dp = 12.dp,
+    focusedScale: Float = 1.025f
 ): Modifier {
+    if (!isTelevisionDevice()) return this
+
     var hasFocus by remember { mutableStateOf(false) }
-    val focusColor = MaterialTheme.colorScheme.secondary
+    val focusColor = MaterialTheme.colorScheme.primary
+    val focusContainerColor = MaterialTheme.colorScheme.primaryContainer
     val focusScale by animateFloatAsState(
-        targetValue = if (hasFocus) 1.018f else 1f,
-        animationSpec = spring(stiffness = 600f, dampingRatio = 0.78f),
+        targetValue = if (hasFocus) focusedScale else 1f,
+        animationSpec = spring(stiffness = 500f, dampingRatio = 0.8f),
         label = "dpadFocusScale"
     )
     val shape = RoundedCornerShape(cornerRadius)
@@ -76,8 +90,8 @@ fun Modifier.dpadFocusOutline(
 
     val focusDecoration = if (hasFocus) {
         Modifier
-            .background(focusColor.copy(alpha = 0.12f), shape)
-            .border(width = 1.5.dp, color = focusColor, shape = shape)
+            .background(focusContainerColor, shape)
+            .border(width = 2.dp, color = focusColor, shape = shape)
     } else {
         Modifier
     }
@@ -88,6 +102,11 @@ fun Modifier.dpadFocusOutline(
         .graphicsLayer {
             scaleX = focusScale
             scaleY = focusScale
+            shadowElevation = if (hasFocus) 8.dp.toPx() else 0f
+            this.shape = shape
+            clip = false
+            ambientShadowColor = focusColor.copy(alpha = 0.28f)
+            spotShadowColor = focusColor.copy(alpha = 0.28f)
         }
         .then(focusDecoration)
 }
@@ -101,6 +120,8 @@ fun Modifier.dpadTextFieldNavigation(
     onMoveUp: (() -> Boolean)? = null,
     onMoveDown: (() -> Boolean)? = null
 ): Modifier {
+    if (!isTelevisionDevice()) return this
+
     val focusManager = LocalFocusManager.current
     return onPreviewKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false

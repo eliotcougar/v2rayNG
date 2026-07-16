@@ -1,11 +1,13 @@
 package com.v2ray.ang.ui
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -128,6 +130,7 @@ import com.v2ray.ang.compose.colorFabInactiveLight
 import com.v2ray.ang.compose.colorPing
 import com.v2ray.ang.compose.colorPingRed
 import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.core.CoreServiceManager
@@ -560,6 +563,18 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        val isTelevision = resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+            Configuration.UI_MODE_TYPE_TELEVISION
+        if (!isTelevision &&
+            (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_BUTTON_B)
+        ) {
+            moveTaskToBack(false)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
 }
 
 @Composable
@@ -624,6 +639,7 @@ private fun MainBottomBar(
     onTestClick: () -> Unit,
     onFabClick: () -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             AppDivider()
@@ -640,7 +656,7 @@ private fun MainBottomBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = if (isTelevision) 48.dp else 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -652,10 +668,10 @@ private fun MainBottomBar(
             onClick = onFabClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 24.dp)
+                .padding(end = if (isTelevision) 48.dp else 24.dp)
                 .offset(y = (-28).dp)
                 .navigationBarsPadding()
-                .dpadFocusOutline(cornerRadius = 16.dp),
+                .dpadFocusOutline(cornerRadius = 16.dp, focusedScale = 1.05f),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
@@ -844,6 +860,7 @@ fun MainScreen(
     shareMethodMoreEntries: List<String>
 ) {
     val context = LocalContext.current
+    val isTelevision = isTelevisionDevice()
     val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val groups = uiState.groups
     val isLoading = uiState.isLoading
@@ -1016,7 +1033,7 @@ fun MainScreen(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier
-                    .fillMaxWidth(0.75f)
+                    .fillMaxWidth(if (isTelevision) 0.38f else 0.75f)
                     .navigationBarsPadding(),
                 drawerContainerColor = MaterialTheme.colorScheme.surface
             ) {
@@ -1226,6 +1243,7 @@ fun MainScreen(
                                 ).forEach { (stringRes, action) ->
                                     DropdownMenuItem(
                                         text = { Text(stringResource(stringRes)) },
+                                        modifier = Modifier.dpadFocusOutline(),
                                         onClick = action
                                     )
                                 }
@@ -1281,6 +1299,7 @@ fun MainScreen(
                                 ).forEach { (stringRes, action) ->
                                     DropdownMenuItem(
                                         text = { Text(stringResource(stringRes)) },
+                                        modifier = Modifier.dpadFocusOutline(),
                                         onClick = action
                                     )
                                 }
@@ -1355,9 +1374,9 @@ fun MainScreen(
                                 else onRemoveServer(guid)
                             },
                             contentPadding = PaddingValues(
-                                start = 0.dp,
-                                top = 0.dp,
-                                end = 0.dp,
+                                start = if (isTelevision) 48.dp else 0.dp,
+                                top = if (isTelevision) 12.dp else 0.dp,
+                                end = if (isTelevision) 48.dp else 0.dp,
                                 bottom = 80.dp
                             )
                         )
@@ -1603,13 +1622,36 @@ fun ServerListItem(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (doubleColumnDisplay) {
-                    IconButton(onClick = onMore, Modifier.size(36.dp)) {
+                    IconButton(
+                        onClick = onMore,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .dpadFocusOutline(cornerRadius = 18.dp, focusedScale = 1.05f)
+                    ) {
                         Icon(painterResource(R.drawable.ic_more_vert_24dp), null, Modifier.size(24.dp))
                     }
                 } else {
-                    IconButton(onClick = onShare, Modifier.size(36.dp)) { Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(24.dp)) }
-                    IconButton(onClick = onEdit, Modifier.size(36.dp)) { Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(24.dp)) }
-                    IconButton(onClick = onRemove, Modifier.size(36.dp)) { Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(24.dp)) }
+                    IconButton(
+                        onClick = onShare,
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(
+                            cornerRadius = 18.dp,
+                            focusedScale = 1.05f
+                        )
+                    ) { Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(24.dp)) }
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(
+                            cornerRadius = 18.dp,
+                            focusedScale = 1.05f
+                        )
+                    ) { Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(24.dp)) }
+                    IconButton(
+                        onClick = onRemove,
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(
+                            cornerRadius = 18.dp,
+                            focusedScale = 1.05f
+                        )
+                    ) { Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(24.dp)) }
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))

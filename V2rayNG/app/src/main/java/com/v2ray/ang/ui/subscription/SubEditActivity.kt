@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.subscription
 
-import android.content.res.Configuration
 import android.os.Bundle
 import android.text.TextUtils
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -27,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +51,7 @@ import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -157,8 +156,7 @@ fun SubEditScreen(
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
     val scrollState = rememberScrollState()
-    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
+    val isTelevision = isTelevisionDevice()
 
     fun buildSubItem(): SubscriptionItem {
         val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
@@ -188,16 +186,15 @@ fun SubEditScreen(
                             onClick = {
                                 if (confirmRemove) showDeleteConfirm = true else onDelete()
                             },
-                            modifier = Modifier.dpadFocusOutline()
+                            modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
                         ) {
                             Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
                         }
                     }
-                    IconButton(
-                        onClick = { buildSubItem()?.let { onSave(it) } },
-                        modifier = Modifier.dpadFocusOutline()
-                    ) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
+                    if (!isTelevision) {
+                        IconButton(onClick = { buildSubItem()?.let { onSave(it) } }) {
+                            Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
+                        }
                     }
                 }
             )
@@ -209,6 +206,10 @@ fun SubEditScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .imePadding()
+                .then(
+                    if (isTelevision) Modifier.padding(horizontal = 48.dp)
+                    else Modifier
+                )
                 .verticalScroll(scrollState)
                 .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)
@@ -221,9 +222,12 @@ fun SubEditScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    FilledTonalButton(
+                    Button(
                         onClick = { buildSubItem()?.let { onSave(it) } },
-                        modifier = Modifier.dpadFocusOutline(cornerRadius = 24.dp)
+                        modifier = Modifier.dpadFocusOutline(
+                            cornerRadius = 24.dp,
+                            focusedScale = 1.05f
+                        )
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_fab_check),

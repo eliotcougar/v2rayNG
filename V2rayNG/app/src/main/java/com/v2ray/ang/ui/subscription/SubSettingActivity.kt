@@ -4,9 +4,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,6 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
@@ -56,6 +59,7 @@ import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
@@ -117,6 +121,7 @@ fun SubSettingScreen(
     onShareQRCode: (String) -> Bitmap?,
     onShareClipboard: (String) -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
     var showUpdateDialog by remember { mutableStateOf(false) }
     var removeTarget by remember { mutableStateOf<String?>(null) }
@@ -140,13 +145,13 @@ fun SubSettingScreen(
                 actions = {
                     IconButton(
                         onClick = onAddClick,
-                        modifier = Modifier.dpadFocusOutline()
+                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
                     ) {
                         Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
                     }
                     IconButton(
                         onClick = { showUpdateDialog = true },
-                        modifier = Modifier.dpadFocusOutline()
+                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
                     ) {
                         Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.acc_update_subscriptions))
                     }
@@ -160,7 +165,11 @@ fun SubSettingScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScrollbar(lazyListState),
-            contentPadding = NavigationBarsBottomPadding()
+            contentPadding = if (isTelevision) {
+                PaddingValues(horizontal = 48.dp, vertical = 12.dp)
+            } else {
+                NavigationBarsBottomPadding()
+            }
         ) {
             itemsIndexed(
                 items = subscriptions,
@@ -174,9 +183,21 @@ fun SubSettingScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .dpadFocusOutline()
-                                .clickable { onEditSub(subCache.guid) }
-                                .padding(horizontal = 14.dp),
+                                .then(
+                                    if (isTelevision) {
+                                        Modifier
+                                            .padding(vertical = 8.dp)
+                                            .background(
+                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                shape = RoundedCornerShape(16.dp)
+                                            )
+                                            .dpadFocusOutline(cornerRadius = 16.dp)
+                                            .clickable { onEditSub(subCache.guid) }
+                                            .padding(horizontal = 24.dp, vertical = 16.dp)
+                                    } else {
+                                        Modifier.padding(horizontal = 14.dp)
+                                    }
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -214,7 +235,7 @@ fun SubSettingScreen(
                                             onClick = {
                                                 shareTarget = Pair(subCache.guid, subCache.subscription.url)
                                             },
-                                            modifier = Modifier.dpadFocusOutline()
+                                            modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
                                         ) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_share_24dp),
@@ -222,21 +243,20 @@ fun SubSettingScreen(
                                             )
                                         }
                                     }
-                                    IconButton(
-                                        onClick = { onEditSub(subCache.guid) },
-                                        modifier = Modifier.dpadFocusOutline()
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_edit_24dp),
-                                            contentDescription = stringResource(R.string.acc_edit)
-                                        )
+                                    if (!isTelevision) {
+                                        IconButton(onClick = { onEditSub(subCache.guid) }) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_edit_24dp),
+                                                contentDescription = stringResource(R.string.acc_edit)
+                                            )
+                                        }
                                     }
                                     IconButton(
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
                                             else onRemoveSub(subCache.guid)
                                         },
-                                        modifier = Modifier.dpadFocusOutline()
+                                        modifier = Modifier.dpadFocusOutline(focusedScale = 1.05f)
                                     ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_delete_24dp),
@@ -253,8 +273,16 @@ fun SubSettingScreen(
                                         viewModel.update(subCache.guid, updated)
                                     },
                                     modifier = Modifier
-                                        .scale(0.7f)
-                                        .dpadFocusOutline(),
+                                        .then(
+                                            if (isTelevision) {
+                                                Modifier.dpadFocusOutline(
+                                                    cornerRadius = 24.dp,
+                                                    focusedScale = 1.05f
+                                                )
+                                            } else {
+                                                Modifier.scale(0.7f)
+                                            }
+                                        ),
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                         checkedTrackColor = MaterialTheme.colorScheme.secondary
@@ -263,7 +291,9 @@ fun SubSettingScreen(
                             }
                         }
                     }
-                    ItemDivider()
+                    if (!isTelevision) {
+                        ItemDivider()
+                    }
                 }
             }
         }

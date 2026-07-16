@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,7 +31,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,17 +47,14 @@ fun FormTextField(
     placeholder: String? = null,
     maxLines: Int = 5,
 ) {
-    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
+    val isTelevision = isTelevisionDevice()
     var isEditing by remember { mutableStateOf(!isTelevision) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    LaunchedEffect(isEditing) {
-        if (isTelevision && isEditing) {
-            keyboardController?.show()
-        } else if (isTelevision) {
-            keyboardController?.hide()
+    if (isTelevision) {
+        LaunchedEffect(isEditing) {
+            if (isEditing) keyboardController?.show() else keyboardController?.hide()
         }
     }
 
@@ -89,28 +84,34 @@ fun FormTextField(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .onFocusChanged { if (!it.isFocused && isTelevision) isEditing = false }
-                .onPreviewKeyEvent { event ->
-                    if (
-                        isTelevision &&
-                        event.type == KeyEventType.KeyDown &&
-                        (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                        !isEditing
-                    ) {
-                        isEditing = true
-                        true
+                .then(
+                    if (isTelevision) {
+                        Modifier
+                            .onFocusChanged { if (!it.isFocused) isEditing = false }
+                            .onPreviewKeyEvent { event ->
+                                if (
+                                    event.type == KeyEventType.KeyDown &&
+                                    (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                                    !isEditing
+                                ) {
+                                    isEditing = true
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+                            .dpadTextFieldNavigation(
+                                onMoveUp = {
+                                    isEditing = false
+                                    focusManager.moveFocus(FocusDirection.Up)
+                                },
+                                onMoveDown = {
+                                    isEditing = false
+                                    focusManager.moveFocus(FocusDirection.Down)
+                                }
+                            )
                     } else {
-                        false
-                    }
-                }
-                .dpadTextFieldNavigation(
-                    onMoveUp = {
-                        if (isTelevision) isEditing = false
-                        focusManager.moveFocus(FocusDirection.Up)
-                    },
-                    onMoveDown = {
-                        if (isTelevision) isEditing = false
-                        focusManager.moveFocus(FocusDirection.Down)
+                        Modifier
                     }
                 )
         )
@@ -134,15 +135,12 @@ fun FormDropdownField(
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val isTelevision = LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
+    val isTelevision = isTelevisionDevice()
     var isEditing by remember { mutableStateOf(!isTelevision) }
 
-    LaunchedEffect(isEditing) {
-        if (isTelevision && isEditing) {
-            keyboardController?.show()
-        } else if (isTelevision) {
-            keyboardController?.hide()
+    if (isTelevision) {
+        LaunchedEffect(isEditing) {
+            if (isEditing) keyboardController?.show() else keyboardController?.hide()
         }
     }
 
@@ -178,33 +176,44 @@ fun FormDropdownField(
                 )
             ),
             modifier = Modifier
-                .onPreviewKeyEvent { event ->
-                    if (
-                        editable &&
-                        isTelevision &&
-                        event.type == KeyEventType.KeyDown &&
-                        (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                        !isEditing
-                    ) {
-                        isEditing = true
-                        true
+                .then(
+                    if (isTelevision) {
+                        Modifier.onPreviewKeyEvent { event ->
+                            if (
+                                editable &&
+                                event.type == KeyEventType.KeyDown &&
+                                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                                !isEditing
+                            ) {
+                                isEditing = true
+                                true
+                            } else {
+                                false
+                            }
+                        }
                     } else {
-                        false
+                        Modifier
                     }
-                }
+                )
                 .menuAnchor(
                     type = if (editable) ExposedDropdownMenuAnchorType.PrimaryEditable
                     else ExposedDropdownMenuAnchorType.PrimaryNotEditable
                 )
                 .fillMaxWidth()
-                .dpadTextFieldNavigation(
-                    onMoveUp = {
-                        if (isTelevision) isEditing = false
-                        focusManager.moveFocus(FocusDirection.Up)
-                    },
-                    onMoveDown = {
-                        if (isTelevision) isEditing = false
-                        focusManager.moveFocus(FocusDirection.Down)
+                .then(
+                    if (isTelevision) {
+                        Modifier.dpadTextFieldNavigation(
+                            onMoveUp = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Up)
+                            },
+                            onMoveDown = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+                    } else {
+                        Modifier
                     }
                 )
                 .onFocusChanged { focusState ->
@@ -226,6 +235,7 @@ fun FormDropdownField(
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option) },
+                    modifier = Modifier.dpadFocusOutline(),
                     onClick = {
                         onValueChange(option)
                         expanded = false
