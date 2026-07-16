@@ -1,9 +1,15 @@
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Checkbox
@@ -38,18 +45,23 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,7 +85,7 @@ fun AppTopBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
-    navigationIcon: @Composable ((Modifier) -> Unit)? = null,
+    navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val isTelevision = isTelevisionDevice()
@@ -97,25 +109,14 @@ fun AppTopBar(
             },
             navigationIcon = {
                 if (navigationIcon != null) {
-                    navigationIcon(
-                        Modifier.dpadFocusOutline(
-                            focusRequester = navigationFocusRequester,
-                            focusedScale = 1.05f
-                        )
-                    )
+                    navigationIcon(navigationFocusRequester)
                 } else {
-                    IconButton(
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_arrow_back_24dp),
+                        label = stringResource(R.string.acc_back),
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        modifier = Modifier.dpadFocusOutline(
-                            focusRequester = navigationFocusRequester,
-                            focusedScale = 1.05f
-                        )
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_arrow_back_24dp),
-                            contentDescription = stringResource(R.string.acc_back)
-                        )
-                    }
+                        focusRequester = navigationFocusRequester
+                    )
                 }
             },
             actions = actions,
@@ -137,6 +138,77 @@ fun AppTopBar(
             exit = shrinkVertically()
         ) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondary)
+        }
+    }
+}
+
+/**
+ * Keeps the existing icon-only Material button on touch devices. On television devices the
+ * same action reveals its label while focused, improving remote discoverability without
+ * permanently consuming toolbar or row space.
+ */
+@Composable
+fun AppIconButton(
+    icon: Painter,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
+    enabled: Boolean = true,
+    containerColor: Color = Color.Transparent,
+    contentColor: Color? = null,
+    contentDescription: String? = label
+) {
+    if (!isTelevisionDevice()) {
+        IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+            if (contentColor == null) {
+                Icon(painter = icon, contentDescription = contentDescription)
+            } else {
+                Icon(painter = icon, contentDescription = contentDescription, tint = contentColor)
+            }
+        }
+        return
+    }
+
+    var isFocused by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(24.dp)
+    val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
+
+    Row(
+        modifier = modifier
+            .height(48.dp)
+            .background(containerColor, shape)
+            .dpadFocusOutline(
+                focusRequester = focusRequester,
+                cornerRadius = 24.dp,
+                focusedScale = 1.05f
+            )
+            .onFocusChanged { isFocused = it.isFocused }
+            .animateContentSize()
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = icon,
+            contentDescription = contentDescription,
+            tint = resolvedContentColor,
+            modifier = Modifier.size(24.dp)
+        )
+        AnimatedVisibility(
+            visible = isFocused,
+            enter = expandHorizontally() + fadeIn(),
+            exit = shrinkHorizontally() + fadeOut()
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = label,
+                    color = resolvedContentColor,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1
+                )
+            }
         }
     }
 }

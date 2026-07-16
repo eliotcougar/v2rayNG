@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.core.spring
@@ -64,7 +65,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -93,8 +93,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -115,6 +121,7 @@ import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppDivider
+import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTheme
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ConfirmDialog
@@ -640,6 +647,31 @@ private fun MainBottomBar(
     onFabClick: () -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
+
+    if (isTelevision) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AppDivider()
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .height(64.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 48.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = displayText, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        return
+    }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth()) {
             AppDivider()
@@ -656,7 +688,7 @@ private fun MainBottomBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = if (isTelevision) 48.dp else 16.dp),
+                        .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -668,7 +700,7 @@ private fun MainBottomBar(
             onClick = onFabClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = if (isTelevision) 48.dp else 24.dp)
+                .padding(end = 24.dp)
                 .offset(y = (-28).dp)
                 .navigationBarsPadding()
                 .dpadFocusOutline(cornerRadius = 16.dp, focusedScale = 1.05f),
@@ -712,6 +744,28 @@ private suspend fun PagerState.navigateToPageOptimized(
     }
 }
 
+private fun Modifier.tvHorizontalFocusNavigation(
+    isTelevision: Boolean,
+    onLeft: () -> Unit,
+    onRight: () -> Unit
+): Modifier {
+    if (!isTelevision) return this
+    return onKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+        when (event.key) {
+            Key.DirectionLeft -> {
+                onLeft()
+                true
+            }
+            Key.DirectionRight -> {
+                onRight()
+                true
+            }
+            else -> false
+        }
+    }
+}
+
 @Composable
 private fun GroupTabBar(
     groups: List<GroupMapItem>,
@@ -720,6 +774,12 @@ private fun GroupTabBar(
     onTabClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isTelevision = isTelevisionDevice()
+    val layoutDirection = LocalLayoutDirection.current
+    val tabFocusRequesters = remember(groups.map { it.id }) {
+        List(groups.size) { FocusRequester() }
+    }
+
     PrimaryScrollableTabRow(
         selectedTabIndex = selectedTabIndex.coerceIn(0, groups.lastIndex),
         modifier = modifier.fillMaxWidth(),
@@ -742,12 +802,32 @@ private fun GroupTabBar(
         divider = {}
     ) {
         groups.forEachIndexed { index, group ->
+            val leftTarget = if (layoutDirection == LayoutDirection.Ltr) index - 1 else index + 1
+            val rightTarget = if (layoutDirection == LayoutDirection.Ltr) index + 1 else index - 1
+            val tabModifier = if (isTelevision) {
+                Modifier
+                    .dpadFocusOutline(
+                        focusRequester = tabFocusRequesters[index],
+                        cornerRadius = 20.dp
+                    )
+                    .onFocusChanged {
+                        if (it.isFocused && index != selectedTabIndex) onTabClick(index)
+                    }
+                    .tvHorizontalFocusNavigation(
+                        isTelevision = true,
+                        onLeft = { tabFocusRequesters.getOrNull(leftTarget)?.requestFocus() },
+                        onRight = { tabFocusRequesters.getOrNull(rightTarget)?.requestFocus() }
+                    )
+            } else {
+                Modifier
+            }
             GroupTabItem(
                 group = group,
                 selected = index == selectedTabIndex,
                 serverFlowProvider = {
                     mainViewModel.serversForGroup(group.id)
                 },
+                modifier = tabModifier,
                 onClick = { onTabClick(index) }
             )
         }
@@ -759,6 +839,7 @@ private fun GroupTabItem(
     group: GroupMapItem,
     selected: Boolean,
     serverFlowProvider: () -> StateFlow<List<ServersCache>>,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val serverFlow = remember(group.id) {
@@ -769,6 +850,7 @@ private fun GroupTabItem(
     Tab(
         selected = selected,
         onClick = onClick,
+        modifier = modifier,
         text = {
             val text = if (group.id.isEmpty()) {
                 group.remarks
@@ -885,6 +967,12 @@ fun MainScreen(
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = isTelevision && showSearch) {
+        searchQuery = ""
+        mainViewModel.filterConfig("")
+        showSearch = false
+    }
 
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -1142,166 +1230,183 @@ fun MainScreen(
                         showSearch = false
                     },
                     searchPlaceholder = stringResource(R.string.menu_item_search),
-                    navigationIcon = { focusModifier ->
+                    navigationIcon = { navigationFocusRequester ->
                         if (showSearch) {
-                            IconButton(
+                            AppIconButton(
+                                icon = painterResource(R.drawable.ic_arrow_back_24dp),
+                                label = "Back",
                                 onClick = {
                                     searchQuery = ""
                                     mainViewModel.filterConfig("")
                                     showSearch = false
                                 },
-                                modifier = focusModifier
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_arrow_back_24dp),
-                                    contentDescription = "Back"
-                                )
-                            }
+                                focusRequester = navigationFocusRequester
+                            )
                         } else {
-                            IconButton(
+                            AppIconButton(
+                                icon = painterResource(R.drawable.ic_menu_24dp),
+                                label = "Menu",
                                 onClick = { scope.launch { drawerState.open() } },
-                                modifier = focusModifier
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_menu_24dp),
-                                    contentDescription = "Menu"
-                                )
-                            }
+                                focusRequester = navigationFocusRequester
+                            )
                         }
                     },
                     actions = {
                         if (!showSearch) {
-                            IconButton(
-                                onClick = { showSearch = true },
-                                modifier = Modifier.dpadFocusOutline()
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_search_24dp),
-                                    contentDescription = "filter"
-                                )
-                            }
+                            AppIconButton(
+                                icon = painterResource(R.drawable.ic_search_24dp),
+                                label = stringResource(R.string.menu_item_search),
+                                contentDescription = if (isTelevision) {
+                                    stringResource(R.string.menu_item_search)
+                                } else {
+                                    "filter"
+                                },
+                                onClick = { showSearch = true }
+                            )
                         }
-                        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            IconButton(
-                                onClick = { showImportMenu = true },
-                                modifier = Modifier.dpadFocusOutline()
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_add_24dp),
-                                    contentDescription = "Add"
+                        if (isTelevision && !showSearch) {
+                            AppIconButton(
+                                icon = painterResource(R.drawable.ic_check_update_24dp),
+                                label = stringResource(R.string.connection_test_pending),
+                                onClick = onTestClick
+                            )
+                            AppIconButton(
+                                icon = if (isRunning) {
+                                    painterResource(R.drawable.ic_stop_24dp)
+                                } else {
+                                    painterResource(R.drawable.ic_play_24dp)
+                                },
+                                label = if (isRunning) {
+                                    stringResource(R.string.action_stop_service)
+                                } else {
+                                    stringResource(R.string.tasker_start_service)
+                                },
+                                onClick = onFabClick,
+                                containerColor = if (isRunning) colorFabActive else Color.Transparent,
+                                contentColor = if (isRunning) Color.White else null
+                            )
+                        }
+                        if (!isTelevision || !showSearch) {
+                            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_add_24dp),
+                                    label = stringResource(R.string.menu_item_add_config),
+                                    contentDescription = if (isTelevision) {
+                                        stringResource(R.string.menu_item_add_config)
+                                    } else {
+                                        "Add"
+                                    },
+                                    onClick = { showImportMenu = true }
                                 )
-                            }
-                            DropdownMenu(
-                                expanded = showImportMenu,
-                                onDismissRequest = { showImportMenu = false },
-                                scrollState = importMenuScrollState,
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .heightIn(max = maxMenuHeight)
-                                    .verticalScrollbar(importMenuScrollState)
-                            ) {
-                                listOf(
-                                    R.string.menu_item_import_config_qrcode to {
-                                        showImportMenu = false; onImportQRcode()
-                                    },
-                                    R.string.menu_item_import_config_clipboard to {
-                                        showImportMenu = false; onImportClipboard()
-                                    },
-                                    R.string.menu_item_import_config_local to {
-                                        showImportMenu = false; onImportLocal()
-                                    },
-                                    R.string.menu_item_import_config_policy_group to {
-                                        showImportMenu = false; onImportManually(EConfigType.POLICYGROUP.value)
-                                    },
-                                    R.string.menu_item_import_config_proxy_chain to {
-                                        showImportMenu = false; onImportManually(EConfigType.PROXYCHAIN.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_vmess to {
-                                        showImportMenu = false; onImportManually(EConfigType.VMESS.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_vless to {
-                                        showImportMenu = false; onImportManually(EConfigType.VLESS.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_ss to {
-                                        showImportMenu = false; onImportManually(EConfigType.SHADOWSOCKS.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_socks to {
-                                        showImportMenu = false; onImportManually(EConfigType.SOCKS.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_http to {
-                                        showImportMenu = false; onImportManually(EConfigType.HTTP.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_trojan to {
-                                        showImportMenu = false; onImportManually(EConfigType.TROJAN.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_wireguard to {
-                                        showImportMenu = false; onImportManually(EConfigType.WIREGUARD.value)
-                                    },
-                                    R.string.menu_item_import_config_manually_hysteria2 to {
-                                        showImportMenu = false; onImportManually(EConfigType.HYSTERIA2.value)
-                                    },
-                                ).forEach { (stringRes, action) ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(stringRes)) },
-                                        modifier = Modifier.dpadFocusOutline(),
-                                        onClick = action
-                                    )
+                                DropdownMenu(
+                                    expanded = showImportMenu,
+                                    onDismissRequest = { showImportMenu = false },
+                                    scrollState = importMenuScrollState,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier
+                                        .heightIn(max = maxMenuHeight)
+                                        .verticalScrollbar(importMenuScrollState)
+                                ) {
+                                    listOf(
+                                        R.string.menu_item_import_config_qrcode to {
+                                            showImportMenu = false; onImportQRcode()
+                                        },
+                                        R.string.menu_item_import_config_clipboard to {
+                                            showImportMenu = false; onImportClipboard()
+                                        },
+                                        R.string.menu_item_import_config_local to {
+                                            showImportMenu = false; onImportLocal()
+                                        },
+                                        R.string.menu_item_import_config_policy_group to {
+                                            showImportMenu = false; onImportManually(EConfigType.POLICYGROUP.value)
+                                        },
+                                        R.string.menu_item_import_config_proxy_chain to {
+                                            showImportMenu = false; onImportManually(EConfigType.PROXYCHAIN.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_vmess to {
+                                            showImportMenu = false; onImportManually(EConfigType.VMESS.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_vless to {
+                                            showImportMenu = false; onImportManually(EConfigType.VLESS.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_ss to {
+                                            showImportMenu = false; onImportManually(EConfigType.SHADOWSOCKS.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_socks to {
+                                            showImportMenu = false; onImportManually(EConfigType.SOCKS.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_http to {
+                                            showImportMenu = false; onImportManually(EConfigType.HTTP.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_trojan to {
+                                            showImportMenu = false; onImportManually(EConfigType.TROJAN.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_wireguard to {
+                                            showImportMenu = false; onImportManually(EConfigType.WIREGUARD.value)
+                                        },
+                                        R.string.menu_item_import_config_manually_hysteria2 to {
+                                            showImportMenu = false; onImportManually(EConfigType.HYSTERIA2.value)
+                                        },
+                                    ).forEach { (stringRes, action) ->
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(stringRes)) },
+                                            modifier = Modifier.dpadFocusOutline(),
+                                            onClick = action
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            IconButton(
-                                onClick = { showMenu = true },
-                                modifier = Modifier.dpadFocusOutline()
-                            ) {
-                                Icon(
-                                    painterResource(R.drawable.ic_more_vert_24dp),
-                                    contentDescription = null
+                            Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_more_vert_24dp),
+                                    label = "More",
+                                    contentDescription = if (isTelevision) "More" else null,
+                                    onClick = { showMenu = true }
                                 )
-                            }
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                scrollState = moreMenuScrollState,
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                modifier = Modifier
-                                    .heightIn(max = maxMenuHeight)
-                                    .verticalScrollbar(moreMenuScrollState)
-                            ) {
-                                listOf(
-                                    R.string.title_service_restart to {
-                                        showMenu = false; onRestartService()
-                                    },
-                                    R.string.title_del_all_config to {
-                                        showMenu = false; showDelAllConfirm = true
-                                    },
-                                    R.string.title_del_duplicate_config to {
-                                        showMenu = false; showDelDuplicateConfirm = true
-                                    },
-                                    R.string.title_del_invalid_config to {
-                                        showMenu = false; showDelInvalidConfirm = true
-                                    },
-                                    R.string.title_export_all to {
-                                        showMenu = false; onExportAll()
-                                    },
-                                    R.string.title_real_ping_all_server to {
-                                        showMenu = false; onRealPingAll()
-                                    },
-                                    R.string.title_locate_selected_config to {
-                                        showMenu = false; onLocateSelectedServer()
-                                    },
-                                    R.string.title_sort_by_test_results to {
-                                        showMenu = false; onSortByTestResults()
-                                    },
-                                    R.string.title_sub_update to {
-                                        showMenu = false; onSubUpdate()
-                                    },
-                                ).forEach { (stringRes, action) ->
-                                    DropdownMenuItem(
-                                        text = { Text(stringResource(stringRes)) },
-                                        modifier = Modifier.dpadFocusOutline(),
-                                        onClick = action
-                                    )
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    scrollState = moreMenuScrollState,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier
+                                        .heightIn(max = maxMenuHeight)
+                                        .verticalScrollbar(moreMenuScrollState)
+                                ) {
+                                    listOf(
+                                        R.string.title_service_restart to {
+                                            showMenu = false; onRestartService()
+                                        },
+                                        R.string.title_del_all_config to {
+                                            showMenu = false; showDelAllConfirm = true
+                                        },
+                                        R.string.title_del_duplicate_config to {
+                                            showMenu = false; showDelDuplicateConfirm = true
+                                        },
+                                        R.string.title_del_invalid_config to {
+                                            showMenu = false; showDelInvalidConfirm = true
+                                        },
+                                        R.string.title_export_all to {
+                                            showMenu = false; onExportAll()
+                                        },
+                                        R.string.title_real_ping_all_server to {
+                                            showMenu = false; onRealPingAll()
+                                        },
+                                        R.string.title_locate_selected_config to {
+                                            showMenu = false; onLocateSelectedServer()
+                                        },
+                                        R.string.title_sort_by_test_results to {
+                                            showMenu = false; onSortByTestResults()
+                                        },
+                                        R.string.title_sub_update to {
+                                            showMenu = false; onSubUpdate()
+                                        },
+                                    ).forEach { (stringRes, action) ->
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(stringRes)) },
+                                            modifier = Modifier.dpadFocusOutline(),
+                                            onClick = action
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1601,11 +1706,27 @@ fun ServerListItem(
     modifier: Modifier = Modifier,
     dragModifier: Modifier = Modifier
 ) {
+    val isTelevision = isTelevisionDevice()
+    val rowFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
+    val shareFocusRequester = remember { FocusRequester() }
+    val editFocusRequester = remember { FocusRequester() }
+    val deleteFocusRequester = remember { FocusRequester() }
+    val compactActionModifier = if (isTelevision) Modifier else Modifier.size(36.dp)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .dpadFocusOutline()
+            .dpadFocusOutline(rowFocusRequester)
+            .tvHorizontalFocusNavigation(
+                isTelevision = isTelevision,
+                onLeft = { rowFocusRequester.requestFocus() },
+                onRight = {
+                    if (doubleColumnDisplay) moreFocusRequester.requestFocus()
+                    else shareFocusRequester.requestFocus()
+                }
+            )
             .clickable(onClick = onClick)
             .then(dragModifier)
     ) {
@@ -1622,36 +1743,67 @@ fun ServerListItem(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (doubleColumnDisplay) {
-                    IconButton(
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_more_vert_24dp),
+                        label = "More",
+                        contentDescription = if (isTelevision) "More" else null,
                         onClick = onMore,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .dpadFocusOutline(cornerRadius = 18.dp, focusedScale = 1.05f)
-                    ) {
-                        Icon(painterResource(R.drawable.ic_more_vert_24dp), null, Modifier.size(24.dp))
-                    }
+                        focusRequester = moreFocusRequester,
+                        modifier = compactActionModifier.tvHorizontalFocusNavigation(
+                            isTelevision = isTelevision,
+                            onLeft = { rowFocusRequester.requestFocus() },
+                            onRight = { moreFocusRequester.requestFocus() }
+                        )
+                    )
                 } else {
-                    IconButton(
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_share_24dp),
+                        label = stringResource(R.string.title_configuration_share),
+                        contentDescription = if (isTelevision) {
+                            stringResource(R.string.title_configuration_share)
+                        } else {
+                            null
+                        },
                         onClick = onShare,
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(
-                            cornerRadius = 18.dp,
-                            focusedScale = 1.05f
+                        focusRequester = shareFocusRequester,
+                        modifier = compactActionModifier.tvHorizontalFocusNavigation(
+                            isTelevision = isTelevision,
+                            onLeft = { rowFocusRequester.requestFocus() },
+                            onRight = { editFocusRequester.requestFocus() }
                         )
-                    ) { Icon(painterResource(R.drawable.ic_share_24dp), null, Modifier.size(24.dp)) }
-                    IconButton(
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_edit_24dp),
+                        label = stringResource(R.string.menu_item_edit_config),
+                        contentDescription = if (isTelevision) {
+                            stringResource(R.string.menu_item_edit_config)
+                        } else {
+                            null
+                        },
                         onClick = onEdit,
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(
-                            cornerRadius = 18.dp,
-                            focusedScale = 1.05f
+                        focusRequester = editFocusRequester,
+                        modifier = compactActionModifier.tvHorizontalFocusNavigation(
+                            isTelevision = isTelevision,
+                            onLeft = { shareFocusRequester.requestFocus() },
+                            onRight = { deleteFocusRequester.requestFocus() }
                         )
-                    ) { Icon(painterResource(R.drawable.ic_edit_24dp), null, Modifier.size(24.dp)) }
-                    IconButton(
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_delete_24dp),
+                        label = stringResource(R.string.menu_item_del_config),
+                        contentDescription = if (isTelevision) {
+                            stringResource(R.string.menu_item_del_config)
+                        } else {
+                            null
+                        },
                         onClick = onRemove,
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(
-                            cornerRadius = 18.dp,
-                            focusedScale = 1.05f
+                        focusRequester = deleteFocusRequester,
+                        modifier = compactActionModifier.tvHorizontalFocusNavigation(
+                            isTelevision = isTelevision,
+                            onLeft = { editFocusRequester.requestFocus() },
+                            onRight = { deleteFocusRequester.requestFocus() }
                         )
-                    ) { Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(24.dp)) }
+                    )
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
