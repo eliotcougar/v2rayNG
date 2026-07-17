@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">কনফিগারেশন সম্পাদনা করুন</string>
     <string name="menu_item_del_config">কনফিগারেশন মুছুন</string>
     <string name="action_delete">মুছুন</string>
+    <string name="action_close">বন্ধ করুন</string>
     <string name="action_back">ফিরে যান</string>
     <string name="action_menu">মেনু</string>
     <string name="action_more">আরও</string>
@@ -191,8 +192,10 @@
     <string name="title_vpn_settings">VPN সেটিংস</string>
     <string name="title_pref_per_app_proxy">প্রতি-অ্যাপ প্রক্সি</string>
     <string name="summary_pref_per_app_proxy">প্রতি-অ্যাপ রাউটিং কোন অ্যাপ VPN ব্যবহার করবে তা নিয়ন্ত্রণ করে।\n\nসাধারণ মোডে নির্বাচিত অ্যাপগুলো VPN ব্যবহার করে এবং অনির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয়। বাইপাস মোডে নির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয় এবং অনির্বাচিত অ্যাপগুলো VPN ব্যবহার করে। আরও মেনু থেকে স্বয়ংক্রিয় অ্যাপ নির্বাচন করা যায়।</string>
-    <string name="title_pref_is_booted">চালুর সময় স্বয়ংক্রিয় সংযোগ</string>
-    <string name="summary_pref_is_booted">চালুর সময় নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে; সংযোগ ব্যর্থ হতে পারে</string>
+    <string name="title_pref_is_booted">অ্যাপ চালু হলে স্বয়ংক্রিয় সংযোগ</string>
+    <string name="summary_pref_is_booted">v2rayNG খুললে নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে।</string>
+    <string name="title_pref_start_on_boot">ডিভাইস চালুর পর স্বয়ংক্রিয় সংযোগ</string>
+    <string name="summary_pref_start_on_boot">ডিভাইস চালু হওয়ার পর ব্যাকগ্রাউন্ডে v2rayNG চালু করে এবং নির্বাচিত সার্ভারে সংযোগ করে।</string>
 
 
     <string name="subscription_updater_job_tips">কাজটি ব্যাকগ্রাউন্ডে চলবে এবং অগ্রগতির তথ্য বিজ্ঞপ্তিতে দেখানো হবে।</string>
@@ -381,6 +384,8 @@
     <string name="title_update_subscription_no_subscription">কোনো সাবস্ক্রিপশন নেই</string>
     <string name="toast_server_not_found_in_group">বর্তমান গ্রুপে নির্বাচিত সার্ভারটি পাওয়া যায়নি</string>
     <string name="title_locate_selected_config">নির্বাচিত কনফিগটি খুঁজুন</string>
+
+    <string name="toast_fragment_not_available">Unable to locate current view</string>
 
     <string name="tasker_start_service">সার্ভিস শুরু করুন</string>
     <string name="tasker_setting_confirm">নিশ্চিত করুন</string>

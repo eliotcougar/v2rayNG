@@ -99,9 +99,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.key.Key
@@ -248,6 +250,15 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.initialize()
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+
+        if (savedInstanceState == null && MmkvManager.decodeAutoConnectOnAppStart()) {
+            lifecycleScope.launch {
+                // Let the activity reach its resumed state before potentially opening the
+                // platform VPN consent screen.
+                delay(300)
+                autoConnectOnAppStart()
+            }
+        }
     }
 
     @Composable
@@ -349,6 +360,17 @@ class MainActivity : HelperBaseComponentActivity() {
         if (!mainViewModel.uiState.value.isRunning) return
         CoreServiceManager.stopVService(this)
         lifecycleScope.launch { delay(500); startV2Ray() }
+    }
+
+    private fun autoConnectOnAppStart() {
+        if (CoreServiceManager.isRunning() || MmkvManager.getSelectServer().isNullOrEmpty()) return
+
+        if (SettingsManager.isVpnMode()) {
+            val intent = VpnService.prepare(this)
+            if (intent == null) startV2Ray() else requestVpnPermission.launch(intent)
+        } else {
+            startV2Ray()
+        }
     }
 
     private fun importManually(createConfigType: Int) {
@@ -824,8 +846,9 @@ private fun GroupTabBar(
     modifier: Modifier = Modifier
 ) {
     val isTelevision = isTelevisionDevice()
+    val activeTabIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
     PrimaryScrollableTabRow(
-        selectedTabIndex = selectedTabIndex.coerceIn(0, groups.lastIndex),
+        selectedTabIndex = activeTabIndex,
         modifier = modifier.fillMaxWidth(),
         containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -835,7 +858,7 @@ private fun GroupTabBar(
             TabRowDefaults.PrimaryIndicator(
                 modifier = Modifier
                     .tabIndicatorOffset(
-                        selectedTabIndex = selectedTabIndex.coerceIn(0, groups.lastIndex),
+                        selectedTabIndex = activeTabIndex,
                         matchContentSize = true
                     )
                     .clip(RoundedCornerShape(3.dp)),
@@ -897,6 +920,7 @@ private fun GroupTabItem(
         serverFlowProvider()
     }
     val servers by serverFlow.collectAsStateWithLifecycle()
+    val inactiveIndicatorColor = MaterialTheme.colorScheme.outlineVariant
 
     Tab(
         selected = selected,
@@ -904,7 +928,7 @@ private fun GroupTabItem(
         modifier = modifier,
         text = {
             val text = if (group.id.isEmpty()) {
-                group.remarks
+                stringResource(R.string.filter_config_all)
             } else {
                 "${group.remarks} (${servers.size})"
             }
@@ -912,7 +936,22 @@ private fun GroupTabItem(
                 text = text,
                 maxLines = 1,
                 softWrap = false,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = if (selected) {
+                    Modifier
+                } else {
+                    Modifier.drawWithContent {
+                        drawContent()
+                        val indicatorY = size.height + 12.dp.toPx()
+                        drawLine(
+                            color = inactiveIndicatorColor,
+                            start = Offset(0f, indicatorY),
+                            end = Offset(size.width, indicatorY),
+                            strokeWidth = 3.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+                }
             )
         }
     )
@@ -1013,6 +1052,7 @@ private fun GroupPagerPage(
     selectedGuid: String?,
     doubleColumnDisplay: Boolean,
     confirmRemove: Boolean,
+    revealSelectedGeneration: Int,
     searchQuery: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
@@ -1039,6 +1079,7 @@ private fun GroupPagerPage(
         doubleColumnDisplay = doubleColumnDisplay,
         subscriptionId = groupId,
         confirmRemove = confirmRemove,
+        revealSelectedGeneration = revealSelectedGeneration,
         groupId = groupId,
         lazyListStates = lazyListStates,
         lazyGridStates = lazyGridStates,
@@ -1094,7 +1135,7 @@ fun MainScreen(
     val displayText = uiState.statusTextRes?.let { stringResource(it) } ?: uiState.statusText
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
-    val confirmRemove = uiState.confirmRemove
+    val confirmRemove = isTelevision || uiState.confirmRemove
 
     LaunchedEffect(mainViewModel, resources) {
         mainViewModel.serviceStatusMessages.collect { message ->
@@ -1325,7 +1366,10 @@ fun MainScreen(
                     1 -> onShareClipboard(guid)
                     2 -> onShareFullContent(guid)
                     3 -> onEditServer(guid, profile)
-                    4 -> onRemoveServer(guid)
+                    4 -> {
+                        if (confirmRemove) showRemoveConfirm = guid
+                        else onRemoveServer(guid)
+                    }
                 }
             },
             onDismiss = { shareTarget = null }
@@ -1825,6 +1869,7 @@ fun MainScreen(
                             selectedGuid = selectedGuid,
                             doubleColumnDisplay = doubleColumnDisplay,
                             confirmRemove = confirmRemove,
+                            revealSelectedGeneration = resumeFocusGeneration,
                             searchQuery = searchQuery,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
@@ -1886,6 +1931,7 @@ private fun ServerListPage(
     doubleColumnDisplay: Boolean,
     subscriptionId: String,
     confirmRemove: Boolean,
+    revealSelectedGeneration: Int,
     groupId: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
@@ -1899,12 +1945,28 @@ private fun ServerListPage(
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
+    val isTelevision = isTelevisionDevice()
+    val selectedServerIndex = servers.indexOfFirst { it.guid == selectedGuid }
+    val serverGuids = servers.map { it.guid }
     val rowFocusTargets = remember(groupId, servers.map { it.guid }, doubleColumnDisplay) {
         servers.associate { it.guid to ServerRowFocusTargets() }
     }
     if (doubleColumnDisplay) {
         val gridState = remember(groupId) {
             lazyGridStates.getOrPut(groupId) { LazyGridState() }
+        }
+        LaunchedEffect(
+            isTelevision,
+            revealSelectedGeneration,
+            selectedGuid,
+            serverGuids
+        ) {
+            if (isTelevision && selectedServerIndex >= 0) {
+                gridState.scrollToItem(
+                    index = selectedServerIndex,
+                    scrollOffset = -gridState.layoutInfo.viewportSize.height / 3
+                )
+            }
         }
         val reorderableGridState = if (canReorder) {
             rememberReorderableLazyGridState(gridState) { from, to ->
@@ -1973,6 +2035,19 @@ private fun ServerListPage(
     } else {
         val listState = remember(groupId) {
             lazyListStates.getOrPut(groupId) { LazyListState() }
+        }
+        LaunchedEffect(
+            isTelevision,
+            revealSelectedGeneration,
+            selectedGuid,
+            serverGuids
+        ) {
+            if (isTelevision && selectedServerIndex >= 0) {
+                listState.scrollToItem(
+                    index = selectedServerIndex,
+                    scrollOffset = -listState.layoutInfo.viewportSize.height / 3
+                )
+            }
         }
         val reorderableState = if (canReorder) {
             rememberReorderableLazyListState(listState) { from, to ->

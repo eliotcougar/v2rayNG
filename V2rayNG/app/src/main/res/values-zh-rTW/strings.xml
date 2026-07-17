@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">編輯設定檔</string>
     <string name="menu_item_del_config">刪除設定</string>
     <string name="action_delete">刪除</string>
+    <string name="action_close">關閉</string>
     <string name="action_back">返回</string>
     <string name="action_menu">選單</string>
     <string name="action_more">更多</string>
@@ -191,8 +192,10 @@
     <string name="title_vpn_settings">VPN 設定</string>
     <string name="title_pref_per_app_proxy">Proxy 個別應用程式</string>
     <string name="summary_pref_per_app_proxy">分應用路由控制哪些應用程式使用 VPN。\n\n在一般模式下，已選取的應用程式使用 VPN，未選取的應用程式直接連線。在繞行模式下，已選取的應用程式直接連線，未選取的應用程式使用 VPN。可從「更多」選單自動選取應用程式。</string>
-    <string name="title_pref_is_booted">開機時自動連線</string>
-    <string name="summary_pref_is_booted">開機時自動連線選擇的伺服器，可能會不成功</string>
+    <string name="title_pref_is_booted">應用程式啟動時自動連線</string>
+    <string name="summary_pref_is_booted">開啟 v2rayNG 時自動連線至所選伺服器。</string>
+    <string name="title_pref_start_on_boot">裝置開機後自動連線</string>
+    <string name="summary_pref_start_on_boot">裝置開機後在背景啟動 v2rayNG 並連線至所選伺服器。</string>
 
 
     <string name="subscription_updater_job_tips">任務將在背景執行，通知中會顯示進度資訊。</string>

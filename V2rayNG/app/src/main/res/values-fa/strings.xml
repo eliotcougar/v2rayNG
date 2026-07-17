@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">ویرایش کردن کانفیگ</string>
     <string name="menu_item_del_config">حذف کانفیگ</string>
     <string name="action_delete">حذف</string>
+    <string name="action_close">بستن</string>
     <string name="action_back">بازگشت</string>
     <string name="action_menu">منو</string>
     <string name="action_more">بیشتر</string>
@@ -191,8 +192,10 @@
     <string name="title_vpn_settings">تنظیمات VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی به تفکیک برنامه</string>
     <string name="summary_pref_per_app_proxy">مسیریابی به تفکیک برنامه مشخص می‌کند کدام برنامه‌ها از VPN استفاده کنند.\n\nدر حالت عمومی، برنامه‌های انتخاب‌شده از VPN استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند. در حالت دور زدن، برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از VPN استفاده می‌کنند. انتخاب خودکار برنامه‌ها از منوی «بیشتر» در دسترس است.</string>
-    <string name="title_pref_is_booted">اتصال خودکار هنگام راه اندازی</string>
-    <string name="summary_pref_is_booted">هنگام راه اندازی به طور خودکار به سرور انتخابی متصل می شود که ممکن است ناموفق باشد.</string>
+    <string name="title_pref_is_booted">اتصال خودکار هنگام اجرای برنامه</string>
+    <string name="summary_pref_is_booted">هنگام باز شدن v2rayNG به‌طور خودکار به سرور انتخاب‌شده متصل می‌شود.</string>
+    <string name="title_pref_start_on_boot">اتصال خودکار پس از روشن شدن دستگاه</string>
+    <string name="summary_pref_start_on_boot">پس از روشن شدن دستگاه، v2rayNG را در پس‌زمینه اجرا می‌کند و به سرور انتخاب‌شده متصل می‌شود.</string>
 
 
     <string name="subscription_updater_job_tips">این کار در پس‌زمینه اجرا می‌شود و پیشرفت آن در اعلان نمایش داده خواهد شد.</string>

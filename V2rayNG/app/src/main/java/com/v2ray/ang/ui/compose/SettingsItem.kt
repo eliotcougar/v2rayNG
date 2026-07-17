@@ -50,11 +50,28 @@ fun CollapsiblePreferenceGroupHeader(
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isTelevision = isTelevisionDevice()
+    val interactionSource = remember { MutableInteractionSource() }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onExpandedChange(!expanded) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .dpadFocusOutline()
+            .then(
+                if (isTelevision) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = { onExpandedChange(!expanded) }
+                    )
+                } else {
+                    Modifier.clickable { onExpandedChange(!expanded) }
+                }
+            )
+            .padding(
+                horizontal = if (isTelevision) 24.dp else 16.dp,
+                vertical = 12.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

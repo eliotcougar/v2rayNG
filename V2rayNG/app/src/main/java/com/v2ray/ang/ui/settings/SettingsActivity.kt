@@ -146,7 +146,8 @@ fun SettingsScreen(
     var coreLogLevel by rememberMmkvString(AppConfig.PREF_LOGLEVEL, "warning")
     var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "0")
 
-    var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
+    var autoConnectOnAppStart by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
+    var startOnBoot by rememberMmkvBool(AppConfig.PREF_START_ON_BOOT, MmkvManager.decodeStartOnBoot())
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
@@ -212,18 +213,20 @@ fun SettingsScreen(
                 onExpandedChange = { uiSettingsExpanded = it }
             )
             if (uiSettingsExpanded) {
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_speed_enabled),
-                    summary = stringResource(R.string.summary_pref_speed_enabled),
-                    checked = speedEnabled,
-                    onCheckedChange = { speedEnabled = it }
-                )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_confirm_remove),
-                    summary = stringResource(R.string.summary_pref_confirm_remove),
-                    checked = confirmRemove,
-                    onCheckedChange = { confirmRemove = it }
-                )
+                if (!isTelevision) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_pref_speed_enabled),
+                        summary = stringResource(R.string.summary_pref_speed_enabled),
+                        checked = speedEnabled,
+                        onCheckedChange = { speedEnabled = it }
+                    )
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_pref_confirm_remove),
+                        summary = stringResource(R.string.summary_pref_confirm_remove),
+                        checked = confirmRemove,
+                        onCheckedChange = { confirmRemove = it }
+                    )
+                }
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_double_column_display),
                     summary = stringResource(R.string.summary_pref_double_column_display),
@@ -612,9 +615,17 @@ fun SettingsScreen(
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_is_booted),
                     summary = stringResource(R.string.summary_pref_is_booted),
-                    checked = isBooted,
-                    onCheckedChange = { isBooted = it }
+                    checked = autoConnectOnAppStart,
+                    onCheckedChange = { autoConnectOnAppStart = it }
                 )
+                if (isTelevision) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_pref_start_on_boot),
+                        summary = stringResource(R.string.summary_pref_start_on_boot),
+                        checked = startOnBoot,
+                        onCheckedChange = { startOnBoot = it }
+                    )
+                }
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_delay_test_url),
                     value = delayTestUrl,
@@ -664,20 +675,22 @@ fun SettingsScreen(
                         }
                     }
                 )
-                SettingsSwitchItem(
-                    title = stringResource(R.string.title_root_lan_sharing),
-                    summary = stringResource(R.string.summary_root_lan_sharing),
-                    checked = lanSharing,
-                    onCheckedChange = { newValue ->
-                        if (newValue && !RootManager.cachedRoot()) {
-                            viewModel.checkAndRequestRoot {
-                                lanSharing = true
+                if (!isTelevision) {
+                    SettingsSwitchItem(
+                        title = stringResource(R.string.title_root_lan_sharing),
+                        summary = stringResource(R.string.summary_root_lan_sharing),
+                        checked = lanSharing,
+                        onCheckedChange = { newValue ->
+                            if (newValue && !RootManager.cachedRoot()) {
+                                viewModel.checkAndRequestRoot {
+                                    lanSharing = true
+                                }
+                            } else {
+                                lanSharing = newValue
                             }
-                        } else {
-                            lanSharing = newValue
                         }
-                    }
-                )
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))

@@ -142,7 +142,8 @@ fun SubSettingScreen(
         subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
     }
     var removeTarget by remember { mutableStateOf<String?>(null) }
-    val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
+    val confirmRemove = isTelevision ||
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
     var shareTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }

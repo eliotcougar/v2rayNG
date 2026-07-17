@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">تعديل التكوين</string>
     <string name="menu_item_del_config">حذف التكوين</string>
     <string name="action_delete">حذف</string>
+    <string name="action_close">إغلاق</string>
     <string name="action_back">رجوع</string>
     <string name="action_menu">القائمة</string>
     <string name="action_more">المزيد</string>
@@ -191,8 +192,10 @@
     <string name="title_vpn_settings">إعدادات VPN</string>
     <string name="title_pref_per_app_proxy">الوكيل لكل تطبيق</string>
     <string name="summary_pref_per_app_proxy">يحدد التوجيه حسب التطبيق التطبيقات التي تستخدم شبكة VPN.\n\nفي الوضع العام، تستخدم التطبيقات المحددة شبكة VPN وتتصل التطبيقات غير المحددة مباشرة. في وضع التجاوز، تتصل التطبيقات المحددة مباشرة وتستخدم التطبيقات غير المحددة شبكة VPN. يتوفر التحديد التلقائي للتطبيقات من قائمة «المزيد».</string>
-    <string name="title_pref_is_booted">الاتصال تلقائياً عند بدء التشغيل</string>
-    <string name="summary_pref_is_booted">الاتصال تلقائياً بالخادم المحدد عند بدء التشغيل؛ قد لا تنجح المحاولة</string>
+    <string name="title_pref_is_booted">الاتصال تلقائيًا عند بدء التطبيق</string>
+    <string name="summary_pref_is_booted">الاتصال تلقائيًا بالخادم المحدد عند فتح v2rayNG.</string>
+    <string name="title_pref_start_on_boot">الاتصال تلقائيًا بعد تشغيل الجهاز</string>
+    <string name="summary_pref_start_on_boot">تشغيل v2rayNG في الخلفية والاتصال بالخادم المحدد بعد تشغيل الجهاز.</string>
 
 
     <string name="subscription_updater_job_tips">ستعمل المهمة في الخلفية، وسيُعرض تقدمها في الإشعار.</string>
@@ -347,8 +350,8 @@
     <string name="title_del_all_config">حذف جميع الإعدادات</string>
     <string name="title_del_duplicate_config">حذف الإعدادات المكررة</string>
     <string name="title_del_invalid_config">حذف الإعدادات غير الصالحة</string>
-    <string name="title_export_all">تصدير التكوينات إلى الحافظة</string>
-    <string name="title_sub_setting">الاشتراكات</string>
+    <string name="title_export_all">تصدير الإعدادات غير المخصصة إلى الحافظة</string>
+    <string name="title_sub_setting">إعداد مجموعة الاشتراك</string>
     <string name="sub_setting_remarks">ملاحظات</string>
     <string name="sub_setting_url">عنوان URL اختياري</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
@@ -380,6 +383,8 @@
     <string name="title_update_subscription_result">تم تحديث %1$d إعدادات (%2$d ناجحة، %3$d فاشلة، %4$d متخطاة)</string>
     <string name="title_update_subscription_no_subscription">لا توجد اشتراكات</string>
     <string name="toast_server_not_found_in_group">لم يُعثر على الخادم المحدد في المجموعة الحالية</string>
+
+    <string name="toast_fragment_not_available">Unable to locate current view</string>
     <string name="title_locate_selected_config">العثور على التكوين المحدد</string>
 
     <string name="tasker_start_service">بدء الخدمة</string>

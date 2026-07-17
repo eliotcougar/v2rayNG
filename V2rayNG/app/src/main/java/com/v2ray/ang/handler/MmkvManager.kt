@@ -14,6 +14,7 @@ import com.tencent.mmkv.MMKVLogLevel
 import com.tencent.mmkv.MMKVRecoverStrategic
 import com.v2ray.ang.AppConfig.DEFAULT_SUBSCRIPTION_ID
 import com.v2ray.ang.AppConfig.PREF_IS_BOOTED
+import com.v2ray.ang.AppConfig.PREF_START_ON_BOOT
 import com.v2ray.ang.AppConfig.PREF_ROUTING_RULESET
 import com.v2ray.ang.AppConfig.TAG
 import com.v2ray.ang.BuildConfig
@@ -956,22 +957,30 @@ object MmkvManager {
     }
 
 
-    /**
-     * Encodes the start on boot setting.
-     *
-     * @param startOnBoot Whether to start on boot.
-     */
+    /** Encodes whether the background service should start after device boot. */
     fun encodeStartOnBoot(startOnBoot: Boolean) {
-        encodeSettings(PREF_IS_BOOTED, startOnBoot)
+        encodeSettings(PREF_START_ON_BOOT, startOnBoot)
+    }
+
+    /** Whether a cold launch of the app should connect automatically. */
+    fun decodeAutoConnectOnAppStart(): Boolean {
+        return decodeSettingsBool(PREF_IS_BOOTED, false)
     }
 
     /**
-     * Decodes the start on boot setting.
+     * Whether the background service should start after device boot.
      *
-     * @return Whether to start on boot.
+     * Before this setting was split, PREF_IS_BOOTED controlled the boot receiver. Migrate that
+     * value once so existing installations retain their behavior and the two switches can then
+     * change independently.
      */
     fun decodeStartOnBoot(): Boolean {
-        return decodeSettingsBool(PREF_IS_BOOTED, false)
+        if (!settingsStorage.containsKey(PREF_START_ON_BOOT)) {
+            val legacyValue = decodeAutoConnectOnAppStart()
+            settingsStorage.encode(PREF_START_ON_BOOT, legacyValue)
+            return legacyValue
+        }
+        return decodeSettingsBool(PREF_START_ON_BOOT, false)
     }
 
     //endregion

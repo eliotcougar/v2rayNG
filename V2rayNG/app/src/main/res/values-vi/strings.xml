@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">Chỉnh sửa cấu hình</string>
     <string name="menu_item_del_config">Xoá cấu hình</string>
     <string name="action_delete">Xoá</string>
+    <string name="action_close">Đóng</string>
     <string name="action_back">Quay lại</string>
     <string name="action_menu">Trình đơn</string>
     <string name="action_more">Thêm</string>
@@ -191,8 +192,10 @@
     <string name="title_vpn_settings">Cài đặt VPN</string>
     <string name="title_pref_per_app_proxy">Proxy theo Ứng dụng</string>
     <string name="summary_pref_per_app_proxy">Định tuyến theo ứng dụng kiểm soát những ứng dụng nào sử dụng VPN.\n\nỞ chế độ Chung, các ứng dụng đã chọn sử dụng VPN và các ứng dụng chưa chọn kết nối trực tiếp. Ở chế độ Bỏ qua, các ứng dụng đã chọn kết nối trực tiếp và các ứng dụng chưa chọn sử dụng VPN. Có thể tự động chọn ứng dụng từ menu Thêm.</string>
-    <string name="title_pref_is_booted">Tự động kết nối khi khởi động</string>
-    <string name="summary_pref_is_booted">Tự động kết nối với máy chủ đã chọn khi khởi động; thao tác này có thể không thành công</string>
+    <string name="title_pref_is_booted">Tự động kết nối khi mở ứng dụng</string>
+    <string name="summary_pref_is_booted">Tự động kết nối tới máy chủ đã chọn khi mở v2rayNG.</string>
+    <string name="title_pref_start_on_boot">Tự động kết nối sau khi thiết bị khởi động</string>
+    <string name="summary_pref_start_on_boot">Khởi chạy v2rayNG trong nền và kết nối tới máy chủ đã chọn sau khi thiết bị khởi động.</string>
 
 
     <string name="subscription_updater_job_tips">Tác vụ sẽ chạy trong nền và thông tin tiến độ sẽ hiển thị trong thông báo.</string>
@@ -380,6 +383,8 @@
     <string name="title_update_subscription_result">Đã cập nhật %1$d cấu hình (%2$d thành công, %3$d thất bại, %4$d bỏ qua)</string>
     <string name="title_update_subscription_no_subscription">Không có đăng ký</string>
     <string name="toast_server_not_found_in_group">Không tìm thấy máy chủ đã chọn trong nhóm hiện tại</string>
+
+    <string name="toast_fragment_not_available">Unable to locate current view</string>
     <string name="title_locate_selected_config">Tìm cấu hình đã chọn</string>
 
     <string name="tasker_start_service">Khởi động v2rayNG</string>

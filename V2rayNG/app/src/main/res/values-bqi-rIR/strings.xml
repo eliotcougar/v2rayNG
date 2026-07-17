@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">آلشتکاری کانفیگ</string>
     <string name="menu_item_del_config">پاک کردن کانفیگ</string>
     <string name="action_delete">پاک کردن</string>
+    <string name="action_close">بستن</string>
     <string name="action_back">بازگشت</string>
     <string name="action_menu">منو</string>
     <string name="action_more">بیشتر</string>
@@ -193,8 +194,10 @@
     <string name="title_vpn_settings">سامووا VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی و ری برنومه</string>
     <string name="summary_pref_per_app_proxy">تور جوستن ب تفکیک برنومه معین اکۊ ک کوم برنومه یل VPN ن ب کار بگرن.\n\nمن هالت پوی وولاتی، برنومه یل پسند وابیڌه VPN ن ب کار اگرن و برنومه یل پسند نوابیڌه موستقیمن منپیز ابۊن. من هالت دور زیڌن، برنومه یل پسند وابیڌه موستقیمن منپیز ابۊن و برنومه یل پسند نوابیڌه VPN ن ب کار اگرن. پسند خوتکار برنومه یل ز نومگه «بیشتر» امکووݩ پزیر هڌ.</string>
-    <string name="title_pref_is_booted">منپیز خوتکار مجال ره ونی</string>
-    <string name="summary_pref_is_booted">مجال ره وندن، خوساخوس و سرور پسند بیڌه منپیز ابۊ که گاشڌ نا مووفق بۊ.</string>
+    <string name="title_pref_is_booted">منپیز خوتکار مجال ره ونی برنامه</string>
+    <string name="summary_pref_is_booted">مجال ره وندن v2rayNG، خوساخوس و سرور پسند بیڌه منپیز ابۊ.</string>
+    <string name="title_pref_start_on_boot">منپیز خوتکار پس از ره وندن دستگاه</string>
+    <string name="summary_pref_start_on_boot">پس از ره وندن دستگاه، v2rayNG نه پس‌زمین ره ابۊ و و سرور پسند بیڌه منپیز ابۊ.</string>
 
 
     <string name="subscription_updater_job_tips">وزیفه من پس زمینه کار اکونه وو ایلاعات پؽشرفت من اعلان نشووݩ داڌه ابۊ.</string>

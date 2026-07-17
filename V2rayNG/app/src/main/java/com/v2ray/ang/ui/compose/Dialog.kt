@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.TextSelectionColors
@@ -56,6 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 
@@ -134,7 +136,8 @@ private fun TvConfirmDialogButton(
     text: String,
     icon: Painter? = null,
     onClick: () -> Unit,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(24.dp)
     // Android's en-XC test locale surrounds platform button labels with more than one hundred
@@ -148,7 +151,7 @@ private fun TvConfirmDialogButton(
     }
     Button(
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .height(48.dp)
             .widthIn(min = 96.dp)
             .dpadFocusOutline(
@@ -170,7 +173,11 @@ private fun TvConfirmDialogButton(
             )
             Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(text = displayText, maxLines = 1)
+        Text(
+            text = displayText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -298,7 +305,9 @@ fun QRCodeDialog(
     onDismiss: () -> Unit
 ) {
     if (bitmap == null) return
-    val okFocusRequester = rememberDpadFocusRequester()
+    val isTelevision = isTelevisionDevice()
+    val closeFocusRequester = rememberDpadFocusRequester()
+    val closeText = stringResource(R.string.action_close)
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
@@ -311,10 +320,15 @@ fun QRCodeDialog(
             )
         },
         confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.dpadFocusOutline(okFocusRequester)
-            ) { Text(stringResource(R.string.action_close)) }
+            if (isTelevision) {
+                TvConfirmDialogButton(
+                    text = closeText,
+                    onClick = onDismiss,
+                    focusRequester = closeFocusRequester
+                )
+            } else {
+                TextButton(onClick = onDismiss) { Text(closeText) }
+            }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -335,57 +349,93 @@ fun <T> SelectListDialog(
     selectedOption: T? = null,
     showRadio: Boolean = false
 ) {
+    val isTelevision = isTelevisionDevice()
     val selectedIndex = if (showRadio) options.indexOf(selectedOption) else -1
     val initialIndex = selectedIndex.takeIf { it >= 0 } ?: 0
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
     val firstOptionFocusRequester = rememberDpadFocusRequester(requestFocus = options.isNotEmpty())
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
         text = {
-            LazyColumn {
+            LazyColumn(
+                state = listState,
+                verticalArrangement = if (isTelevision && !showRadio) {
+                    Arrangement.spacedBy(8.dp)
+                } else {
+                    Arrangement.Top
+                }
+            ) {
                 items(options.size) { index ->
                     val option = options[index]
                     val isSelected = option == selectedOption
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .dpadFocusOutline(
-                                focusRequester = if (index == initialIndex) firstOptionFocusRequester else null
-                            )
-                            .then(
-                                if (showRadio) Modifier.selectable(
-                                    selected = isSelected,
-                                    onClick = { onSelected(option) },
-                                    role = Role.RadioButton
-                                ) else Modifier.clickable { onSelected(option) }
-                            )
-                            .padding(vertical = 12.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (showRadio) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = null
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                        }
-                        Text(
+                    if (isTelevision && !showRadio) {
+                        TvConfirmDialogButton(
                             text = optionText(option),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f)
+                            onClick = { onSelected(option) },
+                            focusRequester = if (index == initialIndex) {
+                                firstOptionFocusRequester
+                            } else {
+                                null
+                            },
+                            modifier = Modifier.fillMaxWidth()
                         )
+                    } else {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .dpadFocusOutline(
+                                    focusRequester = if (index == initialIndex) {
+                                        firstOptionFocusRequester
+                                    } else {
+                                        null
+                                    }
+                                )
+                                .then(
+                                    if (showRadio) {
+                                        Modifier.selectable(
+                                            selected = isSelected,
+                                            onClick = { onSelected(option) },
+                                            role = Role.RadioButton
+                                        )
+                                    } else {
+                                        Modifier.clickable { onSelected(option) }
+                                    }
+                                )
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showRadio) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = optionText(option),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.dpadFocusOutline()
-            ) {
-                Text(stringResource(R.string.action_cancel))
+            if (isTelevision) {
+                TvConfirmDialogButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = onDismiss
+                )
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.action_cancel))
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.surface

@@ -31,6 +31,7 @@
     <string name="menu_item_edit_config">Изменить профиль</string>
     <string name="menu_item_del_config">Удалить профиль</string>
     <string name="action_delete">Удалить</string>
+    <string name="action_close">Закрыть</string>
     <string name="action_back">Назад</string>
     <string name="action_menu">Меню</string>
     <string name="action_more">Ещё</string>
@@ -193,8 +194,10 @@
     <string name="title_vpn_settings">Настройки VPN</string>
     <string name="title_pref_per_app_proxy">Прокси для выбранных приложений</string>
     <string name="summary_pref_per_app_proxy">Маршрутизация приложений определяет, какие приложения используют VPN.\n\nВ обычном режиме выбранные приложения используют VPN, а остальные подключаются напрямую. В режиме обхода выбранные приложения подключаются напрямую, а остальные используют VPN. Автоматический выбор приложений доступен в меню «Ещё».</string>
-    <string name="title_pref_is_booted">Автоподключение при запуске</string>
-    <string name="summary_pref_is_booted">Автоматически подключаться к выбранному серверу при запуске приложения (может оказаться неудачным)</string>
+    <string name="title_pref_is_booted">Автоподключение при запуске приложения</string>
+    <string name="summary_pref_is_booted">Автоматически подключаться к выбранному серверу при запуске v2rayNG.</string>
+    <string name="title_pref_start_on_boot">Автоподключение после загрузки устройства</string>
+    <string name="summary_pref_start_on_boot">Запускать v2rayNG в фоновом режиме и подключаться к выбранному серверу после загрузки устройства.</string>
 
 
     <string name="subscription_updater_job_tips">Задача будет выполняться в фоновом режиме, информация о ходе выполнения будет отображаться в уведомлении.</string>
