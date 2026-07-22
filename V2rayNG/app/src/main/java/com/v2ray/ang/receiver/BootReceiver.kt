@@ -14,7 +14,8 @@ class BootReceiver : BroadcastReceiver() {
     /**
      * This method is called when the BroadcastReceiver is receiving an Intent broadcast.
      * It handles BOOT_COMPLETED, LOCKED_BOOT_COMPLETED, and MY_PACKAGE_REPLACED.
-     * If the conditions are met, it starts the V2Ray service.
+     * If the conditions are met, it starts the V2Ray service. Package replacement is included
+     * because an app update stops the existing foreground service without rebooting the device.
      *
      * @param context The Context in which the receiver is running.
      * @param intent The Intent being received.
