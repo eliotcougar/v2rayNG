@@ -60,6 +60,7 @@ import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo
@@ -157,6 +158,10 @@ fun PerAppProxyScreen(
     val isTelevision = isTelevisionDevice()
     val enableInteractionSource = remember { MutableInteractionSource() }
     val bypassInteractionSource = remember { MutableInteractionSource() }
+    val backFocusRequester = rememberDpadFocusRequester(
+        requestFocus = !showSearch,
+        requestKey = showSearch
+    )
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
 
@@ -170,6 +175,7 @@ fun PerAppProxyScreen(
             AppTopBar(
                 title = stringResource(R.string.per_app_proxy_settings),
                 onBackClick = onBackClick,
+                initialFocus = false,
                 isLoading = isLoading,
                 isSearchActive = showSearch,
                 searchQuery = searchQuery,
@@ -183,6 +189,21 @@ fun PerAppProxyScreen(
                     showSearch = false
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
+                navigationIcon = {
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_arrow_back_24dp),
+                        label = stringResource(R.string.action_back),
+                        focusRequester = backFocusRequester,
+                        onClick = if (showSearch) {
+                            {
+                                searchQuery = ""
+                                showSearch = false
+                            }
+                        } else {
+                            onBackClick
+                        }
+                    )
+                },
                 actions = {
                     if (!showSearch) {
                         AppIconButton(
@@ -190,7 +211,7 @@ fun PerAppProxyScreen(
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
                             modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveLeft = { backFocusRequester.requestFocus() },
                                 onMoveRight = { moreFocusRequester.requestFocus() }
                             ),
                             onClick = { showSearch = true }

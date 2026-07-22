@@ -59,6 +59,7 @@ class MainActivity : HelperBaseComponentActivity() {
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
+    private var autoConnectAttempted = false
 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -97,6 +98,24 @@ class MainActivity : HelperBaseComponentActivity() {
         mainViewModel.onAction(MainAction.Initialize)
 
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN &&
+            (intent.hasCategory(Intent.CATEGORY_LAUNCHER) ||
+                intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER))
+        ) {
+            autoConnectAttempted = false
+        }
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        if (autoConnectAttempted || !MmkvManager.decodeAutoConnectOnAppStart()) return
+        autoConnectAttempted = true
+        autoConnectOnAppStart()
     }
 
     @Composable
@@ -184,8 +203,19 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private fun autoConnectOnAppStart() {
+        if (CoreServiceManager.isRunning() || MmkvManager.getSelectServer().isNullOrEmpty()) return
+
+        if (SettingsManager.isVpnMode()) {
+            val intent = VpnService.prepare(this)
+            if (intent == null) startV2Ray() else requestVpnPermission.launch(intent)
+        } else {
+            startV2Ray()
+        }
+    }
+
     private fun startV2Ray() {
-        if (mainViewModel.uiState.value.selectedGuid.isNullOrEmpty()) {
+        if (MmkvManager.getSelectServer().isNullOrEmpty()) {
             toast(R.string.title_file_chooser)
             return
         }
