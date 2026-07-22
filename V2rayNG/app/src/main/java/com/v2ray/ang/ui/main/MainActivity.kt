@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.main
 
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -49,6 +50,7 @@ import com.v2ray.ang.ui.userasset.UserAssetActivity
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -111,6 +113,7 @@ class MainActivity : HelperBaseComponentActivity() {
                     MainAction.ImportConfigLocal -> importConfigLocal()
                     is MainAction.ImportManually -> importManually(action.type)
                     MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+                    MainAction.Exit -> exitApp()
                     MainAction.LocateSelectedServer -> mainViewModel.triggerLocateSelectedServer()
                     is MainAction.SelectServer -> setSelectServer(action.guid)
                     is MainAction.EditServer -> editServer(action.guid, action.profile)
@@ -277,8 +280,26 @@ class MainActivity : HelperBaseComponentActivity() {
         }
     }
 
+    private fun exitApp() {
+        if (!mainViewModel.uiState.value.isRunning) {
+            finishAndRemoveTask()
+            return
+        }
+
+        val stopGeneration = mainViewModel.serviceStopGeneration.value
+        CoreServiceManager.stopVService(this)
+        lifecycleScope.launch {
+            mainViewModel.serviceStopGeneration.first { it > stopGeneration }
+            finishAndRemoveTask()
+        }
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BUTTON_B) {
+        val isTelevision = resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
+            Configuration.UI_MODE_TYPE_TELEVISION
+        if (!isTelevision &&
+            (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_BUTTON_B)
+        ) {
             moveTaskToBack(false)
             return true
         }

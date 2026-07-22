@@ -252,6 +252,7 @@ class MainViewModel(
             MainAction.ImportConfigLocal,
             is MainAction.ImportManually,
             MainAction.RestartService,
+            MainAction.Exit,
             MainAction.LocateSelectedServer,
             is MainAction.EditServer,
             is MainAction.ShareClipboard,

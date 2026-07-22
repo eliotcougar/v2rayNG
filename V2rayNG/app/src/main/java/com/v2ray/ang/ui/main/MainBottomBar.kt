@@ -27,12 +27,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 
 @Composable
 fun MainBottomBar(
@@ -41,6 +44,37 @@ fun MainBottomBar(
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
+
+    if (isTelevision) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AppDivider()
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .height(64.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 48.dp),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        return
+    }
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -73,7 +107,8 @@ fun MainBottomBar(
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .dpadFocusOutline(cornerRadius = 16.dp),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
@@ -81,9 +116,11 @@ fun MainBottomBar(
             Icon(
                 painter = if (isRunning) painterResource(R.drawable.ic_stop_24dp)
                 else painterResource(R.drawable.ic_play_24dp),
-                contentDescription = stringResource(
-                    if (isRunning) R.string.acc_stop else R.string.acc_start
-                ),
+                contentDescription = if (isRunning) {
+                    stringResource(R.string.action_stop_service)
+                } else {
+                    stringResource(R.string.tasker_start_service)
+                },
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )

@@ -36,7 +36,8 @@ enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
     SortByTestResults(R.string.title_sort_by_test_results),
     TestAll(R.string.title_ping_all_server),
     TestAllRealPing(R.string.title_real_ping_all_server),
-    UpdateSubscriptions(R.string.title_sub_update)
+    UpdateSubscriptions(R.string.title_sub_update),
+    Exit(R.string.action_exit)
 }
 
 internal enum class ServerMenuAction(
@@ -66,8 +67,19 @@ fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
 )
 
 @Composable
-fun MoreMenuContent(onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
-    items = MainMoreMenuAction.entries,
+fun MoreMenuContent(
+    isRunning: Boolean,
+    isTelevision: Boolean,
+    onSelected: (MainMoreMenuAction) -> Unit
+) = AppDropdownMenuItems(
+    items = MainMoreMenuAction.entries.filter { action ->
+        when (action) {
+            MainMoreMenuAction.RestartService -> isRunning && !isTelevision
+            MainMoreMenuAction.DeleteAll -> !isTelevision
+            MainMoreMenuAction.Exit -> isTelevision
+            else -> true
+        }
+    },
     labelRes = { it.labelRes },
     onSelected = onSelected
 )

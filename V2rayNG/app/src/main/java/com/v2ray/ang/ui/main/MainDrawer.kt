@@ -3,35 +3,62 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
@@ -64,59 +91,238 @@ private val drawerItems = primaryDrawerItems + listOf(
 )
 
 @Composable
-fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
+fun MainDrawerContent(
+    drawerState: DrawerState,
+    isOpen: Boolean,
+    focusGeneration: Int,
+    onClose: () -> Unit,
+    onNavigate: (MainDestination) -> Unit
+) {
+    val isTelevision = isTelevisionDevice()
+    val focusRequesters = remember(drawerItems) {
+        List(drawerItems.size) { FocusRequester() }
+    }
     val drawerScrollState = rememberScrollState()
+
+    LaunchedEffect(isTelevision, isOpen, focusGeneration, focusRequesters) {
+        if (isTelevision && isOpen) {
+            repeat(30) {
+                withFrameNanos { }
+                if (focusRequesters.firstOrNull()?.requestFocus() == true) return@LaunchedEffect
+            }
+        }
+    }
 
     ModalDrawerSheet(
         drawerState = drawerState,
-        modifier = Modifier.fillMaxWidth(0.75f),
+        modifier = Modifier
+            .fillMaxWidth(if (isTelevision) 0.38f else 0.75f)
+            .navigationBarsPadding(),
         drawerContainerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
-            modifier = Modifier
-                .verticalScroll(drawerScrollState)
-                .verticalScrollbar(drawerScrollState)
+            modifier = if (isTelevision) {
+                Modifier
+            } else {
+                Modifier
+                    .verticalScroll(drawerScrollState)
+                    .verticalScrollbar(drawerScrollState)
+                    .padding(bottom = 80.dp)
+            }
         ) {
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp)
+                    .height(if (isTelevision) 48.dp else 180.dp)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp),
+                        .padding(if (isTelevision) 8.dp else 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    val isDarkTheme = LocalDarkTheme.current
-                    Image(
-                        painter = painterResource(R.mipmap.ic_launcher_foreground),
-                        contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        colorFilter = if (isDarkTheme) {
-                            ColorFilter.tint(Color.White, BlendMode.SrcIn)
-                        } else {
-                            null
-                        }
-                    )
+                    if (!isTelevision) {
+                        val isDarkTheme = LocalDarkTheme.current
+                        Image(
+                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(120.dp),
+                            colorFilter = if (isDarkTheme) {
+                                ColorFilter.tint(Color.White, BlendMode.SrcIn)
+                            } else {
+                                null
+                            }
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        style = if (isTelevision) {
+                            MaterialTheme.typography.titleLarge.copy(
+                                fontFamily = FontFamily(Font(R.font.montserrat_thin)),
+                                fontWeight = FontWeight.Thin
+                            )
+                        } else {
+                            MaterialTheme.typography.headlineLarge.copy(
+                                fontFamily = FontFamily(Font(R.font.montserrat_thin)),
+                                fontWeight = FontWeight.Thin
+                            )
+                        },
+                        textAlign = TextAlign.Center
                     )
                 }
             }
+
             drawerItems.forEachIndexed { index, item ->
-                if (index == primaryDrawerItems.size) AppDivider()
-                NavigationDrawerItem(
-                    label = { Text(stringResource(item.labelRes)) },
-                    selected = false,
-                    onClick = { onNavigate(item) },
-                    icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                if (index == primaryDrawerItems.size) {
+                    AppDivider(modifier = Modifier.padding(vertical = 4.dp))
+                }
+                DrawerMenuItem(
+                    icon = painterResource(item.iconRes),
+                    label = stringResource(item.labelRes),
+                    focusRequester = focusRequesters[index],
+                    onMoveUp = {
+                        focusRequesters[(index - 1).coerceAtLeast(0)].requestFocus()
+                    },
+                    onMoveDown = {
+                        focusRequesters[(index + 1).coerceAtMost(focusRequesters.lastIndex)]
+                            .requestFocus()
+                    },
+                    onMoveToContent = onClose,
+                    onClick = {
+                        if (!isTelevision) onClose()
+                        onNavigate(item)
+                    }
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun DrawerMenuItem(
+    icon: Painter,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    focusRequester: FocusRequester? = null,
+    onMoveUp: () -> Unit = {},
+    onMoveDown: () -> Unit = {},
+    onMoveToContent: () -> Unit = {}
+) {
+    val isTelevision = isTelevisionDevice()
+    val interactionSource = remember { MutableInteractionSource() }
+    Row(
+        modifier = modifier
+            .then(if (isTelevision) Modifier.padding(horizontal = 12.dp) else Modifier)
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .dpadFocusOutline(focusRequester)
+            .dpadHorizontalFocusNavigation(
+                onMoveLeft = {},
+                onMoveRight = onMoveToContent
+            )
+            .dpadVerticalFocusNavigation(
+                onMoveUp = { onMoveUp(); true },
+                onMoveDown = { onMoveDown(); true }
+            )
+            .then(
+                if (isTelevision) {
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = onClick
+                    )
+                } else {
+                    Modifier.clickable(onClick = onClick)
+                }
+            )
+            .background(
+                if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                else Color.Transparent
+            )
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            painter = icon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+private fun Path.addDrawerPeekPath(
+    width: Float,
+    height: Float,
+    layoutDirection: LayoutDirection,
+    closePath: Boolean
+) {
+    val radius = minOf(width * (22f / 24f), height / 2f)
+    if (layoutDirection == LayoutDirection.Ltr) {
+        moveTo(0f, 0f)
+        lineTo(width - radius, 0f)
+        arcTo(Rect(width - radius * 2f, 0f, width, radius * 2f), -90f, 90f, false)
+        lineTo(width, height - radius)
+        arcTo(Rect(width - radius * 2f, height - radius * 2f, width, height), 0f, 90f, false)
+        lineTo(0f, height)
+    } else {
+        moveTo(width, 0f)
+        lineTo(radius, 0f)
+        arcTo(Rect(0f, 0f, radius * 2f, radius * 2f), -90f, -90f, false)
+        lineTo(0f, height - radius)
+        arcTo(Rect(0f, height - radius * 2f, radius * 2f, height), 180f, -90f, false)
+        lineTo(width, height)
+    }
+    if (closePath) close()
+}
+
+@Composable
+fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
+    val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+    val layoutDirection = LocalLayoutDirection.current
+    val shape = GenericShape { size, direction ->
+        addDrawerPeekPath(size.width, size.height, direction, closePath = true)
+    }
+    Surface(
+        modifier = modifier
+            .width(24.dp)
+            .height(88.dp)
+            .drawWithContent {
+                drawContent()
+                val borderPath = Path().apply {
+                    addDrawerPeekPath(
+                        size.width,
+                        size.height,
+                        layoutDirection,
+                        closePath = false
+                    )
+                }
+                drawPath(
+                    path = borderPath,
+                    color = borderColor,
+                    style = Stroke(width = 1.dp.toPx())
+                )
+            },
+        shape = shape,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        tonalElevation = 3.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(R.drawable.ic_menu_24dp),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
