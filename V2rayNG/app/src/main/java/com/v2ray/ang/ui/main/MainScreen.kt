@@ -59,7 +59,11 @@ fun MainScreen(
     val groups = uiState.groups
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
-    val displayText = mainViewModel.formatStatus(uiState.status)
+    val displayText = if (isTelevision && uiState.status == MainStatus.Connected) {
+        stringResource(R.string.connection_connected_tv)
+    } else {
+        mainViewModel.formatStatus(uiState.status)
+    }
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove

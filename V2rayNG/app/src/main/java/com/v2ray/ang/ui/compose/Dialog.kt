@@ -3,7 +3,10 @@ package com.v2ray.ang.ui.compose
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -41,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -206,7 +210,7 @@ fun InputDialog(
 
     if (isTelevision) {
         LaunchedEffect(editingIndex) {
-            if (editingIndex >= 0) keyboardController?.show() else keyboardController?.hide()
+            if (editingIndex < 0) keyboardController?.hide()
         }
     }
 
@@ -219,33 +223,24 @@ fun InputDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 fields.forEachIndexed { index, field ->
-                    OutlinedTextField(
-                        value = field.value,
-                        onValueChange = { onFieldChange(index, it) },
-                        label = { Text(field.label) },
-                        singleLine = false,
-                        maxLines = 5,
-                        readOnly = isTelevision && editingIndex != index,
-                        visualTransformation = field.visualTransformation,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.secondary,
-                            selectionColors = TextSelectionColors(
-                                handleColor = MaterialTheme.colorScheme.secondary,
-                                backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                            )
-                        ),
+                    val interactionSource = remember(index) { MutableInteractionSource() }
+                    val editorFocusRequester = remember(index) { FocusRequester() }
+
+                    if (isTelevision) {
+                        LaunchedEffect(editingIndex) {
+                            if (editingIndex == index) {
+                                editorFocusRequester.requestFocus()
+                                keyboardController?.show()
+                            }
+                        }
+                    }
+
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(
                                 if (isTelevision) {
                                     Modifier
-                                        .onFocusChanged {
-                                            if (!it.isFocused && editingIndex == index) {
-                                                editingIndex = -1
-                                            }
-                                        }
                                         .onPreviewKeyEvent { event ->
                                             if (
                                                 event.type == KeyEventType.KeyDown &&
@@ -275,11 +270,56 @@ fun InputDialog(
                                                 Modifier
                                             }
                                         )
+                                        .focusable(
+                                            enabled = editingIndex != index,
+                                            interactionSource = interactionSource
+                                        )
                                 } else {
                                     Modifier
                                 }
                             )
-                    )
+                    ) {
+                        OutlinedTextField(
+                            value = field.value,
+                            onValueChange = { onFieldChange(index, it) },
+                            label = { Text(field.label) },
+                            singleLine = false,
+                            maxLines = 5,
+                            readOnly = isTelevision && editingIndex != index,
+                            visualTransformation = field.visualTransformation,
+                            interactionSource = interactionSource,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                selectionColors = TextSelectionColors(
+                                    handleColor = MaterialTheme.colorScheme.secondary,
+                                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(
+                                        alpha = 0.4f
+                                    )
+                                )
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (isTelevision) {
+                                        Modifier
+                                            .focusRequester(editorFocusRequester)
+                                            .focusProperties { canFocus = editingIndex == index }
+                                            .onFocusChanged {
+                                                if (
+                                                    editingIndex == index &&
+                                                    !it.isFocused
+                                                ) {
+                                                    editingIndex = -1
+                                                }
+                                            }
+                                    } else {
+                                        Modifier
+                                    }
+                                )
+                        )
+                    }
                 }
             }
         },

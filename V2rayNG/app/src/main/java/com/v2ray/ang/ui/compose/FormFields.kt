@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.compose
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,6 +26,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
@@ -51,10 +56,17 @@ fun FormTextField(
     var isEditing by remember { mutableStateOf(!isTelevision) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val interactionSource = remember { MutableInteractionSource() }
+    val editorFocusRequester = remember { FocusRequester() }
 
     if (isTelevision) {
         LaunchedEffect(isEditing) {
-            if (isEditing) keyboardController?.show() else keyboardController?.hide()
+            if (isEditing) {
+                editorFocusRequester.requestFocus()
+                keyboardController?.show()
+            } else {
+                keyboardController?.hide()
+            }
         }
     }
 
@@ -62,6 +74,39 @@ fun FormTextField(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .then(
+                if (isTelevision) {
+                    Modifier
+                        .onPreviewKeyEvent { event ->
+                            if (
+                                event.type == KeyEventType.KeyDown &&
+                                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                                !isEditing
+                            ) {
+                                isEditing = true
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        .dpadTextFieldNavigation(
+                            onMoveUp = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Up)
+                            },
+                            onMoveDown = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+                        .focusable(
+                            enabled = enabled && !isEditing,
+                            interactionSource = interactionSource
+                        )
+                } else {
+                    Modifier
+                }
+            )
     ) {
         OutlinedTextField(
             value = value,
@@ -73,6 +118,7 @@ fun FormTextField(
             enabled = enabled,
             readOnly = isTelevision && !isEditing,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            interactionSource = interactionSource,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -87,29 +133,13 @@ fun FormTextField(
                 .then(
                     if (isTelevision) {
                         Modifier
-                            .onFocusChanged { if (!it.isFocused) isEditing = false }
-                            .onPreviewKeyEvent { event ->
-                                if (
-                                    event.type == KeyEventType.KeyDown &&
-                                    (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                                    !isEditing
-                                ) {
-                                    isEditing = true
-                                    true
-                                } else {
-                                    false
+                            .focusRequester(editorFocusRequester)
+                            .focusProperties { canFocus = isEditing }
+                            .onFocusChanged {
+                                if (isEditing && !it.isFocused) {
+                                    isEditing = false
                                 }
                             }
-                            .dpadTextFieldNavigation(
-                                onMoveUp = {
-                                    isEditing = false
-                                    focusManager.moveFocus(FocusDirection.Up)
-                                },
-                                onMoveDown = {
-                                    isEditing = false
-                                    focusManager.moveFocus(FocusDirection.Down)
-                                }
-                            )
                     } else {
                         Modifier
                     }
@@ -137,10 +167,17 @@ fun FormDropdownField(
     val keyboardController = LocalSoftwareKeyboardController.current
     val isTelevision = isTelevisionDevice()
     var isEditing by remember { mutableStateOf(!isTelevision) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val editorFocusRequester = remember { FocusRequester() }
 
     if (isTelevision) {
         LaunchedEffect(isEditing) {
-            if (isEditing) keyboardController?.show() else keyboardController?.hide()
+            if (isEditing) {
+                editorFocusRequester.requestFocus()
+                keyboardController?.show()
+            } else {
+                keyboardController?.hide()
+            }
         }
     }
 
@@ -156,6 +193,44 @@ fun FormDropdownField(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .then(
+                if (isTelevision) {
+                    Modifier
+                        .onPreviewKeyEvent { event ->
+                            if (
+                                event.type != KeyEventType.KeyDown ||
+                                (event.key != Key.DirectionCenter && event.key != Key.Enter)
+                            ) {
+                                return@onPreviewKeyEvent false
+                            }
+                            if (editable && !isEditing) {
+                                isEditing = true
+                            } else if (!editable) {
+                                keyboardController?.hide()
+                                expanded = !expanded
+                            } else {
+                                return@onPreviewKeyEvent false
+                            }
+                            true
+                        }
+                        .dpadTextFieldNavigation(
+                            onMoveUp = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Up)
+                            },
+                            onMoveDown = {
+                                isEditing = false
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+                        .focusable(
+                            enabled = enabled && !isEditing,
+                            interactionSource = interactionSource
+                        )
+                } else {
+                    Modifier
+                }
+            )
     ) {
         OutlinedTextField(
             value = value,
@@ -166,6 +241,7 @@ fun FormDropdownField(
             placeholder = { if (placeholder != null) Text(placeholder) },
             supportingText = supportingText?.let { { Text(it) } },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            interactionSource = interactionSource,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -178,19 +254,14 @@ fun FormDropdownField(
             modifier = Modifier
                 .then(
                     if (isTelevision) {
-                        Modifier.onPreviewKeyEvent { event ->
-                            if (
-                                editable &&
-                                event.type == KeyEventType.KeyDown &&
-                                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                                !isEditing
-                            ) {
-                                isEditing = true
-                                true
-                            } else {
-                                false
+                        Modifier
+                            .focusRequester(editorFocusRequester)
+                            .focusProperties { canFocus = editable && isEditing }
+                            .onFocusChanged {
+                                if (isEditing && !it.isFocused) {
+                                    isEditing = false
+                                }
                             }
-                        }
                     } else {
                         Modifier
                     }
@@ -200,22 +271,6 @@ fun FormDropdownField(
                     else ExposedDropdownMenuAnchorType.PrimaryNotEditable
                 )
                 .fillMaxWidth()
-                .then(
-                    if (isTelevision) {
-                        Modifier.dpadTextFieldNavigation(
-                            onMoveUp = {
-                                isEditing = false
-                                focusManager.moveFocus(FocusDirection.Up)
-                            },
-                            onMoveDown = {
-                                isEditing = false
-                                focusManager.moveFocus(FocusDirection.Down)
-                            }
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
                 .onFocusChanged { focusState ->
                     if (!focusState.isFocused && isTelevision) {
                         isEditing = false
