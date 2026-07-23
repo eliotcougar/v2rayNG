@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,15 +29,22 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -62,6 +68,7 @@ import com.v2ray.ang.compose.colorConfigType
 import com.v2ray.ang.compose.colorFabActive
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadLongPressToMove
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
@@ -232,15 +239,65 @@ fun RoutingSettingScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
-    val rowFocusTargets = remember(rulesets.map { it.id }) {
+    val rulesetIdSet = rulesets.mapTo(mutableSetOf()) { it.id }
+    val rowFocusTargets = remember(rulesetIdSet) {
         rulesets.associate { it.id to RoutingRowFocusTargets() }
     }
+    var movingRuleId by remember { mutableStateOf<String?>(null) }
+    var movingRuleIndex by remember { mutableStateOf(-1) }
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
     var deleteRuleId by remember { mutableStateOf<String?>(null) }
     val addFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(rulesetIdSet) {
+        if (movingRuleId == null || movingRuleId !in rulesetIdSet) {
+            movingRuleId = null
+            movingRuleIndex = -1
+        }
+    }
+    LaunchedEffect(movingRuleId, movingRuleIndex) {
+        val ruleId = movingRuleId ?: return@LaunchedEffect
+        withFrameNanos { }
+        rowFocusTargets[ruleId]?.row?.requestFocus()
+    }
+
+    fun startMovement(ruleId: String, index: Int) {
+        if (!isTelevision) return
+        movingRuleId = ruleId
+        movingRuleIndex = index
+    }
+
+    fun finishMovement() {
+        movingRuleId = null
+        movingRuleIndex = -1
+    }
+
+    fun handleMovementKey(event: KeyEvent): Boolean {
+        if (movingRuleId == null) return false
+
+        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
+            return true
+        }
+
+        val delta = when (event.key) {
+            Key.DirectionUp -> -1
+            Key.DirectionDown -> 1
+            Key.DirectionLeft, Key.DirectionRight -> 0
+            else -> return false
+        }
+        if (event.type != KeyEventType.KeyDown) return true
+
+        val targetIndex = movingRuleIndex + delta
+        if (targetIndex in rulesets.indices && targetIndex != movingRuleIndex) {
+            val fromIndex = movingRuleIndex
+            movingRuleIndex = targetIndex
+            viewModel.swap(fromIndex, targetIndex)
+        }
+        return true
+    }
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
@@ -321,10 +378,12 @@ fun RoutingSettingScreen(
                 val focusTargets = rowFocusTargets.getValue(ruleset.id)
                 val previousTargets = rulesets.getOrNull(index - 1)?.let { rowFocusTargets[it.id] }
                 val nextTargets = rulesets.getOrNull(index + 1)?.let { rowFocusTargets[it.id] }
+                val isMoving = movingRuleId == ruleset.id
                 ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
                     ReorderableListItem(
                         scope = this,
-                        isDragging = isDragging
+                        isDragging = isDragging,
+                        isMoving = isMoving
                     ) {
                         Row(
                             modifier = Modifier
@@ -353,7 +412,18 @@ fun RoutingSettingScreen(
                                                     nextTargets?.row?.requestFocus() ?: true
                                                 }
                                             )
-                                            .clickable { onEditRule(index) }
+                                            .dpadLongPressToMove(
+                                                enabled = isTelevision,
+                                                onClick = {
+                                                    if (isMoving) finishMovement()
+                                                    else onEditRule(index)
+                                                },
+                                                onLongPress = {
+                                                    startMovement(ruleset.id, index)
+                                                },
+                                                onDrop = ::finishMovement,
+                                                onMovementKeyEvent = ::handleMovementKey
+                                            )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
                                         Modifier.padding(horizontal = 16.dp)

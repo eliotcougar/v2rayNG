@@ -51,7 +51,7 @@ class RoutingSettingsViewModel(application: Application) : BaseViewModel(applica
 
     fun swap(fromPosition: Int, toPosition: Int) {
         if (fromPosition in rulesets.indices && toPosition in rulesets.indices) {
-            SettingsManager.swapRoutingRuleset(fromPosition, toPosition)
+            SettingsManager.moveRoutingRuleset(fromPosition, toPosition)
             val item = rulesets.removeAt(fromPosition)
             rulesets.add(toPosition, item)
             _rulesetsFlow.value = rulesets.toList()

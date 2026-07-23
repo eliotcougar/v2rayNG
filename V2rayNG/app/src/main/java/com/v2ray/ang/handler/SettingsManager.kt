@@ -30,6 +30,7 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Collections
 import kotlin.random.Random
 
 object SettingsManager {
@@ -199,6 +200,34 @@ object SettingsManager {
             it.domain?.contains(GEOSITE_PRIVATE) == true || it.ip?.contains(GEOIP_PRIVATE) == true
         }
         return exist == true
+    }
+
+    /**
+     * Move a routing ruleset and shift the intervening rules.
+     * @param fromPosition The position to move from.
+     * @param toPosition The destination position.
+     */
+    fun moveRoutingRuleset(fromPosition: Int, toPosition: Int) {
+        val rulesetList = MmkvManager.decodeRoutingRulesets()
+        if (rulesetList.isNullOrEmpty()) return
+        if (fromPosition !in rulesetList.indices || toPosition !in rulesetList.indices) return
+
+        val ruleset = rulesetList.removeAt(fromPosition)
+        rulesetList.add(toPosition, ruleset)
+        MmkvManager.encodeRoutingRulesets(rulesetList)
+    }
+
+    /**
+     * Swap subscriptions.
+     * @param fromPosition The position to swap from.
+     * @param toPosition The position to swap to.
+     */
+    fun swapSubscriptions(fromPosition: Int, toPosition: Int) {
+        val subsList = decodeSubsList()
+        if (subsList.isEmpty()) return
+
+        Collections.swap(subsList, fromPosition, toPosition)
+        MmkvManager.encodeSubsList(subsList)
     }
 
     /**

@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.compose
 
+import android.graphics.drawable.Drawable
+import android.view.ViewConfiguration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -11,6 +13,8 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,10 +50,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,14 +65,25 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick as semanticsOnClick
+import androidx.compose.ui.semantics.onLongClick as semanticsOnLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,6 +93,10 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 
 private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
@@ -469,8 +490,12 @@ fun VersionInfoBlock(
 }
 
 @Composable
-private fun reorderableElevation(isDragging: Boolean) = animateDpAsState(
-    targetValue = if (isDragging) 4.dp else 0.dp,
+private fun reorderableElevation(isDragging: Boolean, isMoving: Boolean) = animateDpAsState(
+    targetValue = when {
+        isMoving -> 12.dp
+        isDragging -> 4.dp
+        else -> 0.dp
+    },
     label = "ReorderableElevation"
 )
 
@@ -486,15 +511,132 @@ fun ReorderableCollectionItemScope.reorderableDragHandle(): Modifier {
 }
 
 @Composable
+fun Modifier.dpadLongPressToMove(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    onDrop: () -> Unit,
+    onMovementKeyEvent: (KeyEvent) -> Boolean
+): Modifier {
+    val coroutineScope = rememberCoroutineScope()
+    var centerKeyDown by remember { mutableStateOf(false) }
+    var movementSessionActive by remember { mutableStateOf(false) }
+    var movementReady by remember { mutableStateOf(false) }
+    var suppressNextCenterUp by remember { mutableStateOf(false) }
+    var longPressJob by remember { mutableStateOf<Job?>(null) }
+    var releaseJob by remember { mutableStateOf<Job?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            longPressJob?.cancel()
+            releaseJob?.cancel()
+        }
+    }
+
+    fun startMovement(readyToDrop: Boolean) {
+        if (movementSessionActive) return
+        movementSessionActive = true
+        movementReady = readyToDrop
+        longPressJob?.cancel()
+        longPressJob = null
+        onLongPress()
+    }
+
+    if (!enabled) return this
+    return pointerInput(onClick, onLongPress) {
+        detectTapGestures(
+            onTap = { onClick() },
+            onLongPress = { startMovement(readyToDrop = true) }
+        )
+    }
+        .semantics {
+            semanticsOnClick {
+                onClick()
+                true
+            }
+            semanticsOnLongClick {
+                startMovement(readyToDrop = true)
+                true
+            }
+        }
+        .onPreviewKeyEvent { event ->
+            val isActivationKey = event.key == Key.DirectionCenter || event.key == Key.Enter
+            if (!isActivationKey) {
+                onMovementKeyEvent(event)
+            } else if (suppressNextCenterUp) {
+                if (event.type == KeyEventType.KeyUp) suppressNextCenterUp = false
+                true
+            } else if (movementSessionActive) {
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        releaseJob?.cancel()
+                        releaseJob = null
+                        if (movementReady) {
+                            movementSessionActive = false
+                            movementReady = false
+                            suppressNextCenterUp = true
+                            onDrop()
+                        }
+                        true
+                    }
+                    KeyEventType.KeyUp -> {
+                        centerKeyDown = false
+                        releaseJob?.cancel()
+                        releaseJob = coroutineScope.launch {
+                            delay(160)
+                            movementReady = true
+                        }
+                        true
+                    }
+                    else -> true
+                }
+            } else {
+                when (event.type) {
+                    KeyEventType.KeyDown -> {
+                        if (!centerKeyDown) {
+                            centerKeyDown = true
+                            longPressJob?.cancel()
+                            longPressJob = coroutineScope.launch {
+                                delay(ViewConfiguration.getLongPressTimeout().toLong())
+                                if (centerKeyDown) startMovement(readyToDrop = false)
+                            }
+                        }
+                        if (event.nativeKeyEvent.repeatCount > 0 ||
+                            event.nativeKeyEvent.isLongPress
+                        ) {
+                            startMovement(readyToDrop = false)
+                        }
+                        true
+                    }
+                    KeyEventType.KeyUp -> {
+                        centerKeyDown = false
+                        longPressJob?.cancel()
+                        longPressJob = null
+                        onClick()
+                        true
+                    }
+                    else -> true
+                }
+            }
+        }
+        .focusable()
+}
+
+@Composable
 fun ReorderableListItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
+    isMoving: Boolean = false,
     content: @Composable RowScope.() -> Unit
 ) {
-    val elevation by reorderableElevation(isDragging)
+    val elevation by reorderableElevation(isDragging, isMoving)
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = elevation
+        modifier = Modifier
+            .fillMaxWidth()
+            .zIndex(if (isMoving) 1f else 0f),
+        shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape,
+        shadowElevation = elevation,
+        tonalElevation = if (isMoving) 4.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -510,14 +652,18 @@ fun ReorderableListItem(
 fun ReorderableGridItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
+    isMoving: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val elevation by reorderableElevation(isDragging)
+    val elevation by reorderableElevation(isDragging, isMoving)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .zIndex(if (isMoving) 1f else 0f)
             .then(with(scope) { reorderableDragHandle() }),
-        shadowElevation = elevation
+        shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape,
+        shadowElevation = elevation,
+        tonalElevation = if (isMoving) 4.dp else 0.dp
     ) {
         content()
     }
