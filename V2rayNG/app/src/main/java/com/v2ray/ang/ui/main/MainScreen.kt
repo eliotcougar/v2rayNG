@@ -1,5 +1,8 @@
 package com.v2ray.ang.ui.main
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,7 +11,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -36,6 +41,14 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
+private const val TV_DRAWER_MOTION_DURATION_MILLIS = 160
+
+@Suppress("DEPRECATION")
+private suspend fun DrawerState.animateForTelevision(targetValue: DrawerValue) {
+    animateTo(targetValue, tween(TV_DRAWER_MOTION_DURATION_MILLIS))
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
@@ -77,6 +90,58 @@ fun MainScreen(
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
     val removeServer: (String) -> Unit = { guid ->
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
+    }
+    var mainFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
+
+    val topBarFocus = rememberMainTopBarFocusRequesters(showSearch)
+    val openDrawerFrom: (FocusRequester?) -> Unit = { focusRequester ->
+        mainFocusToRestore = focusRequester
+        scope.launch {
+            if (isTelevision) {
+                drawerState.animateForTelevision(DrawerValue.Open)
+            } else {
+                drawerState.open()
+            }
+        }
+    }
+    val closeDrawerAndRestore: () -> Unit = {
+        val focusRequester = mainFocusToRestore
+        scope.launch {
+            if (isTelevision) {
+                drawerState.animateForTelevision(DrawerValue.Closed)
+            } else {
+                drawerState.close()
+            }
+            focusRequester?.requestFocus()
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeFocusGeneration by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner, isTelevision) {
+        if (!isTelevision) return@DisposableEffect onDispose { }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeFocusGeneration++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(drawerState.targetValue, resumeFocusGeneration, isTelevision) {
+        if (!isTelevision || drawerState.targetValue != DrawerValue.Closed) return@LaunchedEffect
+        val requester = mainFocusToRestore ?: topBarFocus.start
+        repeat(30) {
+            if (requester.requestFocus() || topBarFocus.start.requestFocus()) return@LaunchedEffect
+            withFrameNanos { }
+        }
+    }
+
+    BackHandler(enabled = isTelevision && showSearch) {
+        searchQuery = ""
+        onAction(MainAction.Search(""))
+        showSearch = false
+    }
+    BackHandler(enabled = isTelevision && drawerState.isOpen) {
+        closeDrawerAndRestore()
     }
 
     val pagerState = rememberPagerState(

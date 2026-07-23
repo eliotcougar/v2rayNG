@@ -1,8 +1,8 @@
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -77,6 +77,8 @@ import coil.request.ImageRequest
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
 import sh.calvin.reorderable.ReorderableCollectionItemScope
+
+private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -193,7 +195,6 @@ fun AppIconButton(
                 focusContainerColor = containerColor.takeUnless { it == Color.Transparent }
             )
             .onFocusChanged { isFocused = it.isFocused }
-            .animateContentSize()
             .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
@@ -213,8 +214,16 @@ fun AppIconButton(
         )
         AnimatedVisibility(
             visible = isFocused,
-            enter = expandHorizontally() + fadeIn(),
-            exit = shrinkHorizontally() + fadeOut()
+            enter = expandHorizontally(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ) + fadeIn(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ),
+            exit = shrinkHorizontally(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ) + fadeOut(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            )
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))
@@ -255,7 +264,6 @@ fun AppRowSwitch(
                 cornerRadius = 24.dp
             )
             .onFocusChanged { isFocused = it.isFocused }
-            .animateContentSize()
             .clip(shape)
             .clickable(
                 interactionSource = interactionSource,
@@ -279,8 +287,16 @@ fun AppRowSwitch(
         )
         AnimatedVisibility(
             visible = isFocused && label != null,
-            enter = expandHorizontally() + fadeIn(),
-            exit = shrinkHorizontally() + fadeOut()
+            enter = expandHorizontally(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ) + fadeIn(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ),
+            exit = shrinkHorizontally(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            ) + fadeOut(
+                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
+            )
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(4.dp))
