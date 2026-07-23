@@ -49,12 +49,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.ui.compose.ItemDivider
+import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
@@ -218,7 +219,7 @@ private fun ServerListPage(
                                 actions = actions
                             )
                         }
-                        ItemDivider()
+                        ServerItemDivider()
                     }
                 } else {
                     ServerItemRow(
@@ -226,7 +227,7 @@ private fun ServerListPage(
                         isSelected = row.guid == selectedGuid,
                         actions = actions
                     )
-                    ItemDivider()
+                    ServerItemDivider()
                 }
             }
         }
@@ -293,8 +294,18 @@ private fun ServerItemColumn(
             doubleColumnDisplay = doubleColumnDisplay,
             actions = actions
         )
-        ItemDivider()
+        ServerItemDivider()
     }
+}
+
+@Composable
+private fun ServerItemDivider() {
+    AppDivider(
+        modifier = Modifier.padding(
+            horizontal = 12.dp,
+            vertical = if (isTelevisionDevice()) 1.dp else 0.dp
+        )
+    )
 }
 
 @Composable
