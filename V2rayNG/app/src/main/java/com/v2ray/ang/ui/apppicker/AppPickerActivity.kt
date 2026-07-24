@@ -37,6 +37,7 @@ import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo
@@ -132,6 +133,10 @@ fun AppPickerScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester(
+        requestFocus = !showSearch,
+        requestKey = showSearch
+    )
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
 
@@ -158,6 +163,7 @@ fun AppPickerScreen(
                     showSearch = false
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     if (!showSearch) {
                         AppIconButton(
@@ -165,7 +171,7 @@ fun AppPickerScreen(
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
                             modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { searchFocusRequester.requestFocus() },
+                                onMoveLeft = { backFocusRequester.requestFocus() },
                                 onMoveRight = { moreFocusRequester.requestFocus() }
                             ),
                             onClick = { showSearch = true }

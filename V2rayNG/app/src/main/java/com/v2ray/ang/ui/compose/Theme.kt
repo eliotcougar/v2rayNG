@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@file:OptIn(
+    androidx.compose.foundation.ExperimentalFoundationApi::class,
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
+)
 
 package com.v2ray.ang.ui.compose
 
@@ -9,6 +12,8 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -24,8 +29,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,15 +176,22 @@ fun resolveDarkTheme(): Boolean {
 
 val LocalDarkTheme = compositionLocalOf { false }
 
+private val TvOverlayImeFallbackHeight = 240.dp
+
 /** Keeps the platform TV focus policy, but aligns its requested movement with lazy-list pixels. */
 private class PixelAlignedBringIntoViewSpec(
-    private val delegate: BringIntoViewSpec
+    private val delegate: BringIntoViewSpec,
+    private val bottomOcclusion: Float
 ) : BringIntoViewSpec {
     override fun calculateScrollDistance(
         offset: Float,
         size: Float,
         containerSize: Float
-    ): Float = delegate.calculateScrollDistance(offset, size, containerSize)
+    ): Float = delegate.calculateScrollDistance(
+        offset = offset,
+        size = size,
+        containerSize = (containerSize - bottomOcclusion).coerceAtLeast(1f)
+    )
         .roundToInt()
         .toFloat()
 }
@@ -197,15 +213,43 @@ fun AppTheme(
     }
     val snackbarController = rememberAppSnackbarController()
     val platformBringIntoViewSpec = LocalBringIntoViewSpec.current
-    val bringIntoViewSpec = if (isTelevisionDevice()) {
-        remember(platformBringIntoViewSpec) {
-            PixelAlignedBringIntoViewSpec(platformBringIntoViewSpec)
+    val isTelevision = isTelevisionDevice()
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val isImeVisible = WindowInsets.isImeVisible
+    val reportedImeBottomInset = if (isTelevision && isImeVisible) {
+        ViewCompat.getRootWindowInsets(view)
+            ?.getInsets(WindowInsetsCompat.Type.ime())
+            ?.bottom
+            ?: 0
+    } else {
+        0
+    }
+    /*
+     * Some Android TV keyboards are overlay windows: they report IME visibility but a zero
+     * inset, so imePadding cannot reduce the scroll viewport. Reserve a conservative 240dp TV
+     * keyboard area only for that case; inset-reporting keyboards keep the normal Compose path.
+     */
+    val overlayImeOcclusion = if (
+        isTelevision &&
+        isImeVisible &&
+        reportedImeBottomInset == 0
+    ) {
+        with(density) { TvOverlayImeFallbackHeight.toPx() }
+    } else {
+        0f
+    }
+    val bringIntoViewSpec = if (isTelevision) {
+        remember(platformBringIntoViewSpec, overlayImeOcclusion) {
+            PixelAlignedBringIntoViewSpec(
+                delegate = platformBringIntoViewSpec,
+                bottomOcclusion = overlayImeOcclusion
+            )
         }
     } else {
         platformBringIntoViewSpec
     }
 
-    val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val activity = view.context as? Activity ?: return@SideEffect

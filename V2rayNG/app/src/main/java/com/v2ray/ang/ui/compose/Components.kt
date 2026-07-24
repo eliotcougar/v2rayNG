@@ -115,13 +115,16 @@ fun AppTopBar(
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
     titleContent: (@Composable () -> Unit)? = null,
+    navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    val navigationFocusRequester = rememberDpadFocusRequester(
-        requestFocus = initialFocus && !isSearchActive,
+    val defaultNavigationFocusRequester = rememberDpadFocusRequester(
+        requestFocus = navigationFocusRequester == null && initialFocus && !isSearchActive,
         requestKey = isSearchActive
     )
+    val resolvedNavigationFocusRequester =
+        navigationFocusRequester ?: defaultNavigationFocusRequester
 
     Column {
         TopAppBar(
@@ -140,13 +143,13 @@ fun AppTopBar(
             },
             navigationIcon = {
                 if (navigationIcon != null) {
-                    navigationIcon(navigationFocusRequester)
+                    navigationIcon(resolvedNavigationFocusRequester)
                 } else {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_arrow_back_24dp),
                         label = stringResource(R.string.action_back),
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        focusRequester = navigationFocusRequester
+                        focusRequester = resolvedNavigationFocusRequester
                     )
                 }
             },

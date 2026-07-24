@@ -27,10 +27,12 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
-private val TvImeBottomClearance = 96.dp
+private val TvImeBottomClearance = 32.dp
 
 /**
  * Owns the passive-row/editor handoff and IME positioning for one TV text field. Keeping that
@@ -49,6 +51,7 @@ internal class TvTextFieldState(
     internal var editorHasFocus by mutableStateOf(false)
     internal var imeWasVisible by mutableStateOf(false)
     internal var restorePassiveFocus by mutableStateOf(false)
+    internal var measuredSize by mutableStateOf(IntSize.Zero)
 
     fun beginEditing() {
         editorHasFocus = false
@@ -95,7 +98,12 @@ internal fun rememberTvTextFieldState(
     }
     val isImeVisible = WindowInsets.isImeVisible
 
-    LaunchedEffect(state.isEditing, state.editorHasFocus, isImeVisible) {
+    LaunchedEffect(
+        state.isEditing,
+        state.editorHasFocus,
+        isImeVisible,
+        state.measuredSize
+    ) {
         when {
             state.isEditing &&
                 state.editorHasFocus &&
@@ -105,7 +113,7 @@ internal fun rememberTvTextFieldState(
             state.isEditing && state.editorHasFocus -> {
                 if (isImeVisible) {
                     state.imeWasVisible = true
-                    withFrameNanos { }
+                    repeat(3) { withFrameNanos { } }
                     state.bringEditorAboveIme()
                 }
                 keyboardController?.show()
@@ -132,6 +140,7 @@ internal fun Modifier.tvPassiveTextFieldFocus(
     onMoveDown: () -> Boolean
 ): Modifier {
     return bringIntoViewRequester(state.bringIntoViewRequester)
+        .onSizeChanged { state.measuredSize = it }
         .padding(bottom = if (state.isEditing) TvImeBottomClearance else 0.dp)
         .onPreviewKeyEvent { event ->
             if (
