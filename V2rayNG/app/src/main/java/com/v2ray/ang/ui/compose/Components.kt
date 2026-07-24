@@ -524,6 +524,7 @@ fun Modifier.dpadLongPressToMove(
     if (!enabled) return this
 
     val coroutineScope = rememberCoroutineScope()
+    var isItemFocused by remember { mutableStateOf(false) }
     var centerKeyDown by remember { mutableStateOf(false) }
     var movementSessionActive by remember { mutableStateOf(false) }
     var movementReady by remember { mutableStateOf(false) }
@@ -563,7 +564,10 @@ fun Modifier.dpadLongPressToMove(
                 true
             }
         }
+        .onFocusChanged { isItemFocused = it.isFocused }
         .onPreviewKeyEvent { event ->
+            if (!isItemFocused) return@onPreviewKeyEvent false
+
             val isActivationKey = event.key == Key.DirectionCenter || event.key == Key.Enter
             if (!isActivationKey) {
                 onMovementKeyEvent(event)
