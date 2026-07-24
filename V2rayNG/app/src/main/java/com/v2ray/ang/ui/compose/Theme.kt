@@ -12,8 +12,6 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -31,10 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -176,12 +171,9 @@ fun resolveDarkTheme(): Boolean {
 
 val LocalDarkTheme = compositionLocalOf { false }
 
-private val TvOverlayImeFallbackHeight = 240.dp
-
 /** Keeps the platform TV focus policy, but aligns its requested movement with lazy-list pixels. */
 private class PixelAlignedBringIntoViewSpec(
-    private val delegate: BringIntoViewSpec,
-    private val bottomOcclusion: Float
+    private val delegate: BringIntoViewSpec
 ) : BringIntoViewSpec {
     override fun calculateScrollDistance(
         offset: Float,
@@ -190,7 +182,7 @@ private class PixelAlignedBringIntoViewSpec(
     ): Float = delegate.calculateScrollDistance(
         offset = offset,
         size = size,
-        containerSize = (containerSize - bottomOcclusion).coerceAtLeast(1f)
+        containerSize = containerSize
     )
         .roundToInt()
         .toFloat()
@@ -215,36 +207,9 @@ fun AppTheme(
     val platformBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isTelevision = isTelevisionDevice()
     val view = LocalView.current
-    val density = LocalDensity.current
-    val isImeVisible = WindowInsets.isImeVisible
-    val reportedImeBottomInset = if (isTelevision && isImeVisible) {
-        ViewCompat.getRootWindowInsets(view)
-            ?.getInsets(WindowInsetsCompat.Type.ime())
-            ?.bottom
-            ?: 0
-    } else {
-        0
-    }
-    /*
-     * Some Android TV keyboards are overlay windows: they report IME visibility but a zero
-     * inset, so imePadding cannot reduce the scroll viewport. Reserve a conservative 240dp TV
-     * keyboard area only for that case; inset-reporting keyboards keep the normal Compose path.
-     */
-    val overlayImeOcclusion = if (
-        isTelevision &&
-        isImeVisible &&
-        reportedImeBottomInset == 0
-    ) {
-        with(density) { TvOverlayImeFallbackHeight.toPx() }
-    } else {
-        0f
-    }
     val bringIntoViewSpec = if (isTelevision) {
-        remember(platformBringIntoViewSpec, overlayImeOcclusion) {
-            PixelAlignedBringIntoViewSpec(
-                delegate = platformBringIntoViewSpec,
-                bottomOcclusion = overlayImeOcclusion
-            )
+        remember(platformBringIntoViewSpec) {
+            PixelAlignedBringIntoViewSpec(delegate = platformBringIntoViewSpec)
         }
     } else {
         platformBringIntoViewSpec

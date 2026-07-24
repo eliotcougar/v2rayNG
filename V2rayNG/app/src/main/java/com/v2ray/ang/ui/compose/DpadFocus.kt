@@ -6,6 +6,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -31,6 +36,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
@@ -131,6 +137,36 @@ fun Modifier.tvMenuItemFocus(): Modifier {
 fun Modifier.tvContentPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
     if (!isTelevisionDevice()) return this
     return padding(horizontal = horizontal, vertical = vertical)
+}
+
+/**
+ * Applies the platform IME inset everywhere, and reserves layout space for TV keyboards that
+ * are rendered as overlays while reporting a zero-height IME inset. Because the fallback is
+ * layout padding outside the scroll container, even a short form gains enough scroll range for
+ * BringIntoViewRequester to reveal its final field.
+ */
+@Composable
+@OptIn(ExperimentalLayoutApi::class)
+fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
+    val isTelevision = isTelevisionDevice()
+    val density = LocalDensity.current
+    val isImeVisible = WindowInsets.isImeVisible
+    val reportedImeBottomInset = if (isTelevision && isImeVisible) {
+        WindowInsets.ime.getBottom(density)
+    } else {
+        0
+    }
+    val overlayPadding = if (
+        isTelevision &&
+        isImeVisible &&
+        reportedImeBottomInset == 0
+    ) {
+        overlayFallbackHeight
+    } else {
+        0.dp
+    }
+
+    return imePadding().padding(bottom = overlayPadding)
 }
 
 /**

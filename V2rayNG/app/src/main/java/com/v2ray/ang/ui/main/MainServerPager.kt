@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,6 +94,7 @@ fun GroupPagerPage(
     selectedGuid: String?,
     locateTarget: LocateTarget?,
     doubleColumnDisplay: Boolean,
+    revealSelectedGeneration: Int,
     searchQuery: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
@@ -101,6 +103,8 @@ fun GroupPagerPage(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onOpenDrawer: (FocusRequester) -> Unit,
+    onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
     val groupStateFlow = remember(groupId) {
@@ -129,6 +133,7 @@ fun GroupPagerPage(
         locateTarget = locateTarget?.takeIf { it.groupId == groupId },
         canReorder = canReorder,
         doubleColumnDisplay = doubleColumnDisplay,
+        revealSelectedGeneration = revealSelectedGeneration,
         groupId = groupId,
         lazyListStates = lazyListStates,
         lazyGridStates = lazyGridStates,
@@ -137,6 +142,8 @@ fun GroupPagerPage(
         onMoveServer = { fromIndex, toIndex ->
             mainViewModel.moveServer(groupId, fromIndex, toIndex)
         },
+        onMovePreviousFromRow = onOpenDrawer,
+        onMoveUpFromFirstRow = onMoveUpFromFirstRow,
         contentPadding = contentPadding
     )
 }
@@ -156,15 +163,19 @@ private fun ServerListPage(
     locateTarget: LocateTarget?,
     canReorder: Boolean,
     doubleColumnDisplay: Boolean,
+    revealSelectedGeneration: Int,
     groupId: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
     actions: ServerRowActions,
     onLocateHandled: () -> Unit,
     onMoveServer: (Int, Int) -> Unit,
+    onMovePreviousFromRow: (FocusRequester) -> Unit,
+    onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
     val isTelevision = isTelevisionDevice()
+    val selectedServerIndex = rows.indexOfFirst { it.guid == selectedGuid }
     val serverGuids = rows.map { it.guid }
     val serverGuidSet = serverGuids.toSet()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -240,6 +251,14 @@ private fun ServerListPage(
         val gridState = remember(groupId) {
             lazyGridStates.getOrPut(groupId) { LazyGridState() }
         }
+        LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
+            if (isTelevision && selectedServerIndex >= 0) {
+                gridState.scrollToItem(
+                    index = selectedServerIndex,
+                    scrollOffset = -gridState.layoutInfo.viewportSize.height / 3
+                )
+            }
+        }
         val reorderableGridState = if (canReorder) {
             rememberReorderableLazyGridState(gridState) { from, to ->
                 onMoveServer(from.index, to.index)
@@ -276,6 +295,8 @@ private fun ServerListPage(
                         nextFocusTargets = nextTargets,
                         nextColumnFocusTargets = nextColumnTargets,
                         previousColumnFocusTargets = previousColumnTargets,
+                        onMovePrevious = onMovePreviousFromRow,
+                        onMoveUp = if (index < 2) onMoveUpFromFirstRow else null,
                         isMoving = movingGuid == row.guid,
                         onStartMoving = { startMovement(row.guid, index) },
                         onFinishMoving = ::finishMovement,
@@ -298,6 +319,14 @@ private fun ServerListPage(
     } else {
         val listState = remember(groupId) {
             lazyListStates.getOrPut(groupId) { LazyListState() }
+        }
+        LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
+            if (isTelevision && selectedServerIndex >= 0) {
+                listState.scrollToItem(
+                    index = selectedServerIndex,
+                    scrollOffset = -listState.layoutInfo.viewportSize.height / 3
+                )
+            }
         }
         val reorderableState = if (canReorder) {
             rememberReorderableLazyListState(listState) { from, to ->
@@ -326,6 +355,8 @@ private fun ServerListPage(
                         focusTargets = focusTargets,
                         previousFocusTargets = previousTargets,
                         nextFocusTargets = nextTargets,
+                        onMovePrevious = onMovePreviousFromRow,
+                        onMoveUp = if (index == 0) onMoveUpFromFirstRow else null,
                         isMoving = movingGuid == row.guid,
                         onStartMoving = { startMovement(row.guid, index) },
                         onFinishMoving = ::finishMovement,
@@ -390,6 +421,8 @@ private fun ServerItemRow(
     focusTargets: ServerRowFocusTargets,
     previousFocusTargets: ServerRowFocusTargets?,
     nextFocusTargets: ServerRowFocusTargets?,
+    onMovePrevious: (FocusRequester) -> Unit,
+    onMoveUp: (() -> Unit)?,
     isMoving: Boolean,
     onStartMoving: () -> Unit,
     onFinishMoving: () -> Unit,
@@ -403,6 +436,8 @@ private fun ServerItemRow(
         focusTargets = focusTargets,
         previousFocusTargets = previousFocusTargets,
         nextFocusTargets = nextFocusTargets,
+        onMovePrevious = onMovePrevious,
+        onMoveUp = onMoveUp,
         isMoving = isMoving,
         onStartMoving = onStartMoving,
         onFinishMoving = onFinishMoving,
@@ -420,6 +455,8 @@ private fun ServerItemColumn(
     nextFocusTargets: ServerRowFocusTargets?,
     nextColumnFocusTargets: ServerRowFocusTargets?,
     previousColumnFocusTargets: ServerRowFocusTargets?,
+    onMovePrevious: (FocusRequester) -> Unit,
+    onMoveUp: (() -> Unit)?,
     isMoving: Boolean,
     onStartMoving: () -> Unit,
     onFinishMoving: () -> Unit,
@@ -436,6 +473,8 @@ private fun ServerItemColumn(
             nextFocusTargets = nextFocusTargets,
             nextColumnFocusTargets = nextColumnFocusTargets,
             previousColumnFocusTargets = previousColumnFocusTargets,
+            onMovePrevious = onMovePrevious,
+            onMoveUp = onMoveUp,
             isMoving = isMoving,
             onStartMoving = onStartMoving,
             onFinishMoving = onFinishMoving,
@@ -466,6 +505,8 @@ private fun ServerListItem(
     nextFocusTargets: ServerRowFocusTargets?,
     nextColumnFocusTargets: ServerRowFocusTargets? = null,
     previousColumnFocusTargets: ServerRowFocusTargets? = null,
+    onMovePrevious: (FocusRequester) -> Unit,
+    onMoveUp: (() -> Unit)?,
     isMoving: Boolean,
     onStartMoving: () -> Unit,
     onFinishMoving: () -> Unit,
@@ -492,11 +533,18 @@ private fun ServerListItem(
                     stateDescription = selectedStateDescription
                 }
             }
-            .dpadFocusOutline(focusRequester = focusTargets.row)
+            .dpadFocusOutline(
+                focusRequester = focusTargets.row,
+                focusContainerColor = if (isMoving) {
+                    MaterialTheme.colorScheme.secondaryContainer
+                } else {
+                    null
+                }
+            )
             .dpadHorizontalFocusNavigation(
                 onMoveLeft = {
                     previousColumnFocusTargets?.more?.requestFocus()
-                        ?: focusTargets.row.requestFocus()
+                        ?: onMovePrevious(focusTargets.row)
                 },
                 onMoveRight = {
                     if (doubleColumnDisplay) {
@@ -508,7 +556,9 @@ private fun ServerListItem(
             )
             .dpadVerticalFocusNavigation(
                 onMoveUp = {
-                    previousFocusTargets?.row?.requestFocus() ?: false
+                    previousFocusTargets?.row?.requestFocus()
+                        ?: onMoveUp?.let { moveUp -> moveUp(); true }
+                        ?: false
                 },
                 onMoveDown = { nextFocusTargets?.row?.requestFocus() ?: true }
             )
@@ -523,12 +573,17 @@ private fun ServerListItem(
                 onMovementKeyEvent = onMovementKeyEvent
             )
     ) {
-        Box(
-            Modifier
-                .width(10.dp)
-                .fillMaxHeight()
-        ) {
-            if (isSelected) {
+        Box(Modifier.width(10.dp).fillMaxHeight()) {
+            if (isMoving) {
+                Box(
+                    Modifier
+                        .width(8.dp)
+                        .fillMaxHeight()
+                        .padding(vertical = 6.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.secondary)
+                )
+            } else if (isSelected) {
                 Row {
                     Spacer(Modifier.width(6.dp))
                     Box(

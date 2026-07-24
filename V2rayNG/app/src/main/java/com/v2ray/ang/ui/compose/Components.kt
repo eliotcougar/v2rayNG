@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
@@ -498,7 +499,7 @@ fun VersionInfoBlock(
 @Composable
 private fun reorderableElevation(isDragging: Boolean, isMoving: Boolean) = animateDpAsState(
     targetValue = when {
-        isMoving -> 12.dp
+        isMoving -> 16.dp
         isDragging -> 4.dp
         else -> 0.dp
     },
@@ -641,13 +642,24 @@ fun ReorderableListItem(
     content: @Composable RowScope.() -> Unit
 ) {
     val elevation by reorderableElevation(isDragging, isMoving)
+    val shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .zIndex(if (isMoving) 1f else 0f),
-        shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape,
+        shape = shape,
+        color = if (isMoving) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = if (isMoving) {
+            BorderStroke(4.dp, MaterialTheme.colorScheme.secondary)
+        } else {
+            null
+        },
         shadowElevation = elevation,
-        tonalElevation = if (isMoving) 4.dp else 0.dp
+        tonalElevation = if (isMoving) 8.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -667,14 +679,25 @@ fun ReorderableGridItem(
     content: @Composable () -> Unit
 ) {
     val elevation by reorderableElevation(isDragging, isMoving)
+    val shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .zIndex(if (isMoving) 1f else 0f)
             .then(with(scope) { reorderableDragHandle() }),
-        shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape,
+        shape = shape,
+        color = if (isMoving) {
+            MaterialTheme.colorScheme.secondaryContainer
+        } else {
+            MaterialTheme.colorScheme.surface
+        },
+        border = if (isMoving) {
+            BorderStroke(4.dp, MaterialTheme.colorScheme.secondary)
+        } else {
+            null
+        },
         shadowElevation = elevation,
-        tonalElevation = if (isMoving) 4.dp else 0.dp
+        tonalElevation = if (isMoving) 8.dp else 0.dp
     ) {
         content()
     }

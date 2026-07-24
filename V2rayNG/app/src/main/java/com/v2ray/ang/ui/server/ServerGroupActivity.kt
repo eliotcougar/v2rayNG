@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +30,8 @@ import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
 import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.tvAwareImePadding
+import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BalancerStrategyType
 import com.v2ray.ang.enums.EConfigType
@@ -230,6 +231,7 @@ fun ServerGroupScreen(
     onDelete: () -> Unit
 ) {
     val typeEntries = stringArrayResource(R.array.policy_group_type).toList()
+    val scrollState = rememberScrollState()
 
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
@@ -274,10 +276,11 @@ fun ServerGroupScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .imePadding()
+                .tvAwareImePadding()
                 .tvContentPadding()
+                .verticalScroll(scrollState)
+                .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)
-                .verticalScroll(rememberScrollState())
         ) {
             FormTextField(stringResource(R.string.server_lab_remarks), remarks, { remarks = it })
             FormDropdownField(

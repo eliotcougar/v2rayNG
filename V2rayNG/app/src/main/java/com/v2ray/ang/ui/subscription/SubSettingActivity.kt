@@ -3,7 +3,6 @@ package com.v2ray.ang.ui.subscription
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
@@ -30,14 +29,21 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -138,10 +144,13 @@ fun SubSettingScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
+    val subscriptionIdSet = subscriptions.mapTo(mutableSetOf()) { it.guid }
     var showUpdateDialog by remember { mutableStateOf(false) }
-    val rowFocusTargets = remember(subscriptions.map { it.guid }) {
+    val rowFocusTargets = remember(subscriptionIdSet) {
         subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
     }
+    var movingSubscriptionId by remember { mutableStateOf<String?>(null) }
+    var movingSubscriptionIndex by remember { mutableStateOf(-1) }
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
@@ -152,6 +161,59 @@ fun SubSettingScreen(
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         viewModel.move(from.index, to.index)
+    }
+
+    LaunchedEffect(subscriptionIdSet) {
+        if (
+            movingSubscriptionId == null ||
+            movingSubscriptionId !in subscriptionIdSet
+        ) {
+            movingSubscriptionId = null
+            movingSubscriptionIndex = -1
+        }
+    }
+    LaunchedEffect(movingSubscriptionId, movingSubscriptionIndex) {
+        val subscriptionId = movingSubscriptionId ?: return@LaunchedEffect
+        withFrameNanos { }
+        rowFocusTargets[subscriptionId]?.row?.requestFocus()
+    }
+
+    fun startMovement(subscriptionId: String, index: Int) {
+        if (!isTelevision) return
+        movingSubscriptionId = subscriptionId
+        movingSubscriptionIndex = index
+    }
+
+    fun finishMovement() {
+        movingSubscriptionId = null
+        movingSubscriptionIndex = -1
+    }
+
+    fun handleMovementKey(event: KeyEvent): Boolean {
+        if (movingSubscriptionId == null) return false
+
+        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
+            return true
+        }
+
+        val delta = when (event.key) {
+            Key.DirectionUp -> -1
+            Key.DirectionDown -> 1
+            Key.DirectionLeft, Key.DirectionRight -> 0
+            else -> return false
+        }
+        if (event.type != KeyEventType.KeyDown) return true
+
+        val targetIndex = movingSubscriptionIndex + delta
+        if (
+            targetIndex in subscriptions.indices &&
+            targetIndex != movingSubscriptionIndex
+        ) {
+            val fromIndex = movingSubscriptionIndex
+            movingSubscriptionIndex = targetIndex
+            viewModel.swap(fromIndex, targetIndex)
+        }
+        return true
     }
 
     Scaffold(
@@ -197,10 +259,12 @@ fun SubSettingScreen(
                 val previousTargets = previousSub?.let { rowFocusTargets[it.guid] }
                 val nextSub = subscriptions.getOrNull(index + 1)
                 val nextTargets = nextSub?.let { rowFocusTargets[it.guid] }
+                val isMoving = movingSubscriptionId == subCache.guid
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
                     ReorderableListItem(
                         scope = this,
-                        isDragging = isDragging
+                        isDragging = isDragging,
+                        isMoving = isMoving
                     ) {
                         Row(
                             modifier = Modifier
@@ -215,7 +279,12 @@ fun SubSettingScreen(
                                             )
                                             .dpadFocusOutline(
                                                 focusRequester = focusTargets.row,
-                                                cornerRadius = 16.dp
+                                                cornerRadius = 16.dp,
+                                                focusContainerColor = if (isMoving) {
+                                                    MaterialTheme.colorScheme.secondaryContainer
+                                                } else {
+                                                    null
+                                                }
                                             )
                                             .dpadHorizontalFocusNavigation(
                                                 onMoveLeft = { focusTargets.row.requestFocus() },
@@ -235,7 +304,18 @@ fun SubSettingScreen(
                                                     nextTargets?.row?.requestFocus() ?: true
                                                 }
                                             )
-                                            .clickable { onEditSub(subCache.guid) }
+                                            .dpadLongPressToMove(
+                                                enabled = true,
+                                                onClick = {
+                                                    if (isMoving) finishMovement()
+                                                    else onEditSub(subCache.guid)
+                                                },
+                                                onLongPress = {
+                                                    startMovement(subCache.guid, index)
+                                                },
+                                                onDrop = ::finishMovement,
+                                                onMovementKeyEvent = ::handleMovementKey
+                                            )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
                                         Modifier.padding(horizontal = 14.dp)
