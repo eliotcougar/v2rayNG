@@ -6,6 +6,9 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -24,10 +28,13 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
+
+private val TvImeBottomClearance = 96.dp
 
 /**
- * Owns the passive-row/editor handoff for one TV text field. Keeping IME ownership here prevents
- * every form and dialog from implementing subtly different focus and keyboard state machines.
+ * Owns the passive-row/editor handoff and IME positioning for one TV text field. Keeping that
+ * behavior here prevents every form and dialog from implementing subtly different state machines.
  */
 internal class TvTextFieldState(
     val passiveFocusRequester: FocusRequester,
@@ -35,6 +42,7 @@ internal class TvTextFieldState(
 ) {
     val editorFocusRequester = FocusRequester()
     val interactionSource = MutableInteractionSource()
+    val bringIntoViewRequester = BringIntoViewRequester()
 
     var isEditing by mutableStateOf(false)
         private set
@@ -65,6 +73,10 @@ internal class TvTextFieldState(
             finishEditing()
         }
     }
+
+    internal suspend fun bringEditorAboveIme() {
+        bringIntoViewRequester.bringIntoView()
+    }
 }
 
 @Composable
@@ -91,7 +103,11 @@ internal fun rememberTvTextFieldState(
                 !isImeVisible -> state.finishEditing(restoreFocus = true)
 
             state.isEditing && state.editorHasFocus -> {
-                if (isImeVisible) state.imeWasVisible = true
+                if (isImeVisible) {
+                    state.imeWasVisible = true
+                    withFrameNanos { }
+                    state.bringEditorAboveIme()
+                }
                 keyboardController?.show()
             }
 
@@ -115,18 +131,20 @@ internal fun Modifier.tvPassiveTextFieldFocus(
     onMoveUp: () -> Boolean,
     onMoveDown: () -> Boolean
 ): Modifier {
-    return onPreviewKeyEvent { event ->
-        if (
-            event.type == KeyEventType.KeyDown &&
-            (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-            !state.isEditing
-        ) {
-            onActivate()
-            true
-        } else {
-            false
+    return bringIntoViewRequester(state.bringIntoViewRequester)
+        .padding(bottom = if (state.isEditing) TvImeBottomClearance else 0.dp)
+        .onPreviewKeyEvent { event ->
+            if (
+                event.type == KeyEventType.KeyDown &&
+                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                !state.isEditing
+            ) {
+                onActivate()
+                true
+            } else {
+                false
+            }
         }
-    }
         .dpadTextFieldNavigation(onMoveUp = onMoveUp, onMoveDown = onMoveDown)
         .focusRequester(state.passiveFocusRequester)
         .focusable(

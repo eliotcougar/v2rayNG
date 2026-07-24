@@ -24,9 +24,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -41,6 +44,7 @@ import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
@@ -137,6 +141,9 @@ fun RoutingEditScreen(
     val processSelectTitle = stringResource(R.string.routing_settings_process_select)
     val scrollState = rememberScrollState()
     val isTelevision = isTelevisionDevice()
+    val processFieldFocusRequester = if (isTelevision) remember { FocusRequester() } else null
+    val processPickerFocusRequester = if (isTelevision) remember { FocusRequester() } else null
+    val portFocusRequester = if (isTelevision) remember { FocusRequester() } else null
 
     var remarks by rememberSaveable { mutableStateOf(initial?.remarks ?: "") }
     var locked by rememberSaveable { mutableStateOf(initial?.locked == true) }
@@ -261,7 +268,11 @@ fun RoutingEditScreen(
                 placeholder = stringResource(R.string.routing_settings_comma_tip),
                 value = processText,
                 onValueChange = { processText = it },
-                enabled = canUseProcess
+                enabled = canUseProcess,
+                modifier = Modifier.focusProperties {
+                    processPickerFocusRequester?.let { down = it }
+                },
+                tvFocusRequester = processFieldFocusRequester
             )
             if (canUseProcess) {
                 TextButton(
@@ -279,7 +290,13 @@ fun RoutingEditScreen(
                             )
                         )
                     },
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier
+                        .padding(start = 16.dp)
+                        .dpadFocusOutline(focusRequester = processPickerFocusRequester)
+                        .focusProperties {
+                            processFieldFocusRequester?.let { up = it }
+                            portFocusRequester?.let { down = it }
+                        }
                 ) {
                     Icon(
                         painterResource(R.drawable.ic_per_apps_24dp),
@@ -292,7 +309,11 @@ fun RoutingEditScreen(
             FormTextField(
                 label = stringResource(R.string.routing_settings_port),
                 value = port,
-                onValueChange = { port = it }
+                onValueChange = { port = it },
+                modifier = Modifier.focusProperties {
+                    processPickerFocusRequester?.let { up = it }
+                },
+                tvFocusRequester = portFocusRequester
             )
             FormTextField(
                 label = stringResource(R.string.routing_settings_protocol),

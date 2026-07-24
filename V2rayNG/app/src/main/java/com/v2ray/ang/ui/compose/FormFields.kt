@@ -44,10 +44,15 @@ fun FormTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     placeholder: String? = null,
     maxLines: Int = 5,
+    tvFocusRequester: FocusRequester? = null,
 ) {
     val isTelevision = isTelevisionDevice()
     val focusManager = LocalFocusManager.current
-    val tvFieldState = if (isTelevision) rememberTvTextFieldState() else null
+    val tvFieldState = if (isTelevision) {
+        rememberTvTextFieldState(tvFocusRequester)
+    } else {
+        null
+    }
 
     Box(
         modifier = modifier
