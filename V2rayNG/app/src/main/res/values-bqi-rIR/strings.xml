@@ -356,12 +356,14 @@
     <string name="sub_setting_enable">ره وندن ورۊ کردن</string>
     <string name="sub_auto_update">ره وندن ورۊ کردن خوتکار</string>
     <string name="sub_allow_insecure_url">موجاز کردن نشۊوی HTTP نا ٱمن</string>
-    <string name="sub_setting_pre_profile">پروکسی وۊرۊی</string>
-    <string name="sub_setting_next_profile">پروکسی دری</string>
-    <string name="sub_setting_pre_profile_tip">موطمئن بۊ ک نیشتنا هڌس وو جۊرس نی</string>
-    <string name="sub_setting_entry_proxy_tip">ای پروکسی پؽش ز هر کانفیگ من ای اشتراک، وری ٱول عوزو زنجیره پروکسی اضاف ابۊ.</string>
-    <string name="sub_setting_exit_proxy_tip">ای پروکسی بئڌ ز هر کانفیگ من ای اشتراک، وری آخر عوزو زنجیره پروکسی اضاف ابۊ.</string>
+    <string name="sub_setting_pre_profile">پروکسی ورودی</string>
+    <string name="sub_setting_next_profile">پروکسی خروجی</string>
+    <string name="sub_setting_pre_profile_tip">پیش از هر نمایه در این اشتراک استفاده می‌شود</string>
     <string name="toast_invalid_update_interval">فاصله ورۊ کردن نا موئتبر هڌ. حداقل مقدار 15 دؽقه هڌ.</string>
+
+    <string name="sub_setting_next_profile_tip">پس از هر نمایه در این اشتراک استفاده می‌شود</string>
+
+    <string name="sub_setting_no_proxy">هیچ‌کدام</string>
     <string name="title_sub_update">ورۊ کردن اشتراکا</string>
     <string name="title_ping_all_server">Tcping کانفیگا بونکۊ سکویی</string>
     <string name="title_real_ping_all_server">تئخیر واقعی کانفیگا بونکۊ سکویی</string>

@@ -251,21 +251,23 @@ fun SubEditScreen(
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_pre_profile),
-                placeholder = stringResource(R.string.sub_setting_pre_profile_tip),
+                placeholder = stringResource(R.string.sub_setting_no_proxy),
+                supportingText = stringResource(R.string.sub_setting_pre_profile_tip),
                 value = prevProfile,
                 options = profileSuggestions,
                 onValueChange = { prevProfile = it },
-                editable = true,
-                supportingText = stringResource(R.string.sub_setting_entry_proxy_tip)
+                editable = !isTelevision,
+                emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_next_profile),
-                placeholder = stringResource(R.string.sub_setting_pre_profile_tip),
+                placeholder = stringResource(R.string.sub_setting_no_proxy),
+                supportingText = stringResource(R.string.sub_setting_next_profile_tip),
                 value = nextProfile,
                 options = profileSuggestions,
                 onValueChange = { nextProfile = it },
-                editable = true,
-                supportingText = stringResource(R.string.sub_setting_exit_proxy_tip)
+                editable = !isTelevision,
+                emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
             )
             NavigationBarsSpacer()
         }

@@ -362,9 +362,9 @@
     <string name="sub_allow_insecure_url">Cho phép địa chỉ HTTP không an toàn</string>
     <string name="sub_setting_pre_profile">Proxy đầu vào</string>
     <string name="sub_setting_next_profile">Proxy đầu ra</string>
-    <string name="sub_setting_pre_profile_tip">Tên ghi chú của cấu hình phải tồn tại và là duy nhất</string>
-    <string name="sub_setting_entry_proxy_tip">Proxy đã chọn được thêm trước mỗi cấu hình trong gói đăng ký, làm mắt xích đầu vào của chuỗi proxy cho cấu hình đó.</string>
-    <string name="sub_setting_exit_proxy_tip">Proxy đã chọn được thêm sau mỗi cấu hình trong gói đăng ký, làm mắt xích đầu ra của chuỗi proxy cho cấu hình đó.</string>
+    <string name="sub_setting_pre_profile_tip">Được dùng trước mỗi cấu hình trong gói đăng ký này</string>
+    <string name="sub_setting_next_profile_tip">Được dùng sau mỗi cấu hình trong gói đăng ký này</string>
+    <string name="sub_setting_no_proxy">Không có</string>
     <string name="toast_invalid_update_interval">Khoảng thời gian cập nhật không hợp lệ. Giá trị tối thiểu là 15 phút.</string>
     <string name="title_sub_update">Cập nhật gói đăng ký</string>
     <string name="title_ping_all_server">Kiểm tra độ trễ TCP (TCPing)</string>

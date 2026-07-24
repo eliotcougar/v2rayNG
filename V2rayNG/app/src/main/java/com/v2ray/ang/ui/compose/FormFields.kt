@@ -132,6 +132,7 @@ fun FormDropdownField(
     enabled: Boolean = true,
     placeholder: String? = null,
     supportingText: String? = null,
+    emptyOptionLabel: String? = null,
     tvFocusRequester: FocusRequester? = null,
     tvOnMoveUp: (() -> Boolean)? = null,
     tvOnMoveDown: (() -> Boolean)? = null,
@@ -151,7 +152,9 @@ fun FormDropdownField(
         null
     }
     val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
-    val selectedOptionIndex = options.indexOf(value).takeIf { it >= 0 } ?: 0
+    val menuOptions = if (emptyOptionLabel == null) options else listOf("") + options
+    val selectedOptionIndex = menuOptions.indexOf(value).takeIf { it >= 0 } ?: 0
+    val displayedValue = if (!editable && value.isEmpty()) emptyOptionLabel.orEmpty() else value
 
     fun dismissMenu() {
         expanded = false
@@ -228,7 +231,7 @@ fun FormDropdownField(
             )
     ) {
         OutlinedTextField(
-            value = value,
+            value = displayedValue,
             onValueChange = { if (editable) onValueChange(it) },
             readOnly = !editable || (tvFieldState != null && !tvFieldState.isEditing),
             enabled = enabled,
@@ -280,9 +283,13 @@ fun FormDropdownField(
             scrollState = menuScrollState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            options.forEachIndexed { index, option ->
+            menuOptions.forEachIndexed { index, option ->
                 AppDropdownMenuItem(
-                    text = option,
+                    text = if (option.isEmpty() && emptyOptionLabel != null) {
+                        emptyOptionLabel
+                    } else {
+                        option
+                    },
                     modifier = if (
                         index == selectedOptionIndex && selectedOptionFocusRequester != null
                     ) {
