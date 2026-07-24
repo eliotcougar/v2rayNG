@@ -184,14 +184,23 @@ fun MainScreen(
     }
 
     val latestGroups by rememberUpdatedState(groups)
-
-    LaunchedEffect(pagerState) {
+    val latestSelectedGroupId by rememberUpdatedState(uiState.selectedGroupId)
+    LaunchedEffect(pagerState, isTelevision) {
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect { page ->
                 val currentGroups = latestGroups
                 if (page in currentGroups.indices) {
-                    onAction(MainAction.SelectGroup(currentGroups[page].id))
+                    if (isTelevision) {
+                        val selectedPage = currentGroups.indexOfFirst {
+                            it.id == latestSelectedGroupId
+                        }
+                        if (selectedPage >= 0 && page != selectedPage) {
+                            pagerState.scrollToPage(selectedPage)
+                        }
+                    } else {
+                        onAction(MainAction.SelectGroup(currentGroups[page].id))
+                    }
                 }
             }
     }
@@ -322,7 +331,7 @@ fun MainScreen(
                         HorizontalPager(
                             state = pagerState,
                             modifier = Modifier.fillMaxSize(),
-                            userScrollEnabled = true,
+                            userScrollEnabled = !isTelevision,
                             beyondViewportPageCount = 1,
                             key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
                         ) { page ->
