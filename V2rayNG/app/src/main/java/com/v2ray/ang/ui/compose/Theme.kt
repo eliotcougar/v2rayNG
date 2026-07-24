@@ -1,7 +1,11 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.v2ray.ang.ui.compose
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +20,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +31,7 @@ import com.v2ray.ang.handler.MmkvManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.roundToInt
 
 private val LightColor = lightColorScheme(
     primary = Color(0xFF000000), // Black
@@ -161,6 +167,19 @@ fun resolveDarkTheme(): Boolean {
 
 val LocalDarkTheme = compositionLocalOf { false }
 
+/** Keeps the platform TV focus policy, but aligns its requested movement with lazy-list pixels. */
+private class PixelAlignedBringIntoViewSpec(
+    private val delegate: BringIntoViewSpec
+) : BringIntoViewSpec {
+    override fun calculateScrollDistance(
+        offset: Float,
+        size: Float,
+        containerSize: Float
+    ): Float = delegate.calculateScrollDistance(offset, size, containerSize)
+        .roundToInt()
+        .toFloat()
+}
+
 @Composable
 fun AppTheme(
     darkTheme: Boolean = resolveDarkTheme(),
@@ -177,6 +196,14 @@ fun AppTheme(
         else -> LightColor
     }
     val snackbarController = rememberAppSnackbarController()
+    val platformBringIntoViewSpec = LocalBringIntoViewSpec.current
+    val bringIntoViewSpec = if (isTelevisionDevice()) {
+        remember(platformBringIntoViewSpec) {
+            PixelAlignedBringIntoViewSpec(platformBringIntoViewSpec)
+        }
+    } else {
+        platformBringIntoViewSpec
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -192,7 +219,8 @@ fun AppTheme(
 
     CompositionLocalProvider(
         LocalDarkTheme provides darkTheme,
-        LocalAppSnackbar provides snackbarController
+        LocalAppSnackbar provides snackbarController,
+        LocalBringIntoViewSpec provides bringIntoViewSpec
     ) {
         MaterialTheme(
             colorScheme = colorScheme

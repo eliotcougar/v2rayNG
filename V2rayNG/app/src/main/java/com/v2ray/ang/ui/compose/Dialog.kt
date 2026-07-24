@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.v2ray.ang.ui.compose
 
 import android.graphics.Bitmap
@@ -11,9 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -205,12 +210,14 @@ fun InputDialog(
     val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
     val isTelevision = isTelevisionDevice()
     var editingIndex by remember { mutableIntStateOf(-1) }
+    var imeWasVisible by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val isImeVisible = WindowInsets.isImeVisible
 
     if (isTelevision) {
-        LaunchedEffect(editingIndex) {
-            if (editingIndex < 0) keyboardController?.hide()
+        LaunchedEffect(Unit) {
+            keyboardController?.hide()
         }
     }
 
@@ -224,13 +231,46 @@ fun InputDialog(
             ) {
                 fields.forEachIndexed { index, field ->
                     val interactionSource = remember(index) { MutableInteractionSource() }
+                    val rowFocusRequester = remember(index) { FocusRequester() }
+                    val passiveFocusRequester =
+                        if (index == 0) firstFieldFocusRequester else rowFocusRequester
                     val editorFocusRequester = remember(index) { FocusRequester() }
+                    var editorHasFocus by remember(index) { mutableStateOf(false) }
+                    var restorePassiveFocus by remember(index) { mutableStateOf(false) }
+
+                    fun beginEditing() {
+                        editorHasFocus = false
+                        imeWasVisible = false
+                        restorePassiveFocus = false
+                        editingIndex = index
+                    }
+
+                    fun finishEditing(restoreFocus: Boolean = false) {
+                        val wasEditing = editingIndex == index || editorHasFocus
+                        editorHasFocus = false
+                        imeWasVisible = false
+                        restorePassiveFocus = restoreFocus
+                        if (editingIndex == index) editingIndex = -1
+                        if (wasEditing) keyboardController?.hide()
+                    }
 
                     if (isTelevision) {
-                        LaunchedEffect(editingIndex) {
+                        LaunchedEffect(editingIndex, editorHasFocus, isImeVisible) {
                             if (editingIndex == index) {
-                                editorFocusRequester.requestFocus()
-                                keyboardController?.show()
+                                if (editorHasFocus && imeWasVisible && !isImeVisible) {
+                                    finishEditing(restoreFocus = true)
+                                } else if (editorHasFocus) {
+                                    if (isImeVisible) imeWasVisible = true
+                                    keyboardController?.show()
+                                } else {
+                                    editorFocusRequester.requestFocus()
+                                }
+                            }
+                        }
+                        LaunchedEffect(editingIndex, restorePassiveFocus) {
+                            if (editingIndex != index && restorePassiveFocus) {
+                                passiveFocusRequester.requestFocus()
+                                restorePassiveFocus = false
                             }
                         }
                     }
@@ -247,7 +287,7 @@ fun InputDialog(
                                                 (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
                                                 editingIndex != index
                                             ) {
-                                                editingIndex = index
+                                                beginEditing()
                                                 true
                                             } else {
                                                 false
@@ -255,21 +295,15 @@ fun InputDialog(
                                         }
                                         .dpadTextFieldNavigation(
                                             onMoveUp = {
-                                                editingIndex = -1
+                                                finishEditing()
                                                 focusManager.moveFocus(FocusDirection.Up)
                                             },
                                             onMoveDown = {
-                                                editingIndex = -1
+                                                finishEditing()
                                                 focusManager.moveFocus(FocusDirection.Down)
                                             }
                                         )
-                                        .then(
-                                            if (index == 0) {
-                                                Modifier.focusRequester(firstFieldFocusRequester)
-                                            } else {
-                                                Modifier
-                                            }
-                                        )
+                                        .focusRequester(passiveFocusRequester)
                                         .focusable(
                                             enabled = editingIndex != index,
                                             interactionSource = interactionSource
@@ -306,12 +340,11 @@ fun InputDialog(
                                         Modifier
                                             .focusRequester(editorFocusRequester)
                                             .focusProperties { canFocus = editingIndex == index }
-                                            .onFocusChanged {
-                                                if (
-                                                    editingIndex == index &&
-                                                    !it.isFocused
-                                                ) {
-                                                    editingIndex = -1
+                                            .onFocusChanged { focusState ->
+                                                if (focusState.isFocused) {
+                                                    editorHasFocus = true
+                                                } else if (editorHasFocus) {
+                                                    finishEditing()
                                                 }
                                             }
                                     } else {

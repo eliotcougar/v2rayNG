@@ -1,9 +1,13 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -57,15 +61,44 @@ fun FormTextField(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val interactionSource = remember { MutableInteractionSource() }
+    val passiveFocusRequester = remember { FocusRequester() }
     val editorFocusRequester = remember { FocusRequester() }
+    var editorHasFocus by remember { mutableStateOf(false) }
+    var imeWasVisible by remember { mutableStateOf(false) }
+    var restorePassiveFocus by remember { mutableStateOf(false) }
+    val isImeVisible = WindowInsets.isImeVisible
+
+    fun beginEditing() {
+        editorHasFocus = false
+        imeWasVisible = false
+        restorePassiveFocus = false
+        isEditing = true
+    }
+
+    fun finishEditing(restoreFocus: Boolean = false) {
+        val wasEditing = isEditing || editorHasFocus
+        isEditing = false
+        editorHasFocus = false
+        imeWasVisible = false
+        restorePassiveFocus = restoreFocus
+        if (wasEditing) keyboardController?.hide()
+    }
 
     if (isTelevision) {
-        LaunchedEffect(isEditing) {
-            if (isEditing) {
-                editorFocusRequester.requestFocus()
+        LaunchedEffect(isEditing, editorHasFocus, isImeVisible) {
+            if (isEditing && editorHasFocus && imeWasVisible && !isImeVisible) {
+                finishEditing(restoreFocus = true)
+            } else if (isEditing && editorHasFocus) {
+                if (isImeVisible) imeWasVisible = true
                 keyboardController?.show()
-            } else {
-                keyboardController?.hide()
+            } else if (isEditing) {
+                editorFocusRequester.requestFocus()
+            }
+        }
+        LaunchedEffect(isEditing, restorePassiveFocus) {
+            if (!isEditing && restorePassiveFocus) {
+                passiveFocusRequester.requestFocus()
+                restorePassiveFocus = false
             }
         }
     }
@@ -83,7 +116,7 @@ fun FormTextField(
                                 (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
                                 !isEditing
                             ) {
-                                isEditing = true
+                                beginEditing()
                                 true
                             } else {
                                 false
@@ -91,14 +124,15 @@ fun FormTextField(
                         }
                         .dpadTextFieldNavigation(
                             onMoveUp = {
-                                isEditing = false
+                                finishEditing()
                                 focusManager.moveFocus(FocusDirection.Up)
                             },
                             onMoveDown = {
-                                isEditing = false
+                                finishEditing()
                                 focusManager.moveFocus(FocusDirection.Down)
                             }
                         )
+                        .focusRequester(passiveFocusRequester)
                         .focusable(
                             enabled = enabled && !isEditing,
                             interactionSource = interactionSource
@@ -135,9 +169,11 @@ fun FormTextField(
                         Modifier
                             .focusRequester(editorFocusRequester)
                             .focusProperties { canFocus = isEditing }
-                            .onFocusChanged {
-                                if (isEditing && !it.isFocused) {
-                                    isEditing = false
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    editorHasFocus = true
+                                } else if (editorHasFocus) {
+                                    finishEditing()
                                 }
                             }
                     } else {
@@ -168,15 +204,44 @@ fun FormDropdownField(
     val isTelevision = isTelevisionDevice()
     var isEditing by remember { mutableStateOf(!isTelevision) }
     val interactionSource = remember { MutableInteractionSource() }
+    val passiveFocusRequester = remember { FocusRequester() }
     val editorFocusRequester = remember { FocusRequester() }
+    var editorHasFocus by remember { mutableStateOf(false) }
+    var imeWasVisible by remember { mutableStateOf(false) }
+    var restorePassiveFocus by remember { mutableStateOf(false) }
+    val isImeVisible = WindowInsets.isImeVisible
+
+    fun beginEditing() {
+        editorHasFocus = false
+        imeWasVisible = false
+        restorePassiveFocus = false
+        isEditing = true
+    }
+
+    fun finishEditing(restoreFocus: Boolean = false) {
+        val wasEditing = isEditing || editorHasFocus
+        isEditing = false
+        editorHasFocus = false
+        imeWasVisible = false
+        restorePassiveFocus = restoreFocus
+        if (wasEditing) keyboardController?.hide()
+    }
 
     if (isTelevision) {
-        LaunchedEffect(isEditing) {
-            if (isEditing) {
-                editorFocusRequester.requestFocus()
+        LaunchedEffect(isEditing, editorHasFocus, isImeVisible) {
+            if (isEditing && editorHasFocus && imeWasVisible && !isImeVisible) {
+                finishEditing(restoreFocus = true)
+            } else if (isEditing && editorHasFocus) {
+                if (isImeVisible) imeWasVisible = true
                 keyboardController?.show()
-            } else {
-                keyboardController?.hide()
+            } else if (isEditing) {
+                editorFocusRequester.requestFocus()
+            }
+        }
+        LaunchedEffect(isEditing, restorePassiveFocus) {
+            if (!isEditing && restorePassiveFocus) {
+                passiveFocusRequester.requestFocus()
+                restorePassiveFocus = false
             }
         }
     }
@@ -204,7 +269,7 @@ fun FormDropdownField(
                                 return@onPreviewKeyEvent false
                             }
                             if (editable && !isEditing) {
-                                isEditing = true
+                                beginEditing()
                             } else if (!editable) {
                                 keyboardController?.hide()
                                 expanded = !expanded
@@ -215,14 +280,15 @@ fun FormDropdownField(
                         }
                         .dpadTextFieldNavigation(
                             onMoveUp = {
-                                isEditing = false
+                                finishEditing()
                                 focusManager.moveFocus(FocusDirection.Up)
                             },
                             onMoveDown = {
-                                isEditing = false
+                                finishEditing()
                                 focusManager.moveFocus(FocusDirection.Down)
                             }
                         )
+                        .focusRequester(passiveFocusRequester)
                         .focusable(
                             enabled = enabled && !isEditing,
                             interactionSource = interactionSource
@@ -257,9 +323,11 @@ fun FormDropdownField(
                         Modifier
                             .focusRequester(editorFocusRequester)
                             .focusProperties { canFocus = editable && isEditing }
-                            .onFocusChanged {
-                                if (isEditing && !it.isFocused) {
-                                    isEditing = false
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    editorHasFocus = true
+                                } else if (editorHasFocus) {
+                                    finishEditing()
                                 }
                             }
                     } else {
@@ -272,9 +340,6 @@ fun FormDropdownField(
                 )
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!focusState.isFocused && isTelevision) {
-                        isEditing = false
-                    }
                     if (!editable && focusState.isFocused) {
                         keyboardController?.hide()
                     }
