@@ -29,6 +29,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
@@ -45,6 +46,8 @@ fun FormTextField(
     placeholder: String? = null,
     maxLines: Int = 5,
     tvFocusRequester: FocusRequester? = null,
+    tvOnMoveUp: (() -> Boolean)? = null,
+    tvOnMoveDown: (() -> Boolean)? = null,
 ) {
     val isTelevision = isTelevisionDevice()
     val focusManager = LocalFocusManager.current
@@ -66,11 +69,13 @@ fun FormTextField(
                         onActivate = state::beginEditing,
                         onMoveUp = {
                             state.finishEditing()
-                            focusManager.moveFocus(FocusDirection.Up)
+                            tvOnMoveUp?.invoke()
+                                ?: focusManager.moveFocus(FocusDirection.Up)
                         },
                         onMoveDown = {
                             state.finishEditing()
-                            focusManager.moveFocus(FocusDirection.Down)
+                            tvOnMoveDown?.invoke()
+                                ?: focusManager.moveFocus(FocusDirection.Down)
                         }
                     )
                 } ?: Modifier
@@ -90,6 +95,16 @@ fun FormTextField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = if (isTelevision) {
+                    MaterialTheme.colorScheme.secondary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                focusedLabelColor = if (isTelevision) {
+                    MaterialTheme.colorScheme.secondary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 cursorColor = MaterialTheme.colorScheme.secondary,
                 selectionColors = TextSelectionColors(
                     handleColor = MaterialTheme.colorScheme.secondary,
@@ -117,6 +132,12 @@ fun FormDropdownField(
     enabled: Boolean = true,
     placeholder: String? = null,
     supportingText: String? = null,
+    tvFocusRequester: FocusRequester? = null,
+    tvOnMoveUp: (() -> Boolean)? = null,
+    tvOnMoveDown: (() -> Boolean)? = null,
+    tvOnLongPress: (() -> Unit)? = null,
+    tvOnDrop: () -> Unit = {},
+    tvOnMovementKeyEvent: (KeyEvent) -> Boolean = { false },
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var restoreFieldFocus by remember { mutableStateOf(false) }
@@ -124,13 +145,27 @@ fun FormDropdownField(
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val isTelevision = isTelevisionDevice()
-    val tvFieldState = if (isTelevision) rememberTvTextFieldState() else null
+    val tvFieldState = if (isTelevision) {
+        rememberTvTextFieldState(tvFocusRequester)
+    } else {
+        null
+    }
     val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
     val selectedOptionIndex = options.indexOf(value).takeIf { it >= 0 } ?: 0
 
     fun dismissMenu() {
         expanded = false
         restoreFieldFocus = isTelevision
+    }
+
+    fun activateTvField() {
+        val state = tvFieldState ?: return
+        if (editable) {
+            state.beginEditing()
+        } else {
+            keyboardController?.hide()
+            if (expanded) dismissMenu() else expanded = true
+        }
     }
 
     LaunchedEffect(expanded, restoreFieldFocus, selectedOptionIndex) {
@@ -159,25 +194,34 @@ fun FormDropdownField(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .then(
+                if (isTelevision && tvOnLongPress != null) {
+                    Modifier.dpadLongPressToMove(
+                        enabled = true,
+                        onClick = ::activateTvField,
+                        onLongPress = tvOnLongPress,
+                        onDrop = tvOnDrop,
+                        onMovementKeyEvent = tvOnMovementKeyEvent,
+                        addFocusTarget = false
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .then(
                 tvFieldState?.let { state ->
                     Modifier.tvPassiveTextFieldFocus(
                         state = state,
                         enabled = enabled,
-                        onActivate = {
-                            if (editable) {
-                                state.beginEditing()
-                            } else {
-                                keyboardController?.hide()
-                                if (expanded) dismissMenu() else expanded = true
-                            }
-                        },
+                        onActivate = ::activateTvField,
                         onMoveUp = {
                             state.finishEditing()
-                            focusManager.moveFocus(FocusDirection.Up)
+                            tvOnMoveUp?.invoke()
+                                ?: focusManager.moveFocus(FocusDirection.Up)
                         },
                         onMoveDown = {
                             state.finishEditing()
-                            focusManager.moveFocus(FocusDirection.Down)
+                            tvOnMoveDown?.invoke()
+                                ?: focusManager.moveFocus(FocusDirection.Down)
                         }
                     )
                 } ?: Modifier
@@ -196,6 +240,16 @@ fun FormDropdownField(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
+                focusedBorderColor = if (isTelevision) {
+                    MaterialTheme.colorScheme.secondary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                focusedLabelColor = if (isTelevision) {
+                    MaterialTheme.colorScheme.secondary
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
                 cursorColor = MaterialTheme.colorScheme.secondary,
                 selectionColors = TextSelectionColors(
                     handleColor = MaterialTheme.colorScheme.secondary,

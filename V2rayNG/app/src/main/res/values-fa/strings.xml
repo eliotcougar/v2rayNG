@@ -459,6 +459,7 @@
     <string name="title_policy_group_fallback">خروجی پشتیبان (outbound، اختیاری)</string>
 
     <string name="server_proxy_chain_members">اعضای زنجیره پروکسی</string>
+    <string name="server_proxy_chain_member">عضو</string>
     <string name="server_proxy_chain_pick_members">برای انتخاب عضو اینجا بزنید</string>
     <string name="server_proxy_chain_member_unselected">یک عضو را انتخاب کنید</string>
     <string name="server_proxy_chain_members_unselected">لطفاً برای هر ردیف زنجیره یک عضو انتخاب کنید</string>

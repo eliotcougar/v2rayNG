@@ -461,6 +461,8 @@
     <string name="title_policy_group_fallback">বিকল্প বহির্গামী সংযোগ (outbound, ঐচ্ছিক)</string>
 
     <string name="server_proxy_chain_members">প্রক্সি চেইনের সদস্য</string>
+
+    <string name="server_proxy_chain_member">সদস্য</string>
     <string name="server_proxy_chain_pick_members">সদস্য বাছতে এখানে ট্যাপ করুন</string>
     <string name="server_proxy_chain_member_unselected">চেইনের সদস্য নির্বাচন করুন</string>
     <string name="server_proxy_chain_members_unselected">চেইনের প্রতিটি সারির জন্য সদস্য নির্বাচন করুন</string>

@@ -461,6 +461,7 @@
     <string name="title_policy_group_fallback">الاتصال الصادر الاحتياطي (outbound، اختياري)</string>
 
     <string name="server_proxy_chain_members">أعضاء سلسلة الوكيل</string>
+    <string name="server_proxy_chain_member">عضو</string>
     <string name="server_proxy_chain_pick_members">اضغط هنا لاختيار عضو</string>
     <string name="server_proxy_chain_member_unselected">اختر عضوًا</string>
     <string name="server_proxy_chain_members_unselected">يرجى اختيار عضو لكل صف في السلسلة</string>

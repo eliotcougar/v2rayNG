@@ -523,7 +523,8 @@ fun Modifier.dpadLongPressToMove(
     onClick: () -> Unit,
     onLongPress: () -> Unit,
     onDrop: () -> Unit,
-    onMovementKeyEvent: (KeyEvent) -> Boolean
+    onMovementKeyEvent: (KeyEvent) -> Boolean,
+    addFocusTarget: Boolean = true
 ): Modifier {
     if (!enabled) return this
 
@@ -552,7 +553,7 @@ fun Modifier.dpadLongPressToMove(
         onLongPress()
     }
 
-    return pointerInput(onClick, onLongPress) {
+    val movementModifier = pointerInput(onClick, onLongPress) {
         detectTapGestures(
             onTap = { onClick() },
             onLongPress = { startMovement(readyToDrop = true) }
@@ -631,7 +632,8 @@ fun Modifier.dpadLongPressToMove(
                 }
             }
         }
-        .focusable()
+
+    return if (addFocusTarget) movementModifier.focusable() else movementModifier
 }
 
 @Composable

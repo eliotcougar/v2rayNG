@@ -456,6 +456,7 @@
 
     <string name="server_proxy_chain_members">Proxy chain members</string>
     <string name="server_proxy_chain_pick_members">Tap here to pick a member</string>
+    <string name="server_proxy_chain_member">Member</string>
     <string name="server_proxy_chain_member_unselected">Select a member</string>
     <string name="server_proxy_chain_members_unselected">Please select a member for each chain row</string>
     <string name="server_proxy_chain_members_insufficient">Insufficient members</string>

@@ -461,6 +461,8 @@
     <string name="title_policy_group_fallback">Kết nối dự phòng (outbound, tùy chọn)</string>
 
     <string name="server_proxy_chain_members">Thành viên chuỗi proxy</string>
+
+    <string name="server_proxy_chain_member">Thành viên</string>
     <string name="server_proxy_chain_pick_members">Chạm vào đây để chọn thành viên</string>
     <string name="server_proxy_chain_member_unselected">Chọn một thành viên</string>
     <string name="server_proxy_chain_members_unselected">Vui lòng chọn thành viên cho từng hàng trong chuỗi</string>

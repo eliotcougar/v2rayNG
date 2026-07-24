@@ -455,6 +455,7 @@
     <string name="title_policy_group_fallback">Резервное исходящее подключение (outbound, необязательно)</string>
 
     <string name="server_proxy_chain_members">Участники цепочки прокси</string>
+    <string name="server_proxy_chain_member">Участник</string>
     <string name="server_proxy_chain_pick_members">Нажмите здесь, чтобы выбрать участника</string>
     <string name="server_proxy_chain_member_unselected">Выбор участника</string>
     <string name="server_proxy_chain_members_unselected">Выберите участника для каждого звена цепочки</string>

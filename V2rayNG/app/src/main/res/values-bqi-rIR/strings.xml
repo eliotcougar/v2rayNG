@@ -455,6 +455,7 @@
     <string name="title_policy_group_fallback">بارت جایگزین (outbound، اختیاری)</string>
 
     <string name="server_proxy_chain_members">ٱئزا زنجیره پروکسی</string>
+    <string name="server_proxy_chain_member">عوزو</string>
     <string name="server_proxy_chain_pick_members">سی پسند عوزو ایچو بزنین</string>
     <string name="server_proxy_chain_member_unselected">ی عوزو پسند کۊنین</string>
     <string name="server_proxy_chain_members_unselected">سی هر ردیف زنجیره ی عوزو پسند کۊنین</string>
