@@ -17,12 +17,16 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -110,11 +114,32 @@ fun FormDropdownField(
     supportingText: String? = null,
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    var restoreFieldFocus by remember { mutableStateOf(false) }
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val isTelevision = isTelevisionDevice()
     val tvFieldState = if (isTelevision) rememberTvTextFieldState() else null
+    val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
+    val selectedOptionIndex = options.indexOf(value).takeIf { it >= 0 } ?: 0
+
+    fun dismissMenu() {
+        expanded = false
+        restoreFieldFocus = isTelevision
+    }
+
+    LaunchedEffect(expanded, restoreFieldFocus, selectedOptionIndex) {
+        when {
+            expanded && options.isNotEmpty() && selectedOptionFocusRequester != null ->
+                requestFocusWhenReady(selectedOptionFocusRequester)
+
+            !expanded && restoreFieldFocus && tvFieldState != null -> {
+                tvFieldState.finishEditing()
+                requestFocusWhenReady(tvFieldState.passiveFocusRequester)
+                restoreFieldFocus = false
+            }
+        }
+    }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -123,7 +148,7 @@ fun FormDropdownField(
             if (!editable && newExpanded) {
                 keyboardController?.hide()
             }
-            expanded = newExpanded
+            if (newExpanded) expanded = true else dismissMenu()
         },
         modifier = modifier
             .fillMaxWidth()
@@ -138,7 +163,7 @@ fun FormDropdownField(
                                 state.beginEditing()
                             } else {
                                 keyboardController?.hide()
-                                expanded = !expanded
+                                if (expanded) dismissMenu() else expanded = true
                             }
                         },
                         onMoveUp = {
@@ -191,18 +216,25 @@ fun FormDropdownField(
         )
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false },
+            onDismissRequest = ::dismissMenu,
             modifier = Modifier.verticalScrollbar(menuScrollState),
             scrollState = menuScrollState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            options.forEach { option ->
+            options.forEachIndexed { index, option ->
                 AppDropdownMenuItem(
                     text = option,
+                    modifier = if (
+                        index == selectedOptionIndex && selectedOptionFocusRequester != null
+                    ) {
+                        Modifier.focusRequester(selectedOptionFocusRequester)
+                    } else {
+                        Modifier
+                    },
                     onClick = {
                         onValueChange(option)
-                        expanded = false
-                        focusManager.clearFocus()
+                        dismissMenu()
+                        if (!isTelevision) focusManager.clearFocus()
                     }
                 )
             }
