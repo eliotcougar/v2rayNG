@@ -35,7 +35,7 @@ import com.v2ray.ang.compose.AppListItem
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvContentPadding
@@ -139,6 +139,18 @@ fun AppPickerScreen(
     )
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember(
+        backFocusRequester,
+        searchFocusRequester,
+        moreFocusRequester,
+        showSearch
+    ) {
+        if (showSearch) {
+            listOf(backFocusRequester, moreFocusRequester)
+        } else {
+            listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
+        }
+    }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -170,9 +182,9 @@ fun AppPickerScreen(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
-                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { backFocusRequester.requestFocus() },
-                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            modifier = Modifier.dpadOrderedFocusNavigation(
+                                current = searchFocusRequester,
+                                order = topBarFocusOrder
                             ),
                             onClick = { showSearch = true }
                         )
@@ -182,9 +194,9 @@ fun AppPickerScreen(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
                             label = stringResource(R.string.action_more),
                             focusRequester = moreFocusRequester,
-                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { searchFocusRequester.requestFocus() },
-                                onMoveRight = { moreFocusRequester.requestFocus() }
+                            modifier = Modifier.dpadOrderedFocusNavigation(
+                                current = moreFocusRequester,
+                                order = topBarFocusOrder
                             ),
                             onClick = { showMenu = true }
                         )

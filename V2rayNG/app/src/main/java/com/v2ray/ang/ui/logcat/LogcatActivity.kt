@@ -146,7 +146,7 @@ fun LogcatScreen(
     val snackbar = LocalAppSnackbar.current
     LaunchedEffect(isTelevision) {
         if (!isTelevision) {
-            snackbar.showInfo(context, R.string.pull_down_to_refresh)
+            snackbar.show(context.getString(R.string.pull_down_to_refresh))
         }
     }
     val listState = rememberLazyListState()

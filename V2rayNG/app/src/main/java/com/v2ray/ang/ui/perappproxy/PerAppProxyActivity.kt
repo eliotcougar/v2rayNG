@@ -150,12 +150,16 @@ fun PerAppProxyScreen(
     var showInfoPopup by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isTelevision = isTelevisionDevice()
-    val backFocusRequester = rememberDpadFocusRequester(
-        requestFocus = !showSearch,
-        requestKey = showSearch
-    )
+    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember(backFocusRequester, searchFocusRequester, moreFocusRequester, showSearch) {
+        if (showSearch) {
+            listOf(backFocusRequester, moreFocusRequester)
+        } else {
+            listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
+        }
+    }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -202,10 +206,7 @@ fun PerAppProxyScreen(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
-                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { backFocusRequester.requestFocus() },
-                                onMoveRight = { moreFocusRequester.requestFocus() }
-                            ),
+                            modifier = Modifier.dpadOrderedFocusNavigation(searchFocusRequester, topBarFocusOrder),
                             onClick = { showSearch = true }
                         )
                     }
@@ -219,10 +220,7 @@ fun PerAppProxyScreen(
                                 null
                             },
                             focusRequester = moreFocusRequester,
-                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { searchFocusRequester.requestFocus() },
-                                onMoveRight = { moreFocusRequester.requestFocus() }
-                            ),
+                            modifier = Modifier.dpadOrderedFocusNavigation(moreFocusRequester, topBarFocusOrder),
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
@@ -250,15 +248,8 @@ fun PerAppProxyScreen(
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface
-            ) {
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -352,11 +343,7 @@ private fun PerAppModeToggle(
             }
         )
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.width(8.dp))
         Switch(
             checked = checked,
@@ -371,10 +358,7 @@ private fun PerAppModeToggle(
 }
 
 @Composable
-private fun TvPerAppInfoPopup(
-    message: String,
-    onDismiss: () -> Unit
-) {
+private fun TvPerAppInfoPopup(message: String, onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
@@ -384,10 +368,7 @@ private fun TvPerAppInfoPopup(
     AlertDialog(
         onDismissRequest = onDismiss,
         text = {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text(text = message, style = MaterialTheme.typography.bodyLarge)
         },
         confirmButton = {},
         modifier = Modifier
@@ -398,9 +379,6 @@ private fun TvPerAppInfoPopup(
             .focusRequester(focusRequester)
             .focusable(),
         containerColor = MaterialTheme.colorScheme.surface,
-        properties = DialogProperties(
-            dismissOnBackPress = true,
-            dismissOnClickOutside = false
-        )
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     )
 }

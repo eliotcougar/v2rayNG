@@ -54,7 +54,7 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
@@ -119,14 +119,10 @@ fun MainDrawerContent(
         drawerContainerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
-            modifier = if (isTelevision) {
-                Modifier
-            } else {
-                Modifier
-                    .verticalScroll(drawerScrollState)
-                    .verticalScrollbar(drawerScrollState)
-                    .padding(bottom = 80.dp)
-            }
+            modifier = Modifier
+                .verticalScroll(drawerScrollState)
+                .verticalScrollbar(drawerScrollState)
+                .padding(bottom = if (isTelevision) 16.dp else 80.dp)
         ) {
             Surface(
                 modifier = Modifier
@@ -203,7 +199,6 @@ fun DrawerMenuItem(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    selected: Boolean = false,
     focusRequester: FocusRequester? = null,
     onMoveUp: () -> Unit = {},
     onMoveDown: () -> Unit = {},
@@ -216,19 +211,9 @@ fun DrawerMenuItem(
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .dpadFocusOutline(focusRequester)
-            .dpadHorizontalFocusNavigation(
-                onMoveLeft = {},
-                onMoveRight = onMoveToContent
-            )
-            .dpadVerticalFocusNavigation(
-                onMoveUp = { onMoveUp(); true },
-                onMoveDown = { onMoveDown(); true }
-            )
+            .dpadLogicalHorizontalNavigation(onMovePrevious = {}, onMoveNext = onMoveToContent)
+            .dpadVerticalFocusNavigation(onMoveUp = { onMoveUp(); true }, onMoveDown = { onMoveDown(); true })
             .dpadClickable(onClick = onClick)
-            .background(
-                if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                else Color.Transparent
-            )
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -239,11 +224,7 @@ fun DrawerMenuItem(
             tint = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -286,18 +267,9 @@ fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
             .drawWithContent {
                 drawContent()
                 val borderPath = Path().apply {
-                    addDrawerPeekPath(
-                        size.width,
-                        size.height,
-                        layoutDirection,
-                        closePath = false
-                    )
+                    addDrawerPeekPath(size.width, size.height, layoutDirection, closePath = false)
                 }
-                drawPath(
-                    path = borderPath,
-                    color = borderColor,
-                    style = Stroke(width = 1.dp.toPx())
-                )
+                drawPath(path = borderPath, color = borderColor, style = Stroke(width = 1.dp.toPx()))
             },
         shape = shape,
         color = MaterialTheme.colorScheme.primaryContainer,
@@ -305,11 +277,7 @@ fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
         tonalElevation = 3.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(R.drawable.ic_menu_24dp),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
+            Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = null, modifier = Modifier.size(16.dp))
         }
     }
 }

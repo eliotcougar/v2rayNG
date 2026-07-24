@@ -39,11 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -144,13 +139,12 @@ fun SubSettingScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
-    val subscriptionIdSet = subscriptions.mapTo(mutableSetOf()) { it.guid }
+    val subscriptionIds = subscriptions.map { it.guid }
     var showUpdateDialog by remember { mutableStateOf(false) }
-    val rowFocusTargets = remember(subscriptionIdSet) {
+    val rowFocusTargets = remember(subscriptionIds) {
         subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
     }
-    var movingSubscriptionId by remember { mutableStateOf<String?>(null) }
-    var movingSubscriptionIndex by remember { mutableStateOf(-1) }
+    val dpadReorderState = rememberDpadReorderState()
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
@@ -160,60 +154,19 @@ fun SubSettingScreen(
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        viewModel.move(from.index, to.index)
-    }
-
-    LaunchedEffect(subscriptionIdSet) {
-        if (
-            movingSubscriptionId == null ||
-            movingSubscriptionId !in subscriptionIdSet
-        ) {
-            movingSubscriptionId = null
-            movingSubscriptionIndex = -1
+        reorderIndicesForKeys(subscriptionIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
+            viewModel.move(fromIndex, toIndex)
         }
     }
-    LaunchedEffect(movingSubscriptionId, movingSubscriptionIndex) {
-        val subscriptionId = movingSubscriptionId ?: return@LaunchedEffect
+
+    LaunchedEffect(isTelevision, subscriptionIds) {
+        dpadReorderState.syncItems(subscriptionIds, enabled = isTelevision)
+    }
+    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex) {
+        val subscriptionId = dpadReorderState.movingKey as? String
+            ?: return@LaunchedEffect
         withFrameNanos { }
         rowFocusTargets[subscriptionId]?.row?.requestFocus()
-    }
-
-    fun startMovement(subscriptionId: String, index: Int) {
-        if (!isTelevision) return
-        movingSubscriptionId = subscriptionId
-        movingSubscriptionIndex = index
-    }
-
-    fun finishMovement() {
-        movingSubscriptionId = null
-        movingSubscriptionIndex = -1
-    }
-
-    fun handleMovementKey(event: KeyEvent): Boolean {
-        if (movingSubscriptionId == null) return false
-
-        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-            return true
-        }
-
-        val delta = when (event.key) {
-            Key.DirectionUp -> -1
-            Key.DirectionDown -> 1
-            Key.DirectionLeft, Key.DirectionRight -> 0
-            else -> return false
-        }
-        if (event.type != KeyEventType.KeyDown) return true
-
-        val targetIndex = movingSubscriptionIndex + delta
-        if (
-            targetIndex in subscriptions.indices &&
-            targetIndex != movingSubscriptionIndex
-        ) {
-            val fromIndex = movingSubscriptionIndex
-            movingSubscriptionIndex = targetIndex
-            viewModel.swap(fromIndex, targetIndex)
-        }
-        return true
     }
 
     Scaffold(
@@ -250,22 +203,34 @@ fun SubSettingScreen(
                 NavigationBarsBottomPadding()
             }
         ) {
-            itemsIndexed(
-                items = subscriptions,
-                key = { _, item -> item.guid }
-            ) { index, subCache ->
+            itemsIndexed(items = subscriptions, key = { _, item -> item.guid }) { index, subCache ->
                 val focusTargets = rowFocusTargets.getValue(subCache.guid)
                 val previousSub = subscriptions.getOrNull(index - 1)
                 val previousTargets = previousSub?.let { rowFocusTargets[it.guid] }
                 val nextSub = subscriptions.getOrNull(index + 1)
                 val nextTargets = nextSub?.let { rowFocusTargets[it.guid] }
-                val isMoving = movingSubscriptionId == subCache.guid
+                val dpadReorderItem = DpadReorderItem(
+                    state = dpadReorderState,
+                    key = subCache.guid,
+                    index = index,
+                    itemCount = subscriptions.size,
+                    targetIndex = ::verticalDpadReorderTarget,
+                    onMove = viewModel::swap
+                )
+                val isMoving = dpadReorderState.isMoving(subCache.guid)
+                val actionFocusOrder = remember(focusTargets, subCache.subscription.url) {
+                    buildList {
+                        add(focusTargets.row)
+                        if (subCache.subscription.url.isNotEmpty()) {
+                            add(focusTargets.share)
+                        }
+                        add(focusTargets.edit)
+                        add(focusTargets.delete)
+                        add(focusTargets.toggle)
+                    }
+                }
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
-                    ReorderableListItem(
-                        scope = this,
-                        isDragging = isDragging,
-                        isMoving = isMoving
-                    ) {
+                    ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -273,10 +238,7 @@ fun SubSettingScreen(
                                     if (isTelevision) {
                                         Modifier
                                             .padding(vertical = 8.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                shape = RoundedCornerShape(16.dp)
-                                            )
+                                            .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
                                             .dpadFocusOutline(
                                                 focusRequester = focusTargets.row,
                                                 cornerRadius = 16.dp,
@@ -286,16 +248,7 @@ fun SubSettingScreen(
                                                     null
                                                 }
                                             )
-                                            .dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { focusTargets.row.requestFocus() },
-                                                onMoveRight = {
-                                                    if (subCache.subscription.url.isNotEmpty()) {
-                                                        focusTargets.share.requestFocus()
-                                                    } else {
-                                                        focusTargets.edit.requestFocus()
-                                                    }
-                                                }
-                                            )
+                                            .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     previousTargets?.row?.requestFocus() ?: false
@@ -306,15 +259,8 @@ fun SubSettingScreen(
                                             )
                                             .dpadLongPressToMove(
                                                 enabled = true,
-                                                onClick = {
-                                                    if (isMoving) finishMovement()
-                                                    else onEditSub(subCache.guid)
-                                                },
-                                                onLongPress = {
-                                                    startMovement(subCache.guid, index)
-                                                },
-                                                onDrop = ::finishMovement,
-                                                onMovementKeyEvent = ::handleMovementKey
+                                                item = dpadReorderItem,
+                                                onClick = { onEditSub(subCache.guid) }
                                             )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -349,18 +295,15 @@ fun SubSettingScreen(
                             }
 
                             if (isTelevision) {
-                                Row(
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     if (subCache.subscription.url.isNotEmpty()) {
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_share_24dp),
                                             label = stringResource(R.string.action_share),
                                             focusRequester = focusTargets.share,
-                                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { focusTargets.row.requestFocus() },
-                                                onMoveRight = { focusTargets.edit.requestFocus() }
+                                            modifier = Modifier.dpadOrderedFocusNavigation(
+                                                current = focusTargets.share,
+                                                order = actionFocusOrder
                                             ).dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     if (previousSub?.subscription?.url?.isNotEmpty() == true) {
@@ -386,15 +329,9 @@ fun SubSettingScreen(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = {
-                                                if (subCache.subscription.url.isNotEmpty()) {
-                                                    focusTargets.share.requestFocus()
-                                                } else {
-                                                    focusTargets.row.requestFocus()
-                                                }
-                                            },
-                                            onMoveRight = { focusTargets.delete.requestFocus() }
+                                        modifier = Modifier.dpadOrderedFocusNavigation(
+                                            current = focusTargets.edit,
+                                            order = actionFocusOrder
                                         ).dpadVerticalFocusNavigation(
                                             onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
                                             onMoveDown = { nextTargets?.edit?.requestFocus() ?: true }
@@ -406,8 +343,8 @@ fun SubSettingScreen(
                                         label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadRowActionNavigation(
-                                            previous = focusTargets.edit,
-                                            next = focusTargets.toggle,
+                                            current = focusTargets.delete,
+                                            order = actionFocusOrder,
                                             previousRow = previousTargets?.delete,
                                             nextRow = nextTargets?.delete
                                         ),
@@ -417,7 +354,7 @@ fun SubSettingScreen(
                                         }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    AppRowSwitch(
+                                    TvExpandableSwitch(
                                         checked = subCache.subscription.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = subCache.subscription.copy()
@@ -427,28 +364,22 @@ fun SubSettingScreen(
                                         label = stringResource(R.string.sub_setting_enable),
                                         focusRequester = focusTargets.toggle,
                                         modifier = Modifier.dpadRowActionNavigation(
-                                            previous = focusTargets.delete,
-                                            next = focusTargets.toggle,
+                                            current = focusTargets.toggle,
+                                            order = actionFocusOrder,
                                             previousRow = previousTargets?.toggle,
                                             nextRow = nextTargets?.toggle
                                         )
                                     )
                                 }
                             } else {
-                                Column(
-                                    horizontalAlignment = Alignment.End,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
+                                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
                                     Row {
                                         if (subCache.subscription.url.isNotEmpty()) {
                                             AppIconButton(
                                                 icon = painterResource(R.drawable.ic_share_24dp),
                                                 label = stringResource(R.string.action_share),
                                                 onClick = {
-                                                    shareTarget = Pair(
-                                                        subCache.guid,
-                                                        subCache.subscription.url
-                                                    )
+                                                    shareTarget = Pair(subCache.guid, subCache.subscription.url)
                                                 }
                                             )
                                         }
@@ -510,10 +441,7 @@ fun SubSettingScreen(
 
     // QR Code Dialog
     if (showQRCodeBitmap != null) {
-        QRCodeDialog(
-            bitmap = showQRCodeBitmap,
-            onDismiss = { showQRCodeBitmap = null }
-        )
+        QRCodeDialog(bitmap = showQRCodeBitmap, onDismiss = { showQRCodeBitmap = null })
     }
 
     if (removeTarget != null) {

@@ -482,9 +482,6 @@
     <string name="share_method_qrcode">QR-код</string>
     <string name="share_method_clipboard">Копировать ссылку профиля</string>
     <string name="share_method_full_content">Копировать полную конфигурацию</string>
-    <string name="action_edit">Изменить</string>
-    <string name="action_delete">Удалить</string>
-    <string name="action_close">Закрыть</string>
 
     <string name="share_subscription_qrcode">QR-код</string>
     <string name="share_subscription_clipboard">Экспорт в буфер обмена</string>

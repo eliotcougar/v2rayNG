@@ -48,14 +48,13 @@ import com.v2ray.ang.compose.AppDropdownMenuItem
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.SettingsListItem
-import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.AssetUrlCache
 import com.v2ray.ang.dto.entities.AssetUrlItem
@@ -276,6 +275,13 @@ internal fun UserAssetScreen(
     val backFocusRequester = rememberDpadFocusRequester()
     val addFocusRequester = remember { FocusRequester() }
     val downloadFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember(
+        backFocusRequester,
+        addFocusRequester,
+        downloadFocusRequester
+    ) {
+        listOf(backFocusRequester, addFocusRequester, downloadFocusRequester)
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -290,9 +296,9 @@ internal fun UserAssetScreen(
                         label = stringResource(R.string.action_back),
                         onClick = onBackClick,
                         focusRequester = backFocusRequester,
-                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = { backFocusRequester.requestFocus() },
-                            onMoveRight = { addFocusRequester.requestFocus() }
+                        modifier = Modifier.dpadOrderedFocusNavigation(
+                            current = backFocusRequester,
+                            order = topBarFocusOrder
                         )
                     )
                 },
@@ -302,9 +308,9 @@ internal fun UserAssetScreen(
                             icon = painterResource(R.drawable.ic_add_24dp),
                             label = stringResource(R.string.acc_add_asset),
                             focusRequester = addFocusRequester,
-                            modifier = Modifier.dpadHorizontalFocusNavigation(
-                                onMoveLeft = { backFocusRequester.requestFocus() },
-                                onMoveRight = { downloadFocusRequester.requestFocus() }
+                            modifier = Modifier.dpadOrderedFocusNavigation(
+                                current = addFocusRequester,
+                                order = topBarFocusOrder
                             ),
                             onClick = { showAddMenu = true }
                         )
@@ -340,9 +346,9 @@ internal fun UserAssetScreen(
                         icon = painterResource(R.drawable.ic_cloud_download_24dp),
                         label = stringResource(R.string.acc_download_file),
                         focusRequester = downloadFocusRequester,
-                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = { addFocusRequester.requestFocus() },
-                            onMoveRight = { downloadFocusRequester.requestFocus() }
+                        modifier = Modifier.dpadOrderedFocusNavigation(
+                            current = downloadFocusRequester,
+                            order = topBarFocusOrder
                         ),
                         onClick = onDownloadClick
                     )

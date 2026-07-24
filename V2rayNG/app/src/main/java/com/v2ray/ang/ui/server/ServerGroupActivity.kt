@@ -26,6 +26,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
@@ -308,7 +309,7 @@ fun ServerGroupScreen(
                         value = fallbackTag,
                         options = fallbackSuggestions,
                         onValueChange = { fallbackTag = it },
-                        editable = true
+                        config = FormDropdownConfig(editable = true)
                     )
                 }
                 NavigationBarsSpacer()

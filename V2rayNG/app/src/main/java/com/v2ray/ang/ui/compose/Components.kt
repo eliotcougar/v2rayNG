@@ -1,7 +1,6 @@
 package com.v2ray.ang.ui.compose
 
 import android.graphics.drawable.Drawable
-import android.view.ViewConfiguration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -14,8 +13,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -52,12 +49,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,22 +65,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.onClick as semanticsOnClick
-import androidx.compose.ui.semantics.onLongClick as semanticsOnLongClick
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -96,9 +81,6 @@ import coil.request.ImageRequest
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
 import androidx.compose.ui.zIndex
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 
 private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
@@ -131,11 +113,7 @@ fun AppTopBar(
         TopAppBar(
             title = {
                 if (isSearchActive) {
-                    SearchInputField(
-                        query = searchQuery,
-                        onQueryChange = onSearchQueryChange,
-                        placeholder = searchPlaceholder
-                    )
+                    SearchInputField(searchQuery, onSearchQueryChange, searchPlaceholder)
                 } else if (titleContent != null) {
                     titleContent()
                 } else {
@@ -248,12 +226,7 @@ fun AppIconButton(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))
-                Text(
-                    text = label,
-                    color = resolvedContentColor,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1
-                )
+                Text(text = label, color = resolvedContentColor, style = MaterialTheme.typography.labelLarge, maxLines = 1)
             }
         }
     }
@@ -265,7 +238,7 @@ fun AppIconButton(
  * 48 dp focus target. An optional label expands inside the focused outline.
  */
 @Composable
-fun AppRowSwitch(
+fun TvExpandableSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -280,10 +253,7 @@ fun AppRowSwitch(
     Row(
         modifier = modifier
             .height(48.dp)
-            .dpadFocusOutline(
-                focusRequester = focusRequester,
-                cornerRadius = 24.dp
-            )
+            .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 24.dp)
             .onFocusChanged { isFocused = it.isFocused }
             .clip(shape)
             .clickable(
@@ -332,28 +302,17 @@ fun AppRowSwitch(
     }
 }
 
-/** A dropdown item with the shared TV-safe inset and focus outline. */
+/**
+ * A dropdown item with one click owner plus the shared TV-safe inset and focus outline.
+ * Accepting plain text prevents callers from nesting another interactive control in the row.
+ */
 @Composable
-fun AppDropdownMenuItem(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    DropdownMenuItem(
-        text = { Text(text) },
-        onClick = onClick,
-        modifier = modifier.tvMenuItemFocus(),
-        enabled = enabled
-    )
+fun AppDropdownMenuItem(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    DropdownMenuItem(text = { Text(text) }, onClick = onClick, modifier = modifier.tvMenuItemFocus(), enabled = enabled)
 }
 
 @Composable
-private fun SearchInputField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    placeholder: String?
-) {
+private fun SearchInputField(query: String, onQueryChange: (String) -> Unit, placeholder: String?) {
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -431,12 +390,7 @@ fun AppListItem(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = appName,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            Text(text = appName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = packageName,
@@ -448,7 +402,7 @@ fun AppListItem(
         }
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
             colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
         )
     }
@@ -477,11 +431,7 @@ fun NavigationBarsBottomPadding(): PaddingValues {
 }
 
 @Composable
-fun VersionInfoBlock(
-    versionText: String,
-    appIdText: String? = null,
-    modifier: Modifier = Modifier
-) {
+fun VersionInfoBlock(versionText: String, appIdText: String? = null, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -515,125 +465,6 @@ fun ReorderableCollectionItemScope.reorderableDragHandle(): Modifier {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
         }
     )
-}
-
-@Composable
-fun Modifier.dpadLongPressToMove(
-    enabled: Boolean,
-    onClick: () -> Unit,
-    onLongPress: () -> Unit,
-    onDrop: () -> Unit,
-    onMovementKeyEvent: (KeyEvent) -> Boolean,
-    addFocusTarget: Boolean = true
-): Modifier {
-    if (!enabled) return this
-
-    val coroutineScope = rememberCoroutineScope()
-    var isItemFocused by remember { mutableStateOf(false) }
-    var centerKeyDown by remember { mutableStateOf(false) }
-    var movementSessionActive by remember { mutableStateOf(false) }
-    var movementReady by remember { mutableStateOf(false) }
-    var suppressNextCenterUp by remember { mutableStateOf(false) }
-    var longPressJob by remember { mutableStateOf<Job?>(null) }
-    var releaseJob by remember { mutableStateOf<Job?>(null) }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            longPressJob?.cancel()
-            releaseJob?.cancel()
-        }
-    }
-
-    fun startMovement(readyToDrop: Boolean) {
-        if (movementSessionActive) return
-        movementSessionActive = true
-        movementReady = readyToDrop
-        longPressJob?.cancel()
-        longPressJob = null
-        onLongPress()
-    }
-
-    val movementModifier = pointerInput(onClick, onLongPress) {
-        detectTapGestures(
-            onTap = { onClick() },
-            onLongPress = { startMovement(readyToDrop = true) }
-        )
-    }
-        .semantics {
-            semanticsOnClick {
-                onClick()
-                true
-            }
-            semanticsOnLongClick {
-                startMovement(readyToDrop = true)
-                true
-            }
-        }
-        .onFocusChanged { isItemFocused = it.isFocused }
-        .onPreviewKeyEvent { event ->
-            if (!isItemFocused) return@onPreviewKeyEvent false
-
-            val isActivationKey = event.key == Key.DirectionCenter || event.key == Key.Enter
-            if (!isActivationKey) {
-                onMovementKeyEvent(event)
-            } else if (suppressNextCenterUp) {
-                if (event.type == KeyEventType.KeyUp) suppressNextCenterUp = false
-                true
-            } else if (movementSessionActive) {
-                when (event.type) {
-                    KeyEventType.KeyDown -> {
-                        releaseJob?.cancel()
-                        releaseJob = null
-                        if (movementReady) {
-                            movementSessionActive = false
-                            movementReady = false
-                            suppressNextCenterUp = true
-                            onDrop()
-                        }
-                        true
-                    }
-                    KeyEventType.KeyUp -> {
-                        centerKeyDown = false
-                        releaseJob?.cancel()
-                        releaseJob = coroutineScope.launch {
-                            delay(160)
-                            movementReady = true
-                        }
-                        true
-                    }
-                    else -> true
-                }
-            } else {
-                when (event.type) {
-                    KeyEventType.KeyDown -> {
-                        if (!centerKeyDown) {
-                            centerKeyDown = true
-                            longPressJob?.cancel()
-                            longPressJob = coroutineScope.launch {
-                                delay(ViewConfiguration.getLongPressTimeout().toLong())
-                                if (centerKeyDown) startMovement(readyToDrop = false)
-                            }
-                        }
-                        if (event.nativeKeyEvent.repeatCount > 0 ||
-                            event.nativeKeyEvent.isLongPress
-                        ) {
-                            startMovement(readyToDrop = false)
-                        }
-                        true
-                    }
-                    KeyEventType.KeyUp -> {
-                        centerKeyDown = false
-                        longPressJob?.cancel()
-                        longPressJob = null
-                        onClick()
-                        true
-                    }
-                    else -> true
-                }
-            }
-        }
-
-    return if (addFocusTarget) movementModifier.focusable() else movementModifier
 }
 
 @Composable

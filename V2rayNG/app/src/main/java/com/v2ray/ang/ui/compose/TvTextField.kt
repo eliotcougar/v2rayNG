@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,30 +24,50 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 
 private val TvImeBottomClearance = 32.dp
+private const val TvImeLayoutSettlingFrames = 3
+
+data class TvTextFieldNavigation(
+    val focusRequester: FocusRequester? = null,
+    val onMoveUp: (() -> Boolean)? = null,
+    val onMoveDown: (() -> Boolean)? = null
+)
+
+internal data class TvAwareTextFieldSpec(
+    val label: String,
+    val placeholder: String? = null,
+    val supportingText: String? = null,
+    val enabled: Boolean = true,
+    val readOnly: Boolean = false,
+    val singleLine: Boolean = false,
+    val maxLines: Int = 5,
+    val keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    val visualTransformation: VisualTransformation = VisualTransformation.None
+)
 
 /**
  * Owns the passive-row/editor handoff and IME positioning for one TV text field. Keeping that
  * behavior here prevents every form and dialog from implementing subtly different state machines.
  */
-internal class TvTextFieldState(
-    val passiveFocusRequester: FocusRequester,
-    private val hideKeyboard: () -> Unit
-) {
+internal class TvTextFieldState(val passiveFocusRequester: FocusRequester, private val hideKeyboard: () -> Unit) {
     val editorFocusRequester = FocusRequester()
     val interactionSource = MutableInteractionSource()
     val bringIntoViewRequester = BringIntoViewRequester()
@@ -83,9 +109,7 @@ internal class TvTextFieldState(
 }
 
 @Composable
-internal fun rememberTvTextFieldState(
-    passiveFocusRequester: FocusRequester? = null
-): TvTextFieldState {
+internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = null): TvTextFieldState {
     val defaultPassiveFocusRequester = remember { FocusRequester() }
     val resolvedPassiveFocusRequester = passiveFocusRequester ?: defaultPassiveFocusRequester
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -98,12 +122,14 @@ internal fun rememberTvTextFieldState(
     }
     val isImeVisible = WindowInsets.isImeVisible
 
-    LaunchedEffect(
-        state.isEditing,
-        state.editorHasFocus,
-        isImeVisible,
-        state.measuredSize
-    ) {
+    /*
+     * Keep this recovery sequence centralized. On Android TV, both the overlay IME and a
+     * multi-line field can change size for several frames after visibility is reported. Calling
+     * BringIntoViewRequester immediately uses stale bounds, causing the rapid one-pixel jitter or
+     * leaving the last line under the keyboard. Three frames is the shortest value verified on the
+     * AOSP TV keyboard; it is a compatibility delay, not animation timing.
+     */
+    LaunchedEffect(state.isEditing, state.editorHasFocus, isImeVisible, state.measuredSize) {
         when {
             state.isEditing &&
                 state.editorHasFocus &&
@@ -113,7 +139,7 @@ internal fun rememberTvTextFieldState(
             state.isEditing && state.editorHasFocus -> {
                 if (isImeVisible) {
                     state.imeWasVisible = true
-                    repeat(3) { withFrameNanos { } }
+                    repeat(TvImeLayoutSettlingFrames) { withFrameNanos { } }
                     state.bringEditorAboveIme()
                 }
                 keyboardController?.show()
@@ -129,6 +155,81 @@ internal fun rememberTvTextFieldState(
         }
     }
     return state
+}
+
+@Composable
+internal fun Modifier.tvAwareTextFieldFocus(
+    state: TvTextFieldState?,
+    enabled: Boolean,
+    navigation: TvTextFieldNavigation,
+    onActivate: () -> Unit
+): Modifier {
+    if (state == null) return this
+    val focusManager = LocalFocusManager.current
+    return then(
+        Modifier.tvPassiveTextFieldFocus(
+            state = state,
+            enabled = enabled,
+            onActivate = onActivate,
+            onMoveUp = {
+                state.finishEditing()
+                navigation.onMoveUp?.invoke()
+                    ?: focusManager.moveFocus(FocusDirection.Up)
+            },
+            onMoveDown = {
+                state.finishEditing()
+                navigation.onMoveDown?.invoke()
+                    ?: focusManager.moveFocus(FocusDirection.Down)
+            }
+        )
+    )
+}
+
+@Composable
+internal fun TvAwareOutlinedTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    spec: TvAwareTextFieldSpec,
+    tvFieldState: TvTextFieldState?,
+    modifier: Modifier = Modifier,
+    trailingIcon: (@Composable () -> Unit)? = null
+) {
+    val isTelevision = isTelevisionDevice()
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(spec.label) },
+        placeholder = spec.placeholder?.let { placeholder -> { Text(placeholder) } },
+        supportingText = spec.supportingText?.let { text -> { Text(text) } },
+        enabled = spec.enabled,
+        readOnly = spec.readOnly || (tvFieldState != null && !tvFieldState.isEditing),
+        singleLine = spec.singleLine,
+        maxLines = spec.maxLines,
+        keyboardOptions = spec.keyboardOptions,
+        visualTransformation = spec.visualTransformation,
+        trailingIcon = trailingIcon,
+        interactionSource = tvFieldState?.interactionSource,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedBorderColor = if (isTelevision) {
+                MaterialTheme.colorScheme.secondary
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            focusedLabelColor = if (isTelevision) {
+                MaterialTheme.colorScheme.secondary
+            } else {
+                MaterialTheme.colorScheme.primary
+            },
+            cursorColor = MaterialTheme.colorScheme.secondary,
+            selectionColors = TextSelectionColors(
+                handleColor = MaterialTheme.colorScheme.secondary,
+                backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
+            )
+        ),
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -156,16 +257,10 @@ internal fun Modifier.tvPassiveTextFieldFocus(
         }
         .dpadTextFieldNavigation(onMoveUp = onMoveUp, onMoveDown = onMoveDown)
         .focusRequester(state.passiveFocusRequester)
-        .focusable(
-            enabled = enabled && !state.isEditing,
-            interactionSource = state.interactionSource
-        )
+        .focusable(enabled = enabled && !state.isEditing, interactionSource = state.interactionSource)
 }
 
-internal fun Modifier.tvTextFieldEditorFocus(
-    state: TvTextFieldState,
-    enabled: Boolean = true
-): Modifier {
+internal fun Modifier.tvTextFieldEditorFocus(state: TvTextFieldState, enabled: Boolean = true): Modifier {
     return focusRequester(state.editorFocusRequester)
         .focusProperties { canFocus = enabled && state.isEditing }
         .onFocusChanged { state.onEditorFocusChanged(it.isFocused) }

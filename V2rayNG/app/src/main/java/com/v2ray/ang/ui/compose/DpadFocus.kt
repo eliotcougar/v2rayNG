@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
+private const val TvFocusAttachmentRetryFrames = 30
+
 @Composable
 fun isTelevisionDevice(): Boolean {
     return LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
@@ -54,10 +56,7 @@ fun isTelevisionDevice(): Boolean {
  * On phones and tablets this deliberately does nothing, preserving the existing touch UI.
  */
 @Composable
-fun rememberDpadFocusRequester(
-    requestFocus: Boolean = true,
-    requestKey: Any? = Unit
-): FocusRequester {
+fun rememberDpadFocusRequester(requestFocus: Boolean = true, requestKey: Any? = Unit): FocusRequester {
     val isTelevision = isTelevisionDevice()
     val requester = remember { FocusRequester() }
     if (isTelevision && requestFocus) {
@@ -69,11 +68,17 @@ fun rememberDpadFocusRequester(
 }
 
 /**
- * Focus nodes can be composed a frame after their surrounding screen or drawer. Try immediately
- * for responsive TV navigation, then retry on subsequent frames while the node is being attached.
+ * Focus nodes in lazy lists, dialogs, drawers, and popup menus can be attached several frames
+ * after their surrounding composition. The immediate attempt keeps ordinary navigation fast;
+ * the bounded frame retries recover only while that real focus target is being attached.
+ *
+ * This is deliberately frame-based rather than a fixed delay: fixed delays made drawer focus
+ * feel sluggish and were still unreliable under a busy TV renderer. Thirty frames is a generous
+ * upper bound, not animation timing. Do not remove or shorten it without testing newly composed
+ * lazy-list items and popup focus on a real/emulated TV.
  */
 suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
-    repeat(30) {
+    repeat(TvFocusAttachmentRetryFrames) {
         if (requesters.any { it.requestFocus() }) return true
         withFrameNanos { }
     }
@@ -99,8 +104,7 @@ fun Modifier.dpadFocusOutline(
 
     var isFocused by remember { mutableStateOf(false) }
     val focusColor = MaterialTheme.colorScheme.primary
-    val resolvedFocusContainerColor =
-        focusContainerColor ?: MaterialTheme.colorScheme.primaryContainer
+    val resolvedFocusContainerColor = focusContainerColor ?: MaterialTheme.colorScheme.primaryContainer
     val shape = RoundedCornerShape(cornerRadius)
     val requesterModifier = if (focusRequester != null) {
         Modifier.focusRequester(focusRequester)
@@ -157,11 +161,7 @@ fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
     } else {
         0
     }
-    val overlayPadding = if (
-        isTelevision &&
-        isImeVisible &&
-        reportedImeBottomInset == 0
-    ) {
+    val overlayPadding = if (isTelevision && isImeVisible && reportedImeBottomInset == 0) {
         overlayFallbackHeight
     } else {
         0.dp
@@ -175,85 +175,143 @@ fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
  * This keeps the platform distinction in one place instead of duplicating clickable branches.
  */
 @Composable
-fun Modifier.dpadClickable(
-    enabled: Boolean = true,
-    role: Role? = null,
-    onClick: () -> Unit
-): Modifier {
+fun Modifier.dpadClickable(enabled: Boolean = true, role: Role? = null, onClick: () -> Unit): Modifier {
     if (!isTelevisionDevice()) {
         return clickable(enabled = enabled, role = role, onClick = onClick)
     }
     val interactionSource = remember { MutableInteractionSource() }
-    return clickable(
-        interactionSource = interactionSource,
-        indication = null,
-        enabled = enabled,
-        role = role,
-        onClick = onClick
-    )
+    return clickable(interactionSource = interactionSource, indication = null, enabled = enabled, role = role, onClick = onClick)
 }
 
-/** Gives TV rows an explicit left/right focus chain while leaving touch devices unchanged. */
+internal enum class DpadHorizontalDirection {
+    Previous,
+    Next
+}
+
+internal fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizontalDirection? = when (key) {
+    Key.DirectionLeft -> if (isRtl) {
+        DpadHorizontalDirection.Next
+    } else {
+        DpadHorizontalDirection.Previous
+    }
+
+    Key.DirectionRight -> if (isRtl) {
+        DpadHorizontalDirection.Previous
+    } else {
+        DpadHorizontalDirection.Next
+    }
+
+    else -> null
+}
+
+internal fun adjacentDpadFocusIndex(currentIndex: Int, itemCount: Int, direction: DpadHorizontalDirection): Int? {
+    if (currentIndex !in 0 until itemCount) return null
+    val targetIndex = when (direction) {
+        DpadHorizontalDirection.Previous -> currentIndex - 1
+        DpadHorizontalDirection.Next -> currentIndex + 1
+    }
+    return targetIndex.takeIf { it in 0 until itemCount }
+}
+
+internal fun adjacentDpadFocusTarget(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    direction: DpadHorizontalDirection
+): FocusRequester? {
+    val currentIndex = order.indexOfFirst { it === current }
+    return adjacentDpadFocusIndex(currentIndex, order.size, direction)?.let(order::get)
+}
+
+/**
+ * Handles horizontal TV navigation in logical composition order. Previous is physically Left in
+ * LTR and Right in RTL; Next is the opposite. Callers must never mirror these callbacks themselves.
+ */
 @Composable
-fun Modifier.dpadHorizontalFocusNavigation(
-    onMoveLeft: () -> Unit,
-    onMoveRight: () -> Unit
-): Modifier {
+fun Modifier.dpadLogicalHorizontalNavigation(onMovePrevious: () -> Unit, onMoveNext: () -> Unit): Modifier {
     if (!isTelevisionDevice()) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-        when (event.key) {
-            Key.DirectionLeft -> {
-                if (isRtl) onMoveRight() else onMoveLeft()
+        when (logicalHorizontalDirection(event.key, isRtl)) {
+            DpadHorizontalDirection.Previous -> {
+                onMovePrevious()
                 true
             }
-            Key.DirectionRight -> {
-                if (isRtl) onMoveLeft() else onMoveRight()
+
+            DpadHorizontalDirection.Next -> {
+                onMoveNext()
                 true
             }
-            else -> false
+
+            null -> false
         }
     }
 }
 
 /**
- * Handles horizontal popup exits in visual order. Compose mirrors popup/tool-bar placement in
- * RTL layouts, so Previous is Left in LTR and Right in RTL (and Next is the opposite).
+ * Moves within one ordered TV focus chain. A row or toolbar supplies its targets once in logical
+ * composition order; individual controls no longer wire their left/right neighbors pair-by-pair.
+ * RTL conversion stays exclusively in [dpadLogicalHorizontalNavigation].
+ */
+@Composable
+fun Modifier.dpadOrderedFocusNavigation(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    onBeforeFirst: (() -> Unit)? = null,
+    onAfterLast: (() -> Unit)? = null
+): Modifier {
+    fun move(direction: DpadHorizontalDirection, onEdge: (() -> Unit)?) {
+        val target = adjacentDpadFocusTarget(current, order, direction)
+        if (target == null) {
+            onEdge?.invoke() ?: current.requestFocus()
+        } else {
+            target.requestFocus()
+        }
+    }
+
+    return dpadLogicalHorizontalNavigation(
+        onMovePrevious = {
+            move(DpadHorizontalDirection.Previous, onBeforeFirst)
+        },
+        onMoveNext = {
+            move(DpadHorizontalDirection.Next, onAfterLast)
+        }
+    )
+}
+
+/**
+ * Handles popup exits using the same logical ordering convention as ordinary action rows. Preview
+ * events are required here because popup content otherwise consumes the physical D-pad event first.
  */
 @Composable
 fun Modifier.dpadPopupHorizontalNavigation(
-    onMovePrevious: () -> Unit,
-    onMoveNext: (() -> Unit)? = null
+    onMovePrevious: () -> Unit, onMoveNext: (() -> Unit)? = null
 ): Modifier {
     if (!isTelevisionDevice()) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val previousKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
-    val nextKey = if (isRtl) Key.DirectionLeft else Key.DirectionRight
     return onPreviewKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-        when (event.key) {
-            previousKey -> {
+        when (logicalHorizontalDirection(event.key, isRtl)) {
+            DpadHorizontalDirection.Previous -> {
                 onMovePrevious()
                 true
             }
-            nextKey -> {
+
+            DpadHorizontalDirection.Next -> {
                 if (onMoveNext == null) false else {
                     onMoveNext()
                     true
                 }
             }
-            else -> false
+
+            null -> false
         }
     }
 }
 
 /** Gives TV controls an explicit up/down focus chain while preserving spatial fallback. */
 @Composable
-fun Modifier.dpadVerticalFocusNavigation(
-    onMoveUp: () -> Boolean,
-    onMoveDown: () -> Boolean
-): Modifier {
+fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: () -> Boolean): Modifier {
     if (!isTelevisionDevice()) return this
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -271,14 +329,14 @@ fun Modifier.dpadVerticalFocusNavigation(
  */
 @Composable
 fun Modifier.dpadRowActionNavigation(
-    previous: FocusRequester,
-    next: FocusRequester,
+    current: FocusRequester,
+    order: List<FocusRequester>,
     previousRow: FocusRequester?,
     nextRow: FocusRequester?
 ): Modifier {
-    return dpadHorizontalFocusNavigation(
-        onMoveLeft = { previous.requestFocus() },
-        onMoveRight = { next.requestFocus() }
+    return dpadOrderedFocusNavigation(
+        current = current,
+        order = order
     ).dpadVerticalFocusNavigation(
         onMoveUp = { previousRow?.requestFocus() ?: false },
         onMoveDown = { nextRow?.requestFocus() ?: true }

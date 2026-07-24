@@ -40,11 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -231,12 +226,11 @@ fun RoutingSettingScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
-    val rulesetIdSet = rulesets.mapTo(mutableSetOf()) { it.id }
-    val rowFocusTargets = remember(rulesetIdSet) {
+    val rulesetIds = rulesets.map { it.id }
+    val rowFocusTargets = remember(rulesetIds) {
         rulesets.associate { it.id to RoutingRowFocusTargets() }
     }
-    var movingRuleId by remember { mutableStateOf<String?>(null) }
-    var movingRuleIndex by remember { mutableStateOf(-1) }
+    val dpadReorderState = rememberDpadReorderState()
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
@@ -244,60 +238,21 @@ fun RoutingSettingScreen(
     val addFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(rulesetIdSet) {
-        if (movingRuleId == null || movingRuleId !in rulesetIdSet) {
-            movingRuleId = null
-            movingRuleIndex = -1
-        }
+    LaunchedEffect(isTelevision, rulesetIds) {
+        dpadReorderState.syncItems(rulesetIds, enabled = isTelevision)
     }
-    LaunchedEffect(movingRuleId, movingRuleIndex) {
-        val ruleId = movingRuleId ?: return@LaunchedEffect
+    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex) {
+        val ruleId = dpadReorderState.movingKey as? String ?: return@LaunchedEffect
         withFrameNanos { }
         rowFocusTargets[ruleId]?.row?.requestFocus()
-    }
-
-    fun startMovement(ruleId: String, index: Int) {
-        if (!isTelevision) return
-        movingRuleId = ruleId
-        movingRuleIndex = index
-    }
-
-    fun finishMovement() {
-        movingRuleId = null
-        movingRuleIndex = -1
-    }
-
-    fun handleMovementKey(event: KeyEvent): Boolean {
-        if (movingRuleId == null) return false
-
-        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-            return true
-        }
-
-        val delta = when (event.key) {
-            Key.DirectionUp -> -1
-            Key.DirectionDown -> 1
-            Key.DirectionLeft, Key.DirectionRight -> 0
-            else -> return false
-        }
-        if (event.type != KeyEventType.KeyDown) return true
-
-        val targetIndex = movingRuleIndex + delta
-        if (targetIndex in rulesets.indices && targetIndex != movingRuleIndex) {
-            val fromIndex = movingRuleIndex
-            movingRuleIndex = targetIndex
-            viewModel.swap(fromIndex, targetIndex)
-        }
-        return true
     }
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        // Lazy list indices include the preceding non-rule content, so resolve the stable rule keys.
-        val fromIndex = rulesets.indexOfFirst { it.id == from.key }
-        val toIndex = rulesets.indexOfFirst { it.id == to.key }
-        viewModel.move(fromIndex, toIndex)
+        reorderIndicesForKeys(rulesetIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
+            viewModel.swap(fromIndex, toIndex)
+        }
     }
 
     Scaffold(
@@ -363,20 +318,24 @@ fun RoutingSettingScreen(
                 )
             }
 
-            itemsIndexed(
-                items = rulesets,
-                key = { _, ruleset -> ruleset.id }
-            ) { index, ruleset ->
+            itemsIndexed(items = rulesets, key = { _, ruleset -> ruleset.id }) { index, ruleset ->
                 val focusTargets = rowFocusTargets.getValue(ruleset.id)
                 val previousTargets = rulesets.getOrNull(index - 1)?.let { rowFocusTargets[it.id] }
                 val nextTargets = rulesets.getOrNull(index + 1)?.let { rowFocusTargets[it.id] }
-                val isMoving = movingRuleId == ruleset.id
+                val dpadReorderItem = DpadReorderItem(
+                    state = dpadReorderState,
+                    key = ruleset.id,
+                    index = index,
+                    itemCount = rulesets.size,
+                    targetIndex = ::verticalDpadReorderTarget,
+                    onMove = viewModel::swap
+                )
+                val isMoving = dpadReorderState.isMoving(ruleset.id)
+                val actionFocusOrder = remember(focusTargets) {
+                    listOf(focusTargets.row, focusTargets.edit, focusTargets.delete, focusTargets.toggle)
+                }
                 ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
-                    ReorderableListItem(
-                        scope = this,
-                        isDragging = isDragging,
-                        isMoving = isMoving
-                    ) {
+                    ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -384,18 +343,9 @@ fun RoutingSettingScreen(
                                     if (isTelevision) {
                                         Modifier
                                             .padding(vertical = 8.dp)
-                                            .background(
-                                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                shape = RoundedCornerShape(16.dp)
-                                            )
-                                            .dpadFocusOutline(
-                                                focusRequester = focusTargets.row,
-                                                cornerRadius = 16.dp
-                                            )
-                                            .dpadHorizontalFocusNavigation(
-                                                onMoveLeft = { focusTargets.row.requestFocus() },
-                                                onMoveRight = { focusTargets.edit.requestFocus() }
-                                            )
+                                            .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
+                                            .dpadFocusOutline(focusRequester = focusTargets.row, cornerRadius = 16.dp)
+                                            .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     previousTargets?.row?.requestFocus() ?: false
@@ -406,15 +356,8 @@ fun RoutingSettingScreen(
                                             )
                                             .dpadLongPressToMove(
                                                 enabled = isTelevision,
-                                                onClick = {
-                                                    if (isMoving) finishMovement()
-                                                    else onEditRule(index)
-                                                },
-                                                onLongPress = {
-                                                    startMovement(ruleset.id, index)
-                                                },
-                                                onDrop = ::finishMovement,
-                                                onMovementKeyEvent = ::handleMovementKey
+                                                item = dpadReorderItem,
+                                                onClick = { onEditRule(index) }
                                             )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -454,26 +397,19 @@ fun RoutingSettingScreen(
                                 }
                                 if (!ruleset.outboundTag.isNullOrEmpty()) {
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = ruleset.outboundTag,
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = colorConfigType
-                                    )
+                                    Text(ruleset.outboundTag, style = MaterialTheme.typography.labelMedium, color = colorConfigType)
                                 }
                             }
 
                             if (isTelevision) {
-                                Row(
-                                    modifier = Modifier.padding(start = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                                Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
                                         modifier = Modifier.dpadRowActionNavigation(
-                                            previous = focusTargets.row,
-                                            next = focusTargets.delete,
+                                            current = focusTargets.edit,
+                                            order = actionFocusOrder,
                                             previousRow = previousTargets?.edit,
                                             nextRow = nextTargets?.edit
                                         ),
@@ -484,15 +420,15 @@ fun RoutingSettingScreen(
                                         label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
                                         modifier = Modifier.dpadRowActionNavigation(
-                                            previous = focusTargets.edit,
-                                            next = focusTargets.toggle,
+                                            current = focusTargets.delete,
+                                            order = actionFocusOrder,
                                             previousRow = previousTargets?.delete,
                                             nextRow = nextTargets?.delete
                                         ),
                                         onClick = { deleteRuleId = ruleset.id }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    AppRowSwitch(
+                                    TvExpandableSwitch(
                                         checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
@@ -501,18 +437,15 @@ fun RoutingSettingScreen(
                                         label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = focusTargets.toggle,
                                         modifier = Modifier.dpadRowActionNavigation(
-                                            previous = focusTargets.delete,
-                                            next = focusTargets.toggle,
+                                            current = focusTargets.toggle,
+                                            order = actionFocusOrder,
                                             previousRow = previousTargets?.toggle,
                                             nextRow = nextTargets?.toggle
                                         )
                                     )
                                 }
                             } else {
-                                Column(
-                                    horizontalAlignment = Alignment.End,
-                                    modifier = Modifier.padding(start = 8.dp)
-                                ) {
+                                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_edit_24dp),
                                     label = stringResource(R.string.action_edit),
@@ -545,10 +478,8 @@ fun RoutingSettingScreen(
 
 
     deleteRuleId?.let { ruleId ->
-        ConfirmDialog(
+        DeleteConfirmDialog(
             message = stringResource(R.string.del_config_comfirm),
-            confirmText = stringResource(android.R.string.ok),
-            dismissText = stringResource(android.R.string.cancel),
             onConfirm = {
                 val position = rulesets.indexOfFirst { it.id == ruleId }
                 if (position >= 0) viewModel.remove(position)

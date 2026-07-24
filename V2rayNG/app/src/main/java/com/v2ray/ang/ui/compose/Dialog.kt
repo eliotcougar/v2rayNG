@@ -24,14 +24,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,17 +51,11 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 
 @Composable
-fun ConfirmDialog(
-    title: String? = null,
-    message: String,
-    confirmText: String = stringResource(R.string.action_ok),
-    dismissText: String? = stringResource(R.string.action_cancel),
-    confirmIcon: @Composable (() -> Unit)? = null,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
+fun DeleteConfirmDialog(title: String? = null, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val dismissFocusRequester = rememberDpadFocusRequester()
     val isTelevision = isTelevisionDevice()
+    val deleteText = stringResource(R.string.action_delete)
+    val cancelText = stringResource(android.R.string.cancel)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -72,30 +63,20 @@ fun ConfirmDialog(
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
             if (isTelevision) {
-                TvConfirmDialogButton(
-                    text = stringResource(R.string.action_delete),
+                TvDialogButton(
+                    text = deleteText,
                     icon = painterResource(R.drawable.ic_delete_24dp),
                     onClick = { onConfirm(); onDismiss() }
                 )
             } else {
-                TextButton(onClick = { onConfirm(); onDismiss() }) {
-                    confirmIcon?.invoke()
-                    if (confirmIcon != null) Spacer(Modifier.width(8.dp))
-                    Text(confirmText)
-                }
+                TextButton(onClick = { onConfirm(); onDismiss() }) { Text(deleteText) }
             }
         },
-        dismissButton = dismissText?.let { text ->
-            {
-                if (isTelevision) {
-                    TvConfirmDialogButton(
-                        text = text,
-                        onClick = onDismiss,
-                        focusRequester = dismissFocusRequester
-                    )
-                } else {
-                    TextButton(onClick = onDismiss) { Text(text) }
-                }
+        dismissButton = {
+            if (isTelevision) {
+                TvDialogButton(text = cancelText, onClick = onDismiss, focusRequester = dismissFocusRequester)
+            } else {
+                TextButton(onClick = onDismiss) { Text(cancelText) }
             }
         },
         containerColor = MaterialTheme.colorScheme.surface
@@ -103,28 +84,7 @@ fun ConfirmDialog(
 }
 
 @Composable
-fun DeleteConfirmDialog(
-    message: String,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    ConfirmDialog(
-        message = message,
-        confirmText = stringResource(R.string.action_delete),
-        confirmIcon = {
-            Icon(
-                painter = painterResource(R.drawable.ic_delete_24dp),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-        },
-        onConfirm = onConfirm,
-        onDismiss = onDismiss
-    )
-}
-
-@Composable
-private fun TvConfirmDialogButton(
+private fun TvDialogButton(
     text: String,
     icon: Painter? = null,
     onClick: () -> Unit,
@@ -132,24 +92,12 @@ private fun TvConfirmDialogButton(
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(24.dp)
-    // Android's en-XC test locale surrounds platform button labels with more than one hundred
-    // LRM/RLM controls. They have no visible content but skew Compose's native text measurement.
-    // Keep legitimate bidi marks intact and discard only the pseudo-locale's marker flood.
-    val directionMarkCount = text.count { it == '\u200e' || it == '\u200f' }
-    val displayText = if (directionMarkCount > text.length / 2) {
-        text.filterNot { it == '\u200e' || it == '\u200f' }
-    } else {
-        text
-    }
     Button(
         onClick = onClick,
         modifier = modifier
             .height(48.dp)
             .widthIn(min = 96.dp)
-            .dpadFocusOutline(
-                focusRequester = focusRequester,
-                cornerRadius = 24.dp
-            ),
+            .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 24.dp),
         shape = shape,
         colors = ButtonDefaults.buttonColors(
             containerColor = Color.Transparent,
@@ -158,18 +106,10 @@ private fun TvConfirmDialogButton(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp)
     ) {
         if (icon != null) {
-            Icon(
-                painter = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
+            Icon(painter = icon, contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(8.dp))
         }
-        Text(
-            text = displayText,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
+        Text(text = text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -191,16 +131,11 @@ fun InputDialog(
     onDismiss: () -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    val firstFieldFocusRequester = rememberDpadFocusRequester(
-        requestFocus = isTelevision && fields.isNotEmpty()
-    )
+    val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = isTelevision && fields.isNotEmpty())
     val remainingFieldFocusRequesters = remember(fields.size) {
         List((fields.size - 1).coerceAtLeast(0)) { FocusRequester() }
     }
-    val fieldFocusRequesters = remember(
-        firstFieldFocusRequester,
-        remainingFieldFocusRequesters
-    ) {
+    val fieldFocusRequesters = remember(firstFieldFocusRequester, remainingFieldFocusRequesters) {
         if (fields.isEmpty()) {
             emptyList()
         } else {
@@ -209,6 +144,9 @@ fun InputDialog(
     }
     val dismissFocusRequester = remember { FocusRequester() }
     val confirmFocusRequester = remember { FocusRequester() }
+    val buttonFocusOrder = remember(dismissFocusRequester, confirmFocusRequester) {
+        listOf(dismissFocusRequester, confirmFocusRequester)
+    }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     if (isTelevision) {
@@ -221,15 +159,10 @@ fun InputDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 fields.forEachIndexed { index, field ->
                     val tvFieldState = if (isTelevision) {
-                        rememberTvTextFieldState(
-                            passiveFocusRequester = fieldFocusRequesters[index]
-                        )
+                        rememberTvTextFieldState(passiveFocusRequester = fieldFocusRequesters[index])
                     } else {
                         null
                     }
@@ -237,67 +170,39 @@ fun InputDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .then(
-                                tvFieldState?.let { state ->
-                                    Modifier.tvPassiveTextFieldFocus(
-                                        state = state,
-                                        enabled = true,
-                                        onActivate = state::beginEditing,
-                                        onMoveUp = {
-                                            state.finishEditing()
-                                            if (index > 0) {
-                                                fieldFocusRequesters[index - 1].requestFocus()
-                                            } else {
-                                                true
-                                            }
-                                        },
-                                        onMoveDown = {
-                                            state.finishEditing()
-                                            fieldFocusRequesters.getOrNull(index + 1)
-                                                ?.requestFocus()
-                                                ?: dismissFocusRequester.requestFocus()
+                            .tvAwareTextFieldFocus(
+                                state = tvFieldState,
+                                enabled = true,
+                                navigation = TvTextFieldNavigation(
+                                    onMoveUp = {
+                                        if (index > 0) {
+                                            fieldFocusRequesters[index - 1].requestFocus()
+                                        } else {
+                                            true
                                         }
-                                    )
-                                } ?: Modifier
+                                    },
+                                    onMoveDown = {
+                                        fieldFocusRequesters.getOrNull(index + 1)
+                                            ?.requestFocus()
+                                            ?: dismissFocusRequester.requestFocus()
+                                    }
+                                ),
+                                onActivate = { tvFieldState?.beginEditing() }
                             )
                     ) {
-                        OutlinedTextField(
+                        TvAwareOutlinedTextField(
                             value = field.value,
                             onValueChange = { onFieldChange(index, it) },
-                            label = { Text(field.label) },
-                            singleLine = field.singleLine,
-                            maxLines = if (field.singleLine) 1 else 5,
-                            readOnly = tvFieldState != null && !tvFieldState.isEditing,
-                            visualTransformation = field.visualTransformation,
-                            interactionSource = tvFieldState?.interactionSource,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                focusedBorderColor = if (isTelevision) {
-                                    MaterialTheme.colorScheme.secondary
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                },
-                                focusedLabelColor = if (isTelevision) {
-                                    MaterialTheme.colorScheme.secondary
-                                } else {
-                                    MaterialTheme.colorScheme.primary
-                                },
-                                cursorColor = MaterialTheme.colorScheme.secondary,
-                                selectionColors = TextSelectionColors(
-                                    handleColor = MaterialTheme.colorScheme.secondary,
-                                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(
-                                        alpha = 0.4f
-                                    )
-                                )
+                            spec = TvAwareTextFieldSpec(
+                                label = field.label,
+                                singleLine = field.singleLine,
+                                maxLines = if (field.singleLine) 1 else 5,
+                                visualTransformation = field.visualTransformation
                             ),
+                            tvFieldState = tvFieldState,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    tvFieldState?.let {
-                                        Modifier.tvTextFieldEditorFocus(it)
-                                    } ?: Modifier
-                                )
+                                .then(tvFieldState?.let { Modifier.tvTextFieldEditorFocus(it) } ?: Modifier)
                         )
                     }
                 }
@@ -308,10 +213,7 @@ fun InputDialog(
                 onClick = onConfirm,
                 modifier = Modifier
                     .dpadFocusOutline(focusRequester = confirmFocusRequester)
-                    .dpadHorizontalFocusNavigation(
-                        onMoveLeft = { dismissFocusRequester.requestFocus() },
-                        onMoveRight = {}
-                    )
+                    .dpadOrderedFocusNavigation(current = confirmFocusRequester, order = buttonFocusOrder)
                     .dpadVerticalFocusNavigation(
                         onMoveUp = {
                             fieldFocusRequesters.lastOrNull()?.requestFocus() ?: true
@@ -325,10 +227,7 @@ fun InputDialog(
                 onClick = onDismiss,
                 modifier = Modifier
                     .dpadFocusOutline(focusRequester = dismissFocusRequester)
-                    .dpadHorizontalFocusNavigation(
-                        onMoveLeft = {},
-                        onMoveRight = { confirmFocusRequester.requestFocus() }
-                    )
+                    .dpadOrderedFocusNavigation(current = dismissFocusRequester, order = buttonFocusOrder)
                     .dpadVerticalFocusNavigation(
                         onMoveUp = {
                             fieldFocusRequesters.lastOrNull()?.requestFocus() ?: true
@@ -342,10 +241,7 @@ fun InputDialog(
 }
 
 @Composable
-fun QRCodeDialog(
-    bitmap: Bitmap?,
-    onDismiss: () -> Unit
-) {
+fun QRCodeDialog(bitmap: Bitmap?, onDismiss: () -> Unit) {
     if (bitmap == null) return
     val isTelevision = isTelevisionDevice()
     val closeFocusRequester = rememberDpadFocusRequester()
@@ -363,11 +259,7 @@ fun QRCodeDialog(
         },
         confirmButton = {
             if (isTelevision) {
-                TvConfirmDialogButton(
-                    text = closeText,
-                    onClick = onDismiss,
-                    focusRequester = closeFocusRequester
-                )
+                TvDialogButton(text = closeText, onClick = onDismiss, focusRequester = closeFocusRequester)
             } else {
                 TextButton(onClick = onDismiss) { Text(closeText) }
             }
@@ -413,7 +305,7 @@ fun <T> SelectListDialog(
                     val option = options[index]
                     val isSelected = option == selectedOption
                     if (isTelevision && !showRadio) {
-                        TvConfirmDialogButton(
+                        TvDialogButton(
                             text = optionText(option),
                             onClick = { onSelected(option) },
                             focusRequester = if (index == initialIndex) {
@@ -424,35 +316,27 @@ fun <T> SelectListDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
+                        val selectionModifier = if (showRadio) {
+                            Modifier.selectable(
+                                selected = isSelected,
+                                role = Role.RadioButton,
+                                onClick = { onSelected(option) }
+                            )
+                        } else {
+                            Modifier.clickable { onSelected(option) }
+                        }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .dpadFocusOutline(
-                                    focusRequester = if (index == initialIndex) {
-                                        firstOptionFocusRequester
-                                    } else {
-                                        null
-                                    }
+                                    focusRequester = if (index == initialIndex) firstOptionFocusRequester else null
                                 )
-                                .then(
-                                    if (showRadio) {
-                                        Modifier.selectable(
-                                            selected = isSelected,
-                                            onClick = { onSelected(option) },
-                                            role = Role.RadioButton
-                                        )
-                                    } else {
-                                        Modifier.clickable { onSelected(option) }
-                                    }
-                                )
-                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                                .then(selectionModifier)
+                                .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (showRadio) {
-                                RadioButton(
-                                    selected = isSelected,
-                                    onClick = null
-                                )
+                                RadioButton(selected = isSelected, onClick = null)
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                             Text(
@@ -470,10 +354,7 @@ fun <T> SelectListDialog(
         confirmButton = {},
         dismissButton = {
             if (isTelevision) {
-                TvConfirmDialogButton(
-                    text = stringResource(R.string.action_cancel),
-                    onClick = onDismiss
-                )
+                TvDialogButton(text = stringResource(android.R.string.cancel), onClick = onDismiss)
             } else {
                 TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.action_cancel))

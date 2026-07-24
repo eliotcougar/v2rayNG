@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,26 +25,17 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -54,37 +44,127 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.AppDivider
+import com.v2ray.ang.ui.compose.AppIconButton
+import com.v2ray.ang.ui.compose.DpadReorderDirection
+import com.v2ray.ang.ui.compose.DpadReorderItem
+import com.v2ray.ang.ui.compose.DpadReorderState
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
+import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadReorderState
+import com.v2ray.ang.ui.compose.reorderIndicesForKeys
+import com.v2ray.ang.ui.compose.twoColumnDpadReorderTarget
+import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
+import kotlinx.coroutines.yield
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.abs
 
-private class ServerRowFocusTargets {
+private class ServerRowFocusRequesters {
     val row = FocusRequester()
     val more = FocusRequester()
     val share = FocusRequester()
     val edit = FocusRequester()
     val delete = FocusRequester()
+}
+
+private enum class ServerRowLayout { SingleColumn, TwoColumn }
+
+private data class ServerRowFocusTargets(
+    val current: ServerRowFocusRequesters,
+    val previous: ServerRowFocusRequesters?,
+    val next: ServerRowFocusRequesters?,
+    val adjacentColumn: ServerRowFocusRequesters? = null,
+    val layout: ServerRowLayout
+)
+
+private data class ServerRowActions(
+    val select: () -> Unit,
+    val edit: () -> Unit,
+    val share: () -> Unit,
+    val remove: () -> Unit,
+    val more: () -> Unit,
+    val movePrevious: ((FocusRequester) -> Unit)?,
+    val moveUp: (() -> Unit)?,
+    val reorderItem: DpadReorderItem
+)
+
+private data class ServerCollectionActions(
+    val select: (String) -> Unit,
+    val edit: (String, ProfileItem) -> Unit,
+    val share: (String, ProfileItem) -> Unit,
+    val more: (String, ProfileItem) -> Unit,
+    val remove: (String) -> Unit,
+    val move: (Int, Int) -> Unit,
+    val movePrevious: (FocusRequester) -> Unit,
+    val moveUpFromFirstRow: (() -> Unit)?
+)
+
+@Composable
+private fun ServerCollectionItem(
+    row: ServerRowUiModel,
+    index: Int,
+    rows: List<ServerRowUiModel>,
+    focusRequesters: Map<String, ServerRowFocusRequesters>,
+    layout: ServerRowLayout,
+    reorderState: DpadReorderState,
+    reorderTarget: (Int, DpadReorderDirection) -> Int,
+    collectionActions: ServerCollectionActions,
+    selectedGuid: String?
+) {
+    val stride = if (layout == ServerRowLayout.TwoColumn) 2 else 1
+    val current = focusRequesters.getValue(row.guid)
+    val previous = rows.getOrNull(index - stride)?.let { focusRequesters[it.guid] }
+    val next = rows.getOrNull(index + stride)?.let { focusRequesters[it.guid] }
+    val previousColumn = if (layout == ServerRowLayout.TwoColumn && index % 2 == 1) {
+        rows.getOrNull(index - 1)?.let { focusRequesters[it.guid] }
+    } else null
+    val adjacentColumn = if (layout == ServerRowLayout.TwoColumn && index % 2 == 0) {
+        rows.getOrNull(index + 1)?.let { focusRequesters[it.guid] }
+    } else null
+    val reorderItem = DpadReorderItem(
+        reorderState, row.guid, index, rows.size, reorderTarget, collectionActions.move
+    )
+
+    Column {
+        ServerListItem(
+            model = row,
+            isSelected = row.guid == selectedGuid,
+            actions = ServerRowActions(
+                select = { collectionActions.select(row.guid) },
+                edit = { collectionActions.edit(row.guid, row.profile) },
+                share = { collectionActions.share(row.guid, row.profile) },
+                remove = { collectionActions.remove(row.guid) },
+                more = { collectionActions.more(row.guid, row.profile) },
+                movePrevious = previousColumn?.let { target ->
+                    { _: FocusRequester -> target.more.requestFocus() }
+                } ?: collectionActions.movePrevious,
+                moveUp = if (index < stride) collectionActions.moveUpFromFirstRow else null,
+                reorderItem = reorderItem
+            ),
+            focusTargets = ServerRowFocusTargets(current, previous, next, adjacentColumn, layout)
+        )
+        ServerItemDivider()
+    }
 }
 
 @Composable
@@ -107,26 +187,9 @@ fun GroupPagerPage(
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
-    val groupStateFlow = remember(groupId) {
-        mainViewModel.serverGroupState(groupId)
-    }
+    val groupStateFlow = remember(groupId) { mainViewModel.serverGroupState(groupId) }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
-    val actions = remember(
-        onSelectServer,
-        onEditServer,
-        onShareServer,
-        onMoreServer,
-        onRemoveServer,
-    ) {
-        ServerRowActions(
-            select = onSelectServer,
-            edit = onEditServer,
-            share = onShareServer,
-            more = onMoreServer,
-            remove = onRemoveServer,
-        )
-    }
     ServerListPage(
         rows = groupState.rows,
         selectedGuid = selectedGuid,
@@ -137,24 +200,20 @@ fun GroupPagerPage(
         groupId = groupId,
         lazyListStates = lazyListStates,
         lazyGridStates = lazyGridStates,
-        actions = actions,
+        collectionActions = ServerCollectionActions(
+            select = onSelectServer,
+            edit = onEditServer,
+            share = onShareServer,
+            more = onMoreServer,
+            remove = onRemoveServer,
+            move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
+            movePrevious = onOpenDrawer,
+            moveUpFromFirstRow = onMoveUpFromFirstRow
+        ),
         onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
-        onMoveServer = { fromIndex, toIndex ->
-            mainViewModel.moveServer(groupId, fromIndex, toIndex)
-        },
-        onMovePreviousFromRow = onOpenDrawer,
-        onMoveUpFromFirstRow = onMoveUpFromFirstRow,
         contentPadding = contentPadding
     )
 }
-
-private class ServerRowActions(
-    val select: (String) -> Unit,
-    val edit: (String, ProfileItem) -> Unit,
-    val share: (String, ProfileItem) -> Unit,
-    val more: (String, ProfileItem) -> Unit,
-    val remove: (String) -> Unit,
-)
 
 @Composable
 private fun ServerListPage(
@@ -167,11 +226,8 @@ private fun ServerListPage(
     groupId: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
-    actions: ServerRowActions,
+    collectionActions: ServerCollectionActions,
     onLocateHandled: () -> Unit,
-    onMoveServer: (Int, Int) -> Unit,
-    onMovePreviousFromRow: (FocusRequester) -> Unit,
-    onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
     val isTelevision = isTelevisionDevice()
@@ -179,137 +235,53 @@ private fun ServerListPage(
     val serverGuids = rows.map { it.guid }
     val serverGuidSet = serverGuids.toSet()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    var movingGuid by remember(groupId) { mutableStateOf<String?>(null) }
-    var movingIndex by remember(groupId) { mutableStateOf(-1) }
+    val dpadReorderState = rememberDpadReorderState(groupId)
     val rowFocusTargets = remember(groupId, serverGuidSet, doubleColumnDisplay) {
-        rows.associate { it.guid to ServerRowFocusTargets() }
+        rows.associate { it.guid to ServerRowFocusRequesters() }
     }
-
-    LaunchedEffect(canReorder, serverGuidSet) {
-        if (!canReorder || movingGuid == null || movingGuid !in serverGuidSet) {
-            movingGuid = null
-            movingIndex = -1
-        }
+    LaunchedEffect(canReorder, serverGuids) {
+        dpadReorderState.syncItems(serverGuids, enabled = isTelevision && canReorder)
     }
-    LaunchedEffect(movingGuid, movingIndex) {
-        val guid = movingGuid ?: return@LaunchedEffect
+    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex) {
+        val guid = dpadReorderState.movingKey as? String ?: return@LaunchedEffect
         withFrameNanos { }
         rowFocusTargets[guid]?.row?.requestFocus()
     }
 
-    fun startMovement(guid: String, index: Int) {
-        if (!isTelevision || !canReorder) return
-        movingGuid = guid
-        movingIndex = index
-    }
-
-    fun finishMovement() {
-        movingGuid = null
-        movingIndex = -1
-    }
-
-    fun handleMovementKey(event: KeyEvent, grid: Boolean): Boolean {
-        if (movingGuid == null) return false
-
-        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-            return true
-        }
-
-        val isDirection = event.key == Key.DirectionUp ||
-                event.key == Key.DirectionDown ||
-                event.key == Key.DirectionLeft ||
-                event.key == Key.DirectionRight
-        if (!isDirection) return false
-        if (event.type != KeyEventType.KeyDown) return true
-
-        val targetIndex = when (event.key) {
-            Key.DirectionUp -> movingIndex - if (grid) 2 else 1
-            Key.DirectionDown -> movingIndex + if (grid) 2 else 1
-            Key.DirectionLeft -> when {
-                !grid -> movingIndex
-                isRtl && movingIndex % 2 == 0 -> movingIndex + 1
-                !isRtl && movingIndex % 2 == 1 -> movingIndex - 1
-                else -> movingIndex
-            }
-            Key.DirectionRight -> when {
-                !grid -> movingIndex
-                isRtl && movingIndex % 2 == 1 -> movingIndex - 1
-                !isRtl && movingIndex % 2 == 0 -> movingIndex + 1
-                else -> movingIndex
-            }
-            else -> movingIndex
-        }
-        if (targetIndex in rows.indices && targetIndex != movingIndex) {
-            val fromIndex = movingIndex
-            movingIndex = targetIndex
-            onMoveServer(fromIndex, targetIndex)
-        }
-        return true
-    }
-
     if (doubleColumnDisplay) {
-        val gridState = remember(groupId) {
-            lazyGridStates.getOrPut(groupId) { LazyGridState() }
-        }
+        val gridState = remember(groupId) { lazyGridStates.getOrPut(groupId) { LazyGridState() } }
         LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
             if (isTelevision && selectedServerIndex >= 0) {
-                gridState.scrollToItem(
-                    index = selectedServerIndex,
-                    scrollOffset = -gridState.layoutInfo.viewportSize.height / 3
-                )
+                gridState.scrollToItem(selectedServerIndex, -gridState.layoutInfo.viewportSize.height / 3)
             }
         }
+        LocateTargetEffect(locateTarget, rows, gridState, onLocateHandled)
         val reorderableGridState = if (canReorder) {
             rememberReorderableLazyGridState(gridState) { from, to ->
-                onMoveServer(from.index, to.index)
+                reorderIndicesForKeys(serverGuids, from.key, to.key)?.let { (fromIndex, toIndex) ->
+                    collectionActions.move(fromIndex, toIndex)
+                }
             }
         } else null
-
-        LocateTargetEffect(locateTarget, rows, gridState, onLocateHandled)
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             state = gridState,
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScrollbar(gridState),
+            modifier = Modifier.fillMaxSize().verticalScrollbar(gridState),
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
-                val focusTargets = rowFocusTargets.getValue(row.guid)
-                val previousTargets = rows.getOrNull(index - 2)?.let { rowFocusTargets[it.guid] }
-                val nextTargets = rows.getOrNull(index + 2)?.let { rowFocusTargets[it.guid] }
-                val previousColumnTargets = if (index % 2 == 1) {
-                    rows.getOrNull(index - 1)?.let { rowFocusTargets[it.guid] }
-                } else null
-                val nextColumnTargets = if (index % 2 == 0) {
-                    rows.getOrNull(index + 1)?.let { rowFocusTargets[it.guid] }
-                } else null
                 val content: @Composable () -> Unit = {
-                    ServerItemColumn(
-                        row = row,
-                        isSelected = row.guid == selectedGuid,
-                        actions = actions,
-                        focusTargets = focusTargets,
-                        previousFocusTargets = previousTargets,
-                        nextFocusTargets = nextTargets,
-                        nextColumnFocusTargets = nextColumnTargets,
-                        previousColumnFocusTargets = previousColumnTargets,
-                        onMovePrevious = onMovePreviousFromRow,
-                        onMoveUp = if (index < 2) onMoveUpFromFirstRow else null,
-                        isMoving = movingGuid == row.guid,
-                        onStartMoving = { startMovement(row.guid, index) },
-                        onFinishMoving = ::finishMovement,
-                        onMovementKeyEvent = { handleMovementKey(it, grid = true) }
+                    ServerCollectionItem(
+                        row, index, rows, rowFocusTargets, ServerRowLayout.TwoColumn,
+                        dpadReorderState,
+                        { currentIndex, direction -> twoColumnDpadReorderTarget(currentIndex, direction, isRtl) },
+                        collectionActions, selectedGuid
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
                     ReorderableItem(reorderableGridState, key = row.guid) { isDragging ->
-                        ReorderableGridItem(
-                            scope = this,
-                            isDragging = isDragging,
-                            isMoving = movingGuid == row.guid
-                        ) { content() }
+                        ReorderableGridItem(this, isDragging, dpadReorderState.isMoving(row.guid)) { content() }
                     }
                 } else {
                     content()
@@ -317,64 +289,39 @@ private fun ServerListPage(
             }
         }
     } else {
-        val listState = remember(groupId) {
-            lazyListStates.getOrPut(groupId) { LazyListState() }
-        }
+        val listState = remember(groupId) { lazyListStates.getOrPut(groupId) { LazyListState() } }
         LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
             if (isTelevision && selectedServerIndex >= 0) {
-                listState.scrollToItem(
-                    index = selectedServerIndex,
-                    scrollOffset = -listState.layoutInfo.viewportSize.height / 3
-                )
+                listState.scrollToItem(selectedServerIndex, -listState.layoutInfo.viewportSize.height / 3)
             }
         }
+        LocateTargetEffect(locateTarget, rows, listState, onLocateHandled)
         val reorderableState = if (canReorder) {
             rememberReorderableLazyListState(listState) { from, to ->
-                onMoveServer(from.index, to.index)
+                reorderIndicesForKeys(serverGuids, from.key, to.key)?.let { (fromIndex, toIndex) ->
+                    collectionActions.move(fromIndex, toIndex)
+                }
             }
         } else null
 
-        LocateTargetEffect(locateTarget, rows, listState, onLocateHandled)
-
         LazyColumn(
             state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScrollbar(listState),
+            modifier = Modifier.fillMaxSize().verticalScrollbar(listState),
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
-                val focusTargets = rowFocusTargets.getValue(row.guid)
-                val previousTargets = rows.getOrNull(index - 1)?.let { rowFocusTargets[it.guid] }
-                val nextTargets = rows.getOrNull(index + 1)?.let { rowFocusTargets[it.guid] }
                 val content: @Composable () -> Unit = {
-                    ServerItemRow(
-                        row = row,
-                        isSelected = row.guid == selectedGuid,
-                        actions = actions,
-                        focusTargets = focusTargets,
-                        previousFocusTargets = previousTargets,
-                        nextFocusTargets = nextTargets,
-                        onMovePrevious = onMovePreviousFromRow,
-                        onMoveUp = if (index == 0) onMoveUpFromFirstRow else null,
-                        isMoving = movingGuid == row.guid,
-                        onStartMoving = { startMovement(row.guid, index) },
-                        onFinishMoving = ::finishMovement,
-                        onMovementKeyEvent = { handleMovementKey(it, grid = false) }
+                    ServerCollectionItem(
+                        row, index, rows, rowFocusTargets, ServerRowLayout.SingleColumn,
+                        dpadReorderState, ::verticalDpadReorderTarget, collectionActions, selectedGuid
                     )
                 }
                 if (canReorder && reorderableState != null) {
                     ReorderableItem(reorderableState, key = row.guid) { isDragging ->
-                        ReorderableListItem(
-                            scope = this,
-                            isDragging = isDragging,
-                            isMoving = movingGuid == row.guid
-                        ) { content() }
-                        ServerItemDivider()
+                        ReorderableListItem(this, isDragging, dpadReorderState.isMoving(row.guid)) { content() }
                     }
                 } else {
                     content()
-                    ServerItemDivider()
                 }
             }
         }
@@ -383,10 +330,7 @@ private fun ServerListPage(
 
 @Composable
 private fun LocateTargetEffect(
-    target: LocateTarget?,
-    rows: List<ServerRowUiModel>,
-    state: LazyListState,
-    onHandled: () -> Unit,
+    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyListState, onHandled: () -> Unit
 ) {
     if (target == null) return
     LaunchedEffect(target, rows) {
@@ -399,10 +343,7 @@ private fun LocateTargetEffect(
 
 @Composable
 private fun LocateTargetEffect(
-    target: LocateTarget?,
-    rows: List<ServerRowUiModel>,
-    state: LazyGridState,
-    onHandled: () -> Unit,
+    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyGridState, onHandled: () -> Unit
 ) {
     if (target == null) return
     LaunchedEffect(target, rows) {
@@ -410,168 +351,60 @@ private fun LocateTargetEffect(
         if (index < 0) return@LaunchedEffect
         state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
         onHandled()
-    }
-}
-
-@Composable
-private fun ServerItemRow(
-    row: ServerRowUiModel,
-    isSelected: Boolean,
-    actions: ServerRowActions,
-    focusTargets: ServerRowFocusTargets,
-    previousFocusTargets: ServerRowFocusTargets?,
-    nextFocusTargets: ServerRowFocusTargets?,
-    onMovePrevious: (FocusRequester) -> Unit,
-    onMoveUp: (() -> Unit)?,
-    isMoving: Boolean,
-    onStartMoving: () -> Unit,
-    onFinishMoving: () -> Unit,
-    onMovementKeyEvent: (KeyEvent) -> Boolean
-) {
-    ServerListItem(
-        row = row,
-        isSelected = isSelected,
-        doubleColumnDisplay = false,
-        actions = actions,
-        focusTargets = focusTargets,
-        previousFocusTargets = previousFocusTargets,
-        nextFocusTargets = nextFocusTargets,
-        onMovePrevious = onMovePrevious,
-        onMoveUp = onMoveUp,
-        isMoving = isMoving,
-        onStartMoving = onStartMoving,
-        onFinishMoving = onFinishMoving,
-        onMovementKeyEvent = onMovementKeyEvent
-    )
-}
-
-@Composable
-private fun ServerItemColumn(
-    row: ServerRowUiModel,
-    isSelected: Boolean,
-    actions: ServerRowActions,
-    focusTargets: ServerRowFocusTargets,
-    previousFocusTargets: ServerRowFocusTargets?,
-    nextFocusTargets: ServerRowFocusTargets?,
-    nextColumnFocusTargets: ServerRowFocusTargets?,
-    previousColumnFocusTargets: ServerRowFocusTargets?,
-    onMovePrevious: (FocusRequester) -> Unit,
-    onMoveUp: (() -> Unit)?,
-    isMoving: Boolean,
-    onStartMoving: () -> Unit,
-    onFinishMoving: () -> Unit,
-    onMovementKeyEvent: (KeyEvent) -> Boolean
-) {
-    Column {
-        ServerListItem(
-            row = row,
-            isSelected = isSelected,
-            doubleColumnDisplay = true,
-            actions = actions,
-            focusTargets = focusTargets,
-            previousFocusTargets = previousFocusTargets,
-            nextFocusTargets = nextFocusTargets,
-            nextColumnFocusTargets = nextColumnFocusTargets,
-            previousColumnFocusTargets = previousColumnFocusTargets,
-            onMovePrevious = onMovePrevious,
-            onMoveUp = onMoveUp,
-            isMoving = isMoving,
-            onStartMoving = onStartMoving,
-            onFinishMoving = onFinishMoving,
-            onMovementKeyEvent = onMovementKeyEvent
-        )
-        ServerItemDivider()
     }
 }
 
 @Composable
 private fun ServerItemDivider() {
-    AppDivider(
-        modifier = Modifier.padding(
-            horizontal = 12.dp,
-            vertical = if (isTelevisionDevice()) 1.dp else 0.dp
-        )
-    )
+    AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (isTelevisionDevice()) 1.dp else 0.dp))
 }
 
 @Composable
 private fun ServerListItem(
-    row: ServerRowUiModel,
+    model: ServerRowUiModel,
     isSelected: Boolean,
-    doubleColumnDisplay: Boolean,
     actions: ServerRowActions,
-    focusTargets: ServerRowFocusTargets,
-    previousFocusTargets: ServerRowFocusTargets?,
-    nextFocusTargets: ServerRowFocusTargets?,
-    nextColumnFocusTargets: ServerRowFocusTargets? = null,
-    previousColumnFocusTargets: ServerRowFocusTargets? = null,
-    onMovePrevious: (FocusRequester) -> Unit,
-    onMoveUp: (() -> Unit)?,
-    isMoving: Boolean,
-    onStartMoving: () -> Unit,
-    onFinishMoving: () -> Unit,
-    onMovementKeyEvent: (KeyEvent) -> Boolean
+    focusTargets: ServerRowFocusTargets
 ) {
-    val testResult = if (row.testDelayMillis == 0L) {
-        ""
-    } else {
-        stringResource(R.string.server_test_delay_value, row.testDelayMillis)
-    }
-    val selectedStateDescription = if (isSelected) {
-        stringResource(R.string.acc_selected_server)
-    } else {
-        null
-    }
     val isTelevision = isTelevisionDevice()
+    val currentFocus = focusTargets.current
+    val previousFocus = focusTargets.previous
+    val nextFocus = focusTargets.next
+    val isTwoColumn = focusTargets.layout == ServerRowLayout.TwoColumn
+    val reorderItem = actions.reorderItem
+    val isMoving = reorderItem.state.isMoving(reorderItem.key)
     val compactActionModifier = if (isTelevision) Modifier else Modifier.size(36.dp)
+    val actionFocusOrder = remember(currentFocus, isTwoColumn) {
+        if (isTwoColumn) listOf(currentFocus.row, currentFocus.more)
+        else listOf(currentFocus.row, currentFocus.share, currentFocus.edit, currentFocus.delete)
+    }
+    val selectedStateDescription = if (isSelected) stringResource(R.string.acc_selected_server) else null
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .semantics {
-                if (selectedStateDescription != null) {
-                    stateDescription = selectedStateDescription
-                }
-            }
+            .semantics { if (selectedStateDescription != null) stateDescription = selectedStateDescription }
             .dpadFocusOutline(
-                focusRequester = focusTargets.row,
-                focusContainerColor = if (isMoving) {
-                    MaterialTheme.colorScheme.secondaryContainer
-                } else {
-                    null
-                }
+                focusRequester = currentFocus.row,
+                focusContainerColor = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else null
             )
-            .dpadHorizontalFocusNavigation(
-                onMoveLeft = {
-                    previousColumnFocusTargets?.more?.requestFocus()
-                        ?: onMovePrevious(focusTargets.row)
-                },
-                onMoveRight = {
-                    if (doubleColumnDisplay) {
-                        focusTargets.more.requestFocus()
-                    } else {
-                        focusTargets.share.requestFocus()
-                    }
+            .dpadOrderedFocusNavigation(
+                current = currentFocus.row,
+                order = actionFocusOrder,
+                onBeforeFirst = {
+                    actions.movePrevious?.invoke(currentFocus.row) ?: currentFocus.row.requestFocus()
                 }
             )
             .dpadVerticalFocusNavigation(
                 onMoveUp = {
-                    previousFocusTargets?.row?.requestFocus()
-                        ?: onMoveUp?.let { moveUp -> moveUp(); true }
+                    previousFocus?.row?.requestFocus()
+                        ?: actions.moveUp?.let { it(); true }
                         ?: false
                 },
-                onMoveDown = { nextFocusTargets?.row?.requestFocus() ?: true }
+                onMoveDown = { nextFocus?.row?.requestFocus() ?: true }
             )
-            .then(
-                if (isTelevision) Modifier else Modifier.clickable { actions.select(row.guid) }
-            )
-            .dpadLongPressToMove(
-                enabled = isTelevision,
-                onClick = { if (isMoving) onFinishMoving() else actions.select(row.guid) },
-                onLongPress = onStartMoving,
-                onDrop = onFinishMoving,
-                onMovementKeyEvent = onMovementKeyEvent
-            )
+            .then(if (isTelevision) Modifier else Modifier.clickable(onClick = actions.select))
+            .dpadLongPressToMove(enabled = isTelevision, item = reorderItem, onClick = actions.select)
     ) {
         Box(Modifier.width(10.dp).fillMaxHeight()) {
             if (isMoving) {
@@ -586,143 +419,160 @@ private fun ServerListItem(
             } else if (isSelected) {
                 Row {
                     Spacer(Modifier.width(6.dp))
-                    Box(
-                        Modifier
-                            .width(4.dp)
-                            .fillMaxHeight()
-                            .padding(vertical = 10.dp)
-                            .background(MaterialTheme.colorScheme.primary)
-                    )
+                    Box(Modifier.width(4.dp).fillMaxHeight().padding(vertical = 10.dp).background(colorFabActive))
                 }
             }
         }
 
-        Column(
-            Modifier
-                .weight(1f)
-                .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
-        ) {
+        Column(Modifier.weight(1f).padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(row.remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (doubleColumnDisplay) {
-                    IconButton(
-                        onClick = { actions.more(row.guid, row.profile) },
+                Text(
+                    model.remarks,
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (isTwoColumn) {
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_more_vert_24dp),
+                        label = stringResource(R.string.action_more),
+                        onClick = actions.more,
+                        focusRequester = currentFocus.more,
                         modifier = compactActionModifier
-                            .dpadFocusOutline(focusRequester = focusTargets.more)
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = { focusTargets.row.requestFocus() },
-                                onMoveRight = {
-                                    nextColumnFocusTargets?.row?.requestFocus()
-                                        ?: focusTargets.more.requestFocus()
+                            .dpadOrderedFocusNavigation(
+                                current = currentFocus.more,
+                                order = actionFocusOrder,
+                                onAfterLast = {
+                                    focusTargets.adjacentColumn?.row?.requestFocus()
+                                        ?: currentFocus.more.requestFocus()
                                 }
                             )
                             .dpadVerticalFocusNavigation(
-                                onMoveUp = { previousFocusTargets?.more?.requestFocus() ?: false },
-                                onMoveDown = { nextFocusTargets?.more?.requestFocus() ?: true }
+                                onMoveUp = { previousFocus?.more?.requestFocus() ?: false },
+                                onMoveDown = { nextFocus?.more?.requestFocus() ?: true }
                             )
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_more_vert_24dp),
-                            stringResource(R.string.acc_more),
-                            Modifier.size(24.dp)
-                        )
-                    }
+                    )
                 } else {
-                    IconButton(
-                        onClick = { actions.share(row.guid, row.profile) },
-                        modifier = compactActionModifier
-                            .dpadFocusOutline(focusRequester = focusTargets.share)
-                            .dpadRowActionNavigation(
-                                previous = focusTargets.row,
-                                next = focusTargets.edit,
-                                previousRow = previousFocusTargets?.share,
-                                nextRow = nextFocusTargets?.share
-                            )
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            stringResource(R.string.title_configuration_share),
-                            Modifier.size(24.dp)
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_share_24dp),
+                        label = stringResource(R.string.title_configuration_share),
+                        onClick = actions.share,
+                        focusRequester = currentFocus.share,
+                        modifier = compactActionModifier.dpadRowActionNavigation(
+                            currentFocus.share, actionFocusOrder, previousFocus?.share, nextFocus?.share
                         )
-                    }
-                    IconButton(
-                        onClick = { actions.edit(row.guid, row.profile) },
-                        modifier = compactActionModifier
-                            .dpadFocusOutline(focusRequester = focusTargets.edit)
-                            .dpadRowActionNavigation(
-                                previous = focusTargets.share,
-                                next = focusTargets.delete,
-                                previousRow = previousFocusTargets?.edit,
-                                nextRow = nextFocusTargets?.edit
-                            )
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_edit_24dp),
-                            stringResource(R.string.acc_edit),
-                            Modifier.size(24.dp)
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_edit_24dp),
+                        label = stringResource(R.string.menu_item_edit_config),
+                        onClick = actions.edit,
+                        focusRequester = currentFocus.edit,
+                        modifier = compactActionModifier.dpadRowActionNavigation(
+                            currentFocus.edit, actionFocusOrder, previousFocus?.edit, nextFocus?.edit
                         )
-                    }
-                    IconButton(
-                        onClick = { actions.remove(row.guid) },
-                        modifier = compactActionModifier
-                            .dpadFocusOutline(focusRequester = focusTargets.delete)
-                            .dpadRowActionNavigation(
-                                previous = focusTargets.edit,
-                                next = focusTargets.delete,
-                                previousRow = previousFocusTargets?.delete,
-                                nextRow = nextFocusTargets?.delete
-                            )
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            stringResource(R.string.acc_delete),
-                            Modifier.size(24.dp)
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_delete_24dp),
+                        label = stringResource(R.string.menu_item_del_config),
+                        onClick = actions.remove,
+                        focusRequester = currentFocus.delete,
+                        modifier = compactActionModifier.dpadRowActionNavigation(
+                            currentFocus.delete, actionFocusOrder, previousFocus?.delete, nextFocus?.delete
                         )
-                    }
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (row.subscriptionBadge.isNotBlank()) {
-                    Box(
-                        Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)), Alignment.Center
-                    ) {
-                        Text(row.subscriptionBadge.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
+
+            if (isTelevision) {
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    SubscriptionBadge(model.subscriptionBadge)
+                    Text(
+                        model.statistics,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        model.typeDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorConfigType,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    TestResult(model.testDelayMillis)
                 }
-                Text(
-                    row.statistics,
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row.typeDescription, style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(testResult, style = MaterialTheme.typography.bodySmall, color = if (row.testDelayMillis < 0L) colorPingRed else colorPing, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else {
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    SubscriptionBadge(model.subscriptionBadge)
+                    Text(
+                        model.statistics,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(
+                        model.typeDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorConfigType,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    TestResult(model.testDelayMillis)
+                }
             }
         }
     }
 }
 
-internal suspend fun PagerState.navigateToPageOptimized(
-    targetPage: Int,
-    animateAdjacentPage: Boolean = true
-) {
+@Composable
+private fun SubscriptionBadge(text: String) {
+    if (text.isBlank()) return
+    Box(
+        Modifier.size(24.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    }
+    Spacer(Modifier.width(8.dp))
+}
+
+@Composable
+private fun TestResult(delayMillis: Long) {
+    Text(
+        if (delayMillis == 0L) "" else stringResource(R.string.server_test_delay_value, delayMillis),
+        style = MaterialTheme.typography.bodySmall,
+        color = if (delayMillis < 0L) colorPingRed else colorPing,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+}
+
+internal suspend fun PagerState.navigateToPageOptimized(targetPage: Int, animateAdjacentPage: Boolean = true) {
     if (pageCount <= 0) return
     val target = targetPage.coerceIn(0, pageCount - 1)
     val current = settledPage.coerceIn(0, pageCount - 1)
     if (target == current) return
-
-    if (abs(target - current) == 1 && animateAdjacentPage) {
-        animateScrollToPage(target)
-    } else {
-        scrollToPage(target)
+    val distance = abs(target - current)
+    when {
+        distance == 1 && animateAdjacentPage -> animateScrollToPage(target)
+        animateAdjacentPage -> {
+            val adjacent = if (target > current) target - 1 else target + 1
+            scrollToPage(adjacent)
+            yield()
+            animateScrollToPage(target)
+        }
+        else -> scrollToPage(target)
     }
 }

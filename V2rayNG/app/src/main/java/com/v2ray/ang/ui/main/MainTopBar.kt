@@ -33,8 +33,10 @@ import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.DpadHorizontalDirection
+import com.v2ray.ang.ui.compose.adjacentDpadFocusTarget
 import com.v2ray.ang.ui.compose.colorFabActive
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
@@ -49,40 +51,9 @@ internal class MainTopBarFocusRequesters(val start: FocusRequester) {
     val more = FocusRequester()
 }
 
-private fun List<FocusRequester>.adjacentTo(
-    current: FocusRequester,
-    offset: Int
-): FocusRequester? {
-    return getOrNull(indexOf(current) + offset)
-}
-
-@Composable
-private fun Modifier.inMainTopBarFocusOrder(
-    current: FocusRequester,
-    order: List<FocusRequester>,
-    onBeforeFirst: (() -> Unit)? = null,
-    onAfterLast: (() -> Unit)? = null
-): Modifier {
-    return dpadHorizontalFocusNavigation(
-        onMoveLeft = {
-            order.adjacentTo(current, -1)?.requestFocus()
-                ?: onBeforeFirst?.invoke()
-                ?: current.requestFocus()
-        },
-        onMoveRight = {
-            order.adjacentTo(current, 1)?.requestFocus()
-                ?: onAfterLast?.invoke()
-                ?: current.requestFocus()
-        }
-    )
-}
-
 @Composable
 internal fun rememberMainTopBarFocusRequesters(showSearch: Boolean): MainTopBarFocusRequesters {
-    val start = rememberDpadFocusRequester(
-        requestFocus = !showSearch,
-        requestKey = showSearch
-    )
+    val start = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     return remember(start) { MainTopBarFocusRequesters(start) }
 }
 
@@ -109,12 +80,8 @@ internal fun MainTopBar(
     val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val navBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val maxMenuHeight =
-        LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
-    val moveDownModifier = Modifier.dpadVerticalFocusNavigation(
-        onMoveUp = { false },
-        onMoveDown = onMoveDown
-    )
+    val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
+    val moveDownModifier = Modifier.dpadVerticalFocusNavigation(onMoveUp = { false }, onMoveDown = onMoveDown)
     val focusOrder = remember(isRunning, focusRequesters) {
         buildList {
             add(focusRequesters.start)
@@ -138,10 +105,7 @@ internal fun MainTopBar(
         searchPlaceholder = stringResource(R.string.menu_item_search),
         titleContent = if (isTelevision) {
             {
-                Box(
-                    modifier = Modifier.height(48.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
+                Box(modifier = Modifier.height(48.dp), contentAlignment = Alignment.CenterStart) {
                     Text(
                         text = stringResource(R.string.app_name),
                         fontFamily = FontFamily(Font(R.font.montserrat_thin)),
@@ -187,7 +151,7 @@ internal fun MainTopBar(
                     },
                     onClick = { onAction(MainAction.ToggleService) },
                     focusRequester = focusRequesters.start,
-                    modifier = moveDownModifier.inMainTopBarFocusOrder(
+                    modifier = moveDownModifier.dpadOrderedFocusNavigation(
                         current = focusRequesters.start,
                         order = focusOrder,
                         onBeforeFirst = { onOpenDrawer(focusRequesters.start) }
@@ -201,10 +165,7 @@ internal fun MainTopBar(
                         label = stringResource(R.string.connection_test_pending),
                         onClick = { onAction(MainAction.TestCurrentServer) },
                         focusRequester = focusRequesters.test,
-                        modifier = moveDownModifier.inMainTopBarFocusOrder(
-                            current = focusRequesters.test,
-                            order = focusOrder
-                        )
+                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.test, focusOrder)
                     )
                 }
                 AppIconButton(
@@ -212,10 +173,7 @@ internal fun MainTopBar(
                     label = stringResource(R.string.menu_item_search),
                     onClick = { onSearchToggle(true) },
                     focusRequester = focusRequesters.search,
-                    modifier = moveDownModifier.inMainTopBarFocusOrder(
-                        current = focusRequesters.search,
-                        order = focusOrder
-                    )
+                    modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.search, focusOrder)
                 )
             } else if (!showSearch) {
                 AppIconButton(
@@ -233,10 +191,7 @@ internal fun MainTopBar(
                         label = stringResource(R.string.menu_item_add_config),
                         onClick = { showImportMenu = true },
                         focusRequester = focusRequesters.add,
-                        modifier = moveDownModifier.inMainTopBarFocusOrder(
-                            current = focusRequesters.add,
-                            order = focusOrder
-                        )
+                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.add, focusOrder)
                     )
                     DropdownMenu(
                         expanded = showImportMenu,
@@ -247,12 +202,7 @@ internal fun MainTopBar(
                             .heightIn(max = maxMenuHeight)
                             .verticalScrollbar(importMenuScrollState)
                     ) {
-                        ImportMenuContent(
-                            onAction = { action ->
-                                showImportMenu = false
-                                onAction(action)
-                            }
-                        )
+                        ImportMenuContent { action -> showImportMenu = false; onAction(action) }
                     }
                 }
                 if (isTelevision && isRunning) {
@@ -261,10 +211,7 @@ internal fun MainTopBar(
                         label = stringResource(R.string.title_service_restart),
                         onClick = { onAction(MainAction.RestartService) },
                         focusRequester = focusRequesters.restart,
-                        modifier = moveDownModifier.inMainTopBarFocusOrder(
-                            current = focusRequesters.restart,
-                            order = focusOrder
-                        )
+                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.restart, focusOrder)
                     )
                 }
                 Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
@@ -273,10 +220,7 @@ internal fun MainTopBar(
                         label = stringResource(R.string.action_more),
                         onClick = { showMenu = true },
                         focusRequester = focusRequesters.more,
-                        modifier = moveDownModifier.inMainTopBarFocusOrder(
-                            current = focusRequesters.more,
-                            order = focusOrder
-                        )
+                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.more, focusOrder)
                     )
                     DropdownMenu(
                         expanded = showMenu,
@@ -287,7 +231,11 @@ internal fun MainTopBar(
                             .heightIn(max = maxMenuHeight)
                             .dpadPopupHorizontalNavigation(onMovePrevious = {
                                 showMenu = false
-                                focusOrder.adjacentTo(focusRequesters.more, -1)?.requestFocus()
+                                adjacentDpadFocusTarget(
+                                    current = focusRequesters.more,
+                                    order = focusOrder,
+                                    direction = DpadHorizontalDirection.Previous
+                                )?.requestFocus()
                             })
                             .verticalScrollbar(moreMenuScrollState)
                     ) {

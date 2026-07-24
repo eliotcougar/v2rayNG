@@ -41,12 +41,13 @@ import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.tvAwareImePadding
+import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.TvTextFieldNavigation
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
@@ -273,7 +274,9 @@ fun RoutingEditScreen(
                 modifier = Modifier.focusProperties {
                     processPickerFocusRequester?.let { down = it }
                 },
-                tvFocusRequester = processFieldFocusRequester
+                tvNavigation = TvTextFieldNavigation(
+                    focusRequester = processFieldFocusRequester
+                )
             )
             if (canUseProcess) {
                 TextButton(
@@ -314,7 +317,9 @@ fun RoutingEditScreen(
                 modifier = Modifier.focusProperties {
                     processPickerFocusRequester?.let { up = it }
                 },
-                tvFocusRequester = portFocusRequester
+                tvNavigation = TvTextFieldNavigation(
+                    focusRequester = portFocusRequester
+                )
             )
             FormTextField(
                 label = stringResource(R.string.routing_settings_protocol),
@@ -337,7 +342,7 @@ fun RoutingEditScreen(
                 value = outboundTag,
                 options = outboundSuggestions,
                 onValueChange = { outboundTag = it },
-                editable = !isTelevision
+                config = FormDropdownConfig(editable = !isTelevision)
             )
             Spacer(modifier = Modifier.height(36.dp))
             NavigationBarsSpacer()

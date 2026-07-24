@@ -28,6 +28,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
@@ -251,23 +252,27 @@ fun SubEditScreen(
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_pre_profile),
-                placeholder = stringResource(R.string.sub_setting_no_proxy),
-                supportingText = stringResource(R.string.sub_setting_pre_profile_tip),
                 value = prevProfile,
                 options = profileSuggestions,
                 onValueChange = { prevProfile = it },
-                editable = !isTelevision,
-                emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
+                config = FormDropdownConfig(
+                    editable = !isTelevision,
+                    placeholder = stringResource(R.string.sub_setting_no_proxy),
+                    supportingText = stringResource(R.string.sub_setting_pre_profile_tip),
+                    emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
+                )
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_next_profile),
-                placeholder = stringResource(R.string.sub_setting_no_proxy),
-                supportingText = stringResource(R.string.sub_setting_next_profile_tip),
                 value = nextProfile,
                 options = profileSuggestions,
                 onValueChange = { nextProfile = it },
-                editable = !isTelevision,
-                emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
+                config = FormDropdownConfig(
+                    editable = !isTelevision,
+                    placeholder = stringResource(R.string.sub_setting_no_proxy),
+                    supportingText = stringResource(R.string.sub_setting_next_profile_tip),
+                    emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
+                )
             )
             NavigationBarsSpacer()
         }

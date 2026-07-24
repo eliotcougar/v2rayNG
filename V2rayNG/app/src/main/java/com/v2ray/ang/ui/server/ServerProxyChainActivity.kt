@@ -31,11 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -44,16 +39,24 @@ import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.DpadReorderItem
+import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.ReorderableListItem
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.compose.TvTextFieldNavigation
+import com.v2ray.ang.compose.dpadLongPressToMove
+import com.v2ray.ang.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.rememberDpadFocusRequester
+import com.v2ray.ang.compose.rememberDpadReorderState
+import com.v2ray.ang.compose.rememberFormDropdownState
+import com.v2ray.ang.compose.reorderIndicesForKeys
 import com.v2ray.ang.compose.requestFocusWhenReady
 import com.v2ray.ang.compose.tvAwareImePadding
 import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.verticalDpadReorderTarget
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -118,10 +121,7 @@ class ServerProxyChainActivity : BaseComponentActivity() {
         )
     }
 
-    private fun saveServer(
-        remarks: String,
-        members: List<String>
-    ): Boolean {
+    private fun saveServer(remarks: String, members: List<String>): Boolean {
         if (remarks.isBlank()) {
             toast(R.string.server_lab_remarks)
             return false
@@ -147,25 +147,15 @@ class ServerProxyChainActivity : BaseComponentActivity() {
         }
 
         if (invalidMembers.isNotEmpty()) {
-            toast(
-                getString(
-                    R.string.server_proxy_chain_members_invalid,
-                    invalidMembers.joinToString(", ")
-                )
-            )
+            toast(getString(R.string.server_proxy_chain_members_invalid, invalidMembers.joinToString(", ")))
             return false
         }
 
-        val config =
-            MmkvManager.decodeServerConfig(editGuid)
-                ?: ProfileItem.create(EConfigType.PROXYCHAIN)
+        val config = MmkvManager.decodeServerConfig(editGuid) ?: ProfileItem.create(EConfigType.PROXYCHAIN)
 
         config.remarks = remarks.trim()
-        config.proxyChainProfiles =
-            chainMembers.joinToString(",")
-
-        config.description =
-            chainMembers.joinToString(" -> ")
+        config.proxyChainProfiles = chainMembers.joinToString(",")
+        config.description = chainMembers.joinToString(" -> ")
 
         if (
             config.subscriptionId.isEmpty() &&
@@ -174,18 +164,12 @@ class ServerProxyChainActivity : BaseComponentActivity() {
             config.subscriptionId = subscriptionId.orEmpty()
         }
 
-        val savedGuid = MmkvManager.encodeServerConfig(
-            editGuid,
-            config
-        )
+        val savedGuid = MmkvManager.encodeServerConfig(editGuid, config)
 
         toastSuccess(R.string.toast_success)
 
         ProfileEditorResult.run {
-            finishSaved(
-                guid = savedGuid,
-                restartService = isRunning
-            )
+            finishSaved(guid = savedGuid, restartService = isRunning)
         }
 
         return true
@@ -233,7 +217,7 @@ fun ProxyChainScreen(
     }
     var showProfileDeleteConfirm by remember { mutableStateOf(false) }
     var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    var movingMemberId by remember { mutableStateOf<Long?>(null) }
+    val dpadReorderState = rememberDpadReorderState()
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }
     var pendingAddFocus by remember { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
@@ -243,6 +227,13 @@ fun ProxyChainScreen(
     val deleteConfigFocusRequester = remember { FocusRequester() }
     val saveFocusRequester = remember { FocusRequester() }
     val addFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember(backFocusRequester, deleteConfigFocusRequester, saveFocusRequester, showDelete) {
+        buildList {
+            add(backFocusRequester)
+            if (showDelete) add(deleteConfigFocusRequester)
+            add(saveFocusRequester)
+        }
+    }
     val memberFocusTargetStore = remember {
         mutableMapOf<Long, ProxyChainMemberFocusTargets>()
     }
@@ -271,15 +262,14 @@ fun ProxyChainScreen(
     }
 
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        moveMember(from.index - 2, to.index - 2)
+        reorderIndicesForKeys(memberIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
+            moveMember(fromIndex, toIndex)
+        }
     }
 
     LaunchedEffect(memberIds) {
         memberFocusTargetStore.keys.retainAll(memberIds.toSet())
-        val movingId = movingMemberId
-        if (movingId != null && movingId !in memberIds) {
-            movingMemberId = null
-        }
+        dpadReorderState.syncItems(memberIds, enabled = isTelevision)
     }
 
     LaunchedEffect(pendingMemberFocusId, memberIds) {
@@ -300,8 +290,8 @@ fun ProxyChainScreen(
         }
     }
 
-    LaunchedEffect(movingMemberId, memberIds) {
-        val memberId = movingMemberId ?: return@LaunchedEffect
+    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex, memberIds) {
+        val memberId = dpadReorderState.movingKey as? Long ?: return@LaunchedEffect
         val index = memberIds.indexOf(memberId)
         val focusTargets = memberFocusTargets[memberId]
         if (index >= 0 && focusTargets != null) {
@@ -328,36 +318,6 @@ fun ProxyChainScreen(
         pendingAddFocus = nextFocusId == null
     }
 
-    fun startMovement(memberId: Long) {
-        if (isTelevision) movingMemberId = memberId
-    }
-
-    fun finishMovement() {
-        movingMemberId = null
-    }
-
-    fun handleMovementKey(event: KeyEvent): Boolean {
-        val memberId = movingMemberId ?: return false
-        if (event.key == Key.DirectionCenter || event.key == Key.Enter) {
-            return true
-        }
-
-        val delta = when (event.key) {
-            Key.DirectionUp -> -1
-            Key.DirectionDown -> 1
-            Key.DirectionLeft, Key.DirectionRight -> 0
-            else -> return false
-        }
-        if (event.type != KeyEventType.KeyDown) return true
-
-        val fromIndex = memberIds.indexOf(memberId)
-        val toIndex = fromIndex + delta
-        if (fromIndex >= 0 && toIndex in memberIds.indices) {
-            moveMember(fromIndex, toIndex)
-        }
-        return true
-    }
-
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -371,16 +331,7 @@ fun ProxyChainScreen(
                         label = stringResource(R.string.action_back),
                         focusRequester = requester,
                         modifier = Modifier
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = {},
-                                onMoveRight = {
-                                    if (showDelete) {
-                                        deleteConfigFocusRequester.requestFocus()
-                                    } else {
-                                        saveFocusRequester.requestFocus()
-                                    }
-                                }
-                            )
+                            .dpadOrderedFocusNavigation(backFocusRequester, topBarFocusOrder)
                             .dpadVerticalFocusNavigation(
                                 onMoveUp = { true },
                                 onMoveDown = { remarksFocusRequester.requestFocus() }
@@ -395,10 +346,7 @@ fun ProxyChainScreen(
                             label = stringResource(R.string.menu_item_del_config),
                             focusRequester = deleteConfigFocusRequester,
                             modifier = Modifier
-                                .dpadHorizontalFocusNavigation(
-                                    onMoveLeft = { backFocusRequester.requestFocus() },
-                                    onMoveRight = { saveFocusRequester.requestFocus() }
-                                )
+                                .dpadOrderedFocusNavigation(deleteConfigFocusRequester, topBarFocusOrder)
                                 .dpadVerticalFocusNavigation(
                                     onMoveUp = { true },
                                  onMoveDown = { remarksFocusRequester.requestFocus() }
@@ -411,16 +359,7 @@ fun ProxyChainScreen(
                         label = stringResource(R.string.menu_item_save_config),
                         focusRequester = saveFocusRequester,
                         modifier = Modifier
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = {
-                                    if (showDelete) {
-                                        deleteConfigFocusRequester.requestFocus()
-                                    } else {
-                                        backFocusRequester.requestFocus()
-                                    }
-                                },
-                                onMoveRight = {}
-                            )
+                            .dpadOrderedFocusNavigation(saveFocusRequester, topBarFocusOrder)
                             .dpadVerticalFocusNavigation(
                                 onMoveUp = { true },
                                 onMoveDown = { remarksFocusRequester.requestFocus() }
@@ -440,10 +379,7 @@ fun ProxyChainScreen(
                     modifier = Modifier
                         .offset(y = -20.dp)
                         .navigationBarsPadding()
-                        .dpadHorizontalFocusNavigation(
-                            onMoveLeft = {},
-                            onMoveRight = {}
-                        )
+                        .dpadOrderedFocusNavigation(addFocusRequester, listOf(addFocusRequester))
                         .dpadVerticalFocusNavigation(
                             onMoveUp = {
                                 memberIds.lastOrNull()
@@ -455,16 +391,8 @@ fun ProxyChainScreen(
                     onClick = ::addMember
                 )
             } else {
-                FloatingActionButton(
-                    onClick = ::addMember,
-                    modifier = Modifier
-                        .offset(y = -20.dp)
-                        .navigationBarsPadding()
-                ) {
-                    Icon(
-                        painterResource(R.drawable.ic_add_24dp),
-                        contentDescription = stringResource(R.string.action_add_member)
-                    )
+                FloatingActionButton(onClick = ::addMember, modifier = Modifier.offset(y = -20.dp).navigationBarsPadding()) {
+                    Icon(painterResource(R.drawable.ic_add_24dp), stringResource(R.string.action_add_member))
                 }
             }
         }
@@ -490,13 +418,15 @@ fun ProxyChainScreen(
                     label = stringResource(R.string.server_lab_remarks),
                     value = remarks,
                     onValueChange = { remarks = it },
-                    tvFocusRequester = remarksFocusRequester,
-                    tvOnMoveUp = { backFocusRequester.requestFocus() },
-                    tvOnMoveDown = {
-                        memberIds.firstOrNull()
-                            ?.let { memberFocusTargets[it]?.field?.requestFocus() }
-                            ?: addFocusRequester.requestFocus()
-                    }
+                    tvNavigation = TvTextFieldNavigation(
+                        focusRequester = remarksFocusRequester,
+                        onMoveUp = { backFocusRequester.requestFocus() },
+                        onMoveDown = {
+                            memberIds.firstOrNull()
+                                ?.let { memberFocusTargets[it]?.field?.requestFocus() }
+                                ?: addFocusRequester.requestFocus()
+                        }
+                    )
                 )
             }
 
@@ -515,56 +445,60 @@ fun ProxyChainScreen(
                     ?.let(memberFocusTargets::get)
                 val nextTargets = memberIds.getOrNull(index + 1)
                     ?.let(memberFocusTargets::get)
-                val isMoving = movingMemberId == memberId
+                val dpadReorderItem = DpadReorderItem(
+                    state = dpadReorderState,
+                    key = memberId,
+                    index = index,
+                    itemCount = memberIds.size,
+                    targetIndex = ::verticalDpadReorderTarget,
+                    onMove = ::moveMember
+                )
+                val isMoving = dpadReorderState.isMoving(memberId)
+                val dropdownState = rememberFormDropdownState()
+                val actionFocusOrder = remember(focusTargets) {
+                    listOf(focusTargets.field, focusTargets.remove)
+                }
 
                 ReorderableItem(reorderableState, key = memberId) { isDragging ->
-                    ReorderableListItem(
-                        scope = this,
-                        isDragging = isDragging,
-                        isMoving = isMoving
-                    ) {
+                    ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 4.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "${index + 1}",
-                                modifier = Modifier
-                                    .width(44.dp),
-                                textAlign = TextAlign.Center
-                            )
+                            Text("${index + 1}", modifier = Modifier.width(44.dp), textAlign = TextAlign.Center)
                             FormDropdownField(
                                 label = stringResource(R.string.server_proxy_chain_member),
-                                placeholder = stringResource(R.string.server_proxy_chain_member_unselected),
                                 value = member,
                                 options = allRemarks,
                                 onValueChange = { newVal ->
                                     members = members.toMutableList().also { it[index] = newVal }
                                 },
-                                editable = !isTelevision,
-                                tvFocusRequester = focusTargets.field,
-                                tvOnMoveUp = {
-                                    previousTargets?.field?.requestFocus()
-                                        ?: remarksFocusRequester.requestFocus()
-                                },
-                                tvOnMoveDown = {
-                                    nextTargets?.field?.requestFocus()
-                                        ?: addFocusRequester.requestFocus()
-                                },
-                                tvOnLongPress = if (isTelevision) {
-                                    { startMovement(memberId) }
-                                } else {
-                                    null
-                                },
-                                tvOnDrop = ::finishMovement,
-                                tvOnMovementKeyEvent = ::handleMovementKey,
+                                config = FormDropdownConfig(
+                                    editable = !isTelevision,
+                                    placeholder = stringResource(R.string.server_proxy_chain_member_unselected)
+                                ),
+                                tvNavigation = TvTextFieldNavigation(
+                                    focusRequester = focusTargets.field,
+                                    onMoveUp = {
+                                        previousTargets?.field?.requestFocus()
+                                            ?: remarksFocusRequester.requestFocus()
+                                    },
+                                    onMoveDown = {
+                                        nextTargets?.field?.requestFocus()
+                                            ?: addFocusRequester.requestFocus()
+                                    }
+                                ),
+                                state = dropdownState,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .dpadHorizontalFocusNavigation(
-                                        onMoveLeft = { focusTargets.field.requestFocus() },
-                                        onMoveRight = { focusTargets.remove.requestFocus() }
+                                    .dpadOrderedFocusNavigation(focusTargets.field, actionFocusOrder)
+                                    .dpadLongPressToMove(
+                                        enabled = isTelevision,
+                                        item = dpadReorderItem,
+                                        onClick = dropdownState::activate,
+                                        addFocusTarget = false
                                     )
                             )
                             AppIconButton(
@@ -572,10 +506,7 @@ fun ProxyChainScreen(
                                 label = stringResource(R.string.action_remove),
                                 focusRequester = focusTargets.remove,
                                 modifier = Modifier
-                                    .dpadHorizontalFocusNavigation(
-                                        onMoveLeft = { focusTargets.field.requestFocus() },
-                                        onMoveRight = {}
-                                    )
+                                    .dpadOrderedFocusNavigation(focusTargets.remove, actionFocusOrder)
                                     .dpadVerticalFocusNavigation(
                                         onMoveUp = {
                                             previousTargets?.remove?.requestFocus()
