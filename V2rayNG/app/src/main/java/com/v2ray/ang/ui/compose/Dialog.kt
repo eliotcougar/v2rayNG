@@ -40,12 +40,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -193,12 +191,24 @@ fun InputDialog(
     onDismiss: () -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    val firstFieldFocusRequester = if (isTelevision) {
-        rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
-    } else {
-        null
+    val firstFieldFocusRequester = rememberDpadFocusRequester(
+        requestFocus = isTelevision && fields.isNotEmpty()
+    )
+    val remainingFieldFocusRequesters = remember(fields.size) {
+        List((fields.size - 1).coerceAtLeast(0)) { FocusRequester() }
     }
-    val focusManager = LocalFocusManager.current
+    val fieldFocusRequesters = remember(
+        firstFieldFocusRequester,
+        remainingFieldFocusRequesters
+    ) {
+        if (fields.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(firstFieldFocusRequester) + remainingFieldFocusRequesters
+        }
+    }
+    val dismissFocusRequester = remember { FocusRequester() }
+    val confirmFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
     if (isTelevision) {
@@ -218,7 +228,7 @@ fun InputDialog(
                 fields.forEachIndexed { index, field ->
                     val tvFieldState = if (isTelevision) {
                         rememberTvTextFieldState(
-                            passiveFocusRequester = firstFieldFocusRequester.takeIf { index == 0 }
+                            passiveFocusRequester = fieldFocusRequesters[index]
                         )
                     } else {
                         null
@@ -235,11 +245,17 @@ fun InputDialog(
                                         onActivate = state::beginEditing,
                                         onMoveUp = {
                                             state.finishEditing()
-                                            focusManager.moveFocus(FocusDirection.Up)
+                                            if (index > 0) {
+                                                fieldFocusRequesters[index - 1].requestFocus()
+                                            } else {
+                                                true
+                                            }
                                         },
                                         onMoveDown = {
                                             state.finishEditing()
-                                            focusManager.moveFocus(FocusDirection.Down)
+                                            fieldFocusRequesters.getOrNull(index + 1)
+                                                ?.requestFocus()
+                                                ?: dismissFocusRequester.requestFocus()
                                         }
                                     )
                                 } ?: Modifier
@@ -290,13 +306,35 @@ fun InputDialog(
         confirmButton = {
             TextButton(
                 onClick = onConfirm,
-                modifier = Modifier.dpadFocusOutline()
+                modifier = Modifier
+                    .dpadFocusOutline(focusRequester = confirmFocusRequester)
+                    .dpadHorizontalFocusNavigation(
+                        onMoveLeft = { dismissFocusRequester.requestFocus() },
+                        onMoveRight = {}
+                    )
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = {
+                            fieldFocusRequesters.lastOrNull()?.requestFocus() ?: true
+                        },
+                        onMoveDown = { true }
+                    )
             ) { Text(confirmText) }
         },
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                modifier = Modifier.dpadFocusOutline()
+                modifier = Modifier
+                    .dpadFocusOutline(focusRequester = dismissFocusRequester)
+                    .dpadHorizontalFocusNavigation(
+                        onMoveLeft = {},
+                        onMoveRight = { confirmFocusRequester.requestFocus() }
+                    )
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = {
+                            fieldFocusRequesters.lastOrNull()?.requestFocus() ?: true
+                        },
+                        onMoveDown = { true }
+                    )
             ) { Text(dismissText) }
         },
         containerColor = MaterialTheme.colorScheme.surface
