@@ -257,6 +257,16 @@ fun InputDialog(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
+                                focusedBorderColor = if (isTelevision) {
+                                    MaterialTheme.colorScheme.secondary
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                                focusedLabelColor = if (isTelevision) {
+                                    MaterialTheme.colorScheme.secondary
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
                                 cursorColor = MaterialTheme.colorScheme.secondary,
                                 selectionColors = TextSelectionColors(
                                     handleColor = MaterialTheme.colorScheme.secondary,

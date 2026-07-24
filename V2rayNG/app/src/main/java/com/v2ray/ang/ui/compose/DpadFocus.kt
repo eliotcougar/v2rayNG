@@ -92,9 +92,10 @@ suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
 fun Modifier.dpadFocusOutline(
     focusRequester: FocusRequester? = null,
     cornerRadius: Dp = 12.dp,
-    focusContainerColor: Color? = null
+    focusContainerColor: Color? = null,
+    showFocus: Boolean = true
 ): Modifier {
-    if (!isTelevisionDevice()) return this
+    if (!isTelevisionDevice() || !showFocus) return this
 
     var isFocused by remember { mutableStateOf(false) }
     val focusColor = MaterialTheme.colorScheme.primary

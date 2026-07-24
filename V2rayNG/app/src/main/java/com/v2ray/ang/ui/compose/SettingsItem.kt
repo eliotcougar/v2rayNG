@@ -86,6 +86,7 @@ private fun SettingsItemRow(
     enabled: Boolean,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    showFocus: Boolean = true,
     trailing: @Composable (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
@@ -101,7 +102,7 @@ private fun SettingsItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .dpadFocusOutline()
+            .dpadFocusOutline(showFocus = showFocus)
             .then(
                 onClick?.let { Modifier.dpadClickable(enabled, onClick = it) } ?: Modifier
             )
@@ -165,7 +166,8 @@ fun SettingsEditItem(
         onClick = if (enabled) {
             { showDialog = true }
         } else null,
-        modifier = modifier
+        modifier = modifier,
+        showFocus = !showDialog
     )
 
     if (showDialog) {
