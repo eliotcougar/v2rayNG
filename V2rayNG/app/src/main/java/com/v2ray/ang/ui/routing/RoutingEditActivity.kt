@@ -41,6 +41,7 @@ import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.isTelevisionDevice
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
@@ -63,6 +64,11 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 private val ROUTING_NETWORK_OPTIONS = listOf("tcp", "udp", "tcp,udp")
+
+private fun normalizeRoutingNetwork(value: String?): String {
+    val normalized = value.orEmpty().lowercase().replace(" ", "")
+    return normalized.takeIf { it == "tcp" || it == "udp" } ?: "tcp,udp"
+}
 
 class RoutingEditActivity : BaseComponentActivity() {
     private val position by lazy { intent.getIntExtra("position", -1) }
@@ -130,6 +136,7 @@ fun RoutingEditScreen(
     val context = LocalContext.current
     val processSelectTitle = stringResource(R.string.routing_settings_process_select)
     val scrollState = rememberScrollState()
+    val isTelevision = isTelevisionDevice()
 
     var remarks by rememberSaveable { mutableStateOf(initial?.remarks ?: "") }
     var locked by rememberSaveable { mutableStateOf(initial?.locked == true) }
@@ -137,13 +144,14 @@ fun RoutingEditScreen(
     var ip by rememberSaveable { mutableStateOf(initial?.ip?.joinToString(",") ?: "") }
     var processText by rememberSaveable { mutableStateOf(initial?.process?.joinToString(",") ?: "") }
     var protocol by rememberSaveable { mutableStateOf(initial?.protocol?.joinToString(",") ?: "") }
-    var network by rememberSaveable { mutableStateOf(initial?.network ?: "") }
+    var network by rememberSaveable {
+        mutableStateOf(normalizeRoutingNetwork(initial?.network))
+    }
     var port by rememberSaveable { mutableStateOf(initial?.port ?: "") }
     var outboundTag by rememberSaveable {
         mutableStateOf(initial?.outboundTag ?: BUILTIN_OUTBOUND_TAGS.first())
     }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
-    val selectedNetwork = network.ifBlank { "tcp,udp" }
 
     val processPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -294,7 +302,7 @@ fun RoutingEditScreen(
             )
             FormDropdownField(
                 label = stringResource(R.string.routing_settings_network),
-                value = selectedNetwork,
+                value = network,
                 options = ROUTING_NETWORK_OPTIONS,
                 onValueChange = { network = it }
             )
@@ -307,7 +315,7 @@ fun RoutingEditScreen(
                 value = outboundTag,
                 options = outboundSuggestions,
                 onValueChange = { outboundTag = it },
-                editable = true
+                editable = !isTelevision
             )
             Spacer(modifier = Modifier.height(36.dp))
             NavigationBarsSpacer()
