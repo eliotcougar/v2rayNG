@@ -1,7 +1,5 @@
 package com.v2ray.ang.ui.compose
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -51,23 +49,12 @@ fun CollapsiblePreferenceGroupHeader(
     modifier: Modifier = Modifier
 ) {
     val isTelevision = isTelevisionDevice()
-    val interactionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
-            .then(
-                if (isTelevision) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = { onExpandedChange(!expanded) }
-                    )
-                } else {
-                    Modifier.clickable { onExpandedChange(!expanded) }
-                }
-            )
+            .dpadClickable { onExpandedChange(!expanded) }
             .padding(
                 horizontal = if (isTelevision) 24.dp else 16.dp,
                 vertical = 12.dp
@@ -111,25 +98,12 @@ private fun SettingsItemRow(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
     }
-    val interactionSource = remember { MutableInteractionSource() }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
             .then(
-                if (onClick == null) {
-                    Modifier
-                } else if (isTelevision) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        enabled = enabled,
-                        onClick = onClick
-                    )
-                } else {
-                    Modifier.clickable(enabled = enabled, onClick = onClick)
-                }
+                onClick?.let { Modifier.dpadClickable(enabled, onClick = it) } ?: Modifier
             )
             .padding(
                 horizontal = if (isTelevision) 24.dp else 16.dp,

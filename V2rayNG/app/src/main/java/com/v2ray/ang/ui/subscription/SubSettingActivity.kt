@@ -64,6 +64,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -324,12 +325,11 @@ fun SubSettingScreen(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
                                         label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { focusTargets.edit.requestFocus() },
-                                            onMoveRight = { focusTargets.toggle.requestFocus() }
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: true }
+                                        modifier = Modifier.dpadRowActionNavigation(
+                                            previous = focusTargets.edit,
+                                            next = focusTargets.toggle,
+                                            previousRow = previousTargets?.delete,
+                                            nextRow = nextTargets?.delete
                                         ),
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
@@ -346,12 +346,11 @@ fun SubSettingScreen(
                                         },
                                         label = stringResource(R.string.sub_setting_enable),
                                         focusRequester = focusTargets.toggle,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { focusTargets.delete.requestFocus() },
-                                            onMoveRight = { focusTargets.toggle.requestFocus() }
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: true }
+                                        modifier = Modifier.dpadRowActionNavigation(
+                                            previous = focusTargets.delete,
+                                            next = focusTargets.toggle,
+                                            previousRow = previousTargets?.toggle,
+                                            nextRow = nextTargets?.toggle
                                         )
                                     )
                                 }

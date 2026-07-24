@@ -5,7 +5,6 @@ import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,29 +49,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppDivider
-import com.v2ray.ang.compose.AppIconButton
-import com.v2ray.ang.compose.AppListItem
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.ItemDivider
-import com.v2ray.ang.compose.colorFabActive
-import com.v2ray.ang.compose.dpadFocusOutline
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
-import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
-import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.rememberDpadFocusRequester
-import com.v2ray.ang.compose.tvMenuItemFocus
-import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.extension.toastInfo
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppDropdownMenuItems
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppListItem
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.colorFabActive
+import com.v2ray.ang.ui.compose.dpadClickable
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 
@@ -156,8 +150,6 @@ fun PerAppProxyScreen(
     var showInfoPopup by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isTelevision = isTelevisionDevice()
-    val enableInteractionSource = remember { MutableInteractionSource() }
-    val bypassInteractionSource = remember { MutableInteractionSource() }
     val backFocusRequester = rememberDpadFocusRequester(
         requestFocus = !showSearch,
         requestKey = showSearch
@@ -277,75 +269,21 @@ fun PerAppProxyScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .weight(1f)
-                            .then(
-                                if (isTelevision) {
-                                    Modifier
-                                        .dpadFocusOutline(cornerRadius = 16.dp)
-                                        .clickable(
-                                            interactionSource = enableInteractionSource,
-                                            indication = null
-                                        ) { onPerAppProxyChanged(!perAppProxyEnabled) }
-                                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.per_app_proxy_settings_enable),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = perAppProxyEnabled,
-                            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
-                            onCheckedChange = if (isTelevision) null else onPerAppProxyChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
-                            )
-                        )
-                    }
+                    PerAppModeToggle(
+                        label = stringResource(R.string.per_app_proxy_settings_enable),
+                        checked = perAppProxyEnabled,
+                        isTelevision = isTelevision,
+                        onCheckedChange = onPerAppProxyChanged,
+                        modifier = Modifier.weight(1f)
+                    )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .weight(1f)
-                            .then(
-                                if (isTelevision) {
-                                    Modifier
-                                        .dpadFocusOutline(cornerRadius = 16.dp)
-                                        .clickable(
-                                            interactionSource = bypassInteractionSource,
-                                            indication = null
-                                        ) { onBypassAppsChanged(!bypassApps) }
-                                        .padding(horizontal = 20.dp, vertical = 12.dp)
-                                } else {
-                                    Modifier
-                                }
-                            )
-                    ) {
-                        Text(
-                            text = stringResource(R.string.switch_bypass_apps_mode),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = bypassApps,
-                            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
-                            onCheckedChange = if (isTelevision) null else onBypassAppsChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
-                            )
-                        )
-                    }
+                    PerAppModeToggle(
+                        label = stringResource(R.string.switch_bypass_apps_mode),
+                        checked = bypassApps,
+                        isTelevision = isTelevision,
+                        onCheckedChange = onBypassAppsChanged,
+                        modifier = Modifier.weight(1f)
+                    )
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_about_24dp),
                         label = stringResource(R.string.action_info),
@@ -389,6 +327,45 @@ fun PerAppProxyScreen(
         TvPerAppInfoPopup(
             message = stringResource(R.string.summary_pref_per_app_proxy),
             onDismiss = { showInfoPopup = false }
+        )
+    }
+}
+
+@Composable
+private fun PerAppModeToggle(
+    label: String,
+    checked: Boolean,
+    isTelevision: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier.then(
+            if (isTelevision) {
+                Modifier
+                    .dpadFocusOutline(cornerRadius = 16.dp)
+                    .dpadClickable { onCheckedChange(!checked) }
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            } else {
+                Modifier
+            }
+        )
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
+            onCheckedChange = if (isTelevision) null else onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                checkedTrackColor = MaterialTheme.colorScheme.secondary
+            )
         )
     }
 }

@@ -35,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -117,7 +118,6 @@ fun AppTopBar(
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    val isTelevision = isTelevisionDevice()
     val navigationFocusRequester = rememberDpadFocusRequester(
         requestFocus = initialFocus && !isSearchActive,
         requestKey = isSearchActive
@@ -157,11 +157,7 @@ fun AppTopBar(
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.onSurface
             ),
-            modifier = if (isTelevision) {
-                Modifier.padding(horizontal = 48.dp, vertical = 12.dp)
-            } else {
-                Modifier
-            }
+            modifier = Modifier.tvContentPadding(horizontal = 48.dp, vertical = 12.dp)
         )
         AnimatedVisibility(
             visible = isLoading,
@@ -332,6 +328,22 @@ fun AppRowSwitch(
     }
 }
 
+/** A dropdown item with the shared TV-safe inset and focus outline. */
+@Composable
+fun AppDropdownMenuItem(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    DropdownMenuItem(
+        text = { Text(text) },
+        onClick = onClick,
+        modifier = modifier.tvMenuItemFocus(),
+        enabled = enabled
+    )
+}
+
 @Composable
 private fun SearchInputField(
     query: String,
@@ -389,16 +401,7 @@ fun AppListItem(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
-            .then(
-                if (isTelevision) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) { onCheckedChange(!checked) }
-                } else {
-                    Modifier.clickable { onCheckedChange(!checked) }
-                }
-            )
+            .dpadClickable { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -518,6 +521,8 @@ fun Modifier.dpadLongPressToMove(
     onDrop: () -> Unit,
     onMovementKeyEvent: (KeyEvent) -> Boolean
 ): Modifier {
+    if (!enabled) return this
+
     val coroutineScope = rememberCoroutineScope()
     var centerKeyDown by remember { mutableStateOf(false) }
     var movementSessionActive by remember { mutableStateOf(false) }
@@ -542,7 +547,6 @@ fun Modifier.dpadLongPressToMove(
         onLongPress()
     }
 
-    if (!enabled) return this
     return pointerInput(onClick, onLongPress) {
         detectTapGestures(
             onTap = { onClick() },

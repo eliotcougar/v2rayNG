@@ -69,6 +69,7 @@ import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -576,13 +577,11 @@ private fun ServerListItem(
                         onClick = { actions.share(row.guid, row.profile) },
                         modifier = compactActionModifier
                             .dpadFocusOutline(focusRequester = focusTargets.share)
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = { focusTargets.row.requestFocus() },
-                                onMoveRight = { focusTargets.edit.requestFocus() }
-                            )
-                            .dpadVerticalFocusNavigation(
-                                onMoveUp = { previousFocusTargets?.share?.requestFocus() ?: false },
-                                onMoveDown = { nextFocusTargets?.share?.requestFocus() ?: true }
+                            .dpadRowActionNavigation(
+                                previous = focusTargets.row,
+                                next = focusTargets.edit,
+                                previousRow = previousFocusTargets?.share,
+                                nextRow = nextFocusTargets?.share
                             )
                     ) {
                         Icon(
@@ -595,13 +594,11 @@ private fun ServerListItem(
                         onClick = { actions.edit(row.guid, row.profile) },
                         modifier = compactActionModifier
                             .dpadFocusOutline(focusRequester = focusTargets.edit)
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = { focusTargets.share.requestFocus() },
-                                onMoveRight = { focusTargets.delete.requestFocus() }
-                            )
-                            .dpadVerticalFocusNavigation(
-                                onMoveUp = { previousFocusTargets?.edit?.requestFocus() ?: false },
-                                onMoveDown = { nextFocusTargets?.edit?.requestFocus() ?: true }
+                            .dpadRowActionNavigation(
+                                previous = focusTargets.share,
+                                next = focusTargets.delete,
+                                previousRow = previousFocusTargets?.edit,
+                                nextRow = nextFocusTargets?.edit
                             )
                     ) {
                         Icon(
@@ -614,13 +611,11 @@ private fun ServerListItem(
                         onClick = { actions.remove(row.guid) },
                         modifier = compactActionModifier
                             .dpadFocusOutline(focusRequester = focusTargets.delete)
-                            .dpadHorizontalFocusNavigation(
-                                onMoveLeft = { focusTargets.edit.requestFocus() },
-                                onMoveRight = { focusTargets.delete.requestFocus() }
-                            )
-                            .dpadVerticalFocusNavigation(
-                                onMoveUp = { previousFocusTargets?.delete?.requestFocus() ?: false },
-                                onMoveDown = { nextFocusTargets?.delete?.requestFocus() ?: true }
+                            .dpadRowActionNavigation(
+                                previous = focusTargets.edit,
+                                next = focusTargets.delete,
+                                previousRow = previousFocusTargets?.delete,
+                                nextRow = nextFocusTargets?.delete
                             )
                     ) {
                         Icon(

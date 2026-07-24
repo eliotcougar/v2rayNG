@@ -5,19 +5,16 @@ package com.v2ray.ang.ui.compose
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,26 +37,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
@@ -207,13 +192,14 @@ fun InputDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
     val isTelevision = isTelevisionDevice()
-    var editingIndex by remember { mutableIntStateOf(-1) }
-    var imeWasVisible by remember { mutableStateOf(false) }
+    val firstFieldFocusRequester = if (isTelevision) {
+        rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
+    } else {
+        null
+    }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val isImeVisible = WindowInsets.isImeVisible
 
     if (isTelevision) {
         LaunchedEffect(Unit) {
@@ -230,98 +216,44 @@ fun InputDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 fields.forEachIndexed { index, field ->
-                    val interactionSource = remember(index) { MutableInteractionSource() }
-                    val rowFocusRequester = remember(index) { FocusRequester() }
-                    val passiveFocusRequester =
-                        if (index == 0) firstFieldFocusRequester else rowFocusRequester
-                    val editorFocusRequester = remember(index) { FocusRequester() }
-                    var editorHasFocus by remember(index) { mutableStateOf(false) }
-                    var restorePassiveFocus by remember(index) { mutableStateOf(false) }
-
-                    fun beginEditing() {
-                        editorHasFocus = false
-                        imeWasVisible = false
-                        restorePassiveFocus = false
-                        editingIndex = index
-                    }
-
-                    fun finishEditing(restoreFocus: Boolean = false) {
-                        val wasEditing = editingIndex == index || editorHasFocus
-                        editorHasFocus = false
-                        imeWasVisible = false
-                        restorePassiveFocus = restoreFocus
-                        if (editingIndex == index) editingIndex = -1
-                        if (wasEditing) keyboardController?.hide()
-                    }
-
-                    if (isTelevision) {
-                        LaunchedEffect(editingIndex, editorHasFocus, isImeVisible) {
-                            if (editingIndex == index) {
-                                if (editorHasFocus && imeWasVisible && !isImeVisible) {
-                                    finishEditing(restoreFocus = true)
-                                } else if (editorHasFocus) {
-                                    if (isImeVisible) imeWasVisible = true
-                                    keyboardController?.show()
-                                } else {
-                                    editorFocusRequester.requestFocus()
-                                }
-                            }
-                        }
-                        LaunchedEffect(editingIndex, restorePassiveFocus) {
-                            if (editingIndex != index && restorePassiveFocus) {
-                                passiveFocusRequester.requestFocus()
-                                restorePassiveFocus = false
-                            }
-                        }
+                    val tvFieldState = if (isTelevision) {
+                        rememberTvTextFieldState(
+                            passiveFocusRequester = firstFieldFocusRequester.takeIf { index == 0 }
+                        )
+                    } else {
+                        null
                     }
 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .then(
-                                if (isTelevision) {
-                                    Modifier
-                                        .onPreviewKeyEvent { event ->
-                                            if (
-                                                event.type == KeyEventType.KeyDown &&
-                                                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
-                                                editingIndex != index
-                                            ) {
-                                                beginEditing()
-                                                true
-                                            } else {
-                                                false
-                                            }
+                                tvFieldState?.let { state ->
+                                    Modifier.tvPassiveTextFieldFocus(
+                                        state = state,
+                                        enabled = true,
+                                        onActivate = state::beginEditing,
+                                        onMoveUp = {
+                                            state.finishEditing()
+                                            focusManager.moveFocus(FocusDirection.Up)
+                                        },
+                                        onMoveDown = {
+                                            state.finishEditing()
+                                            focusManager.moveFocus(FocusDirection.Down)
                                         }
-                                        .dpadTextFieldNavigation(
-                                            onMoveUp = {
-                                                finishEditing()
-                                                focusManager.moveFocus(FocusDirection.Up)
-                                            },
-                                            onMoveDown = {
-                                                finishEditing()
-                                                focusManager.moveFocus(FocusDirection.Down)
-                                            }
-                                        )
-                                        .focusRequester(passiveFocusRequester)
-                                        .focusable(
-                                            enabled = editingIndex != index,
-                                            interactionSource = interactionSource
-                                        )
-                                } else {
-                                    Modifier
-                                }
+                                    )
+                                } ?: Modifier
                             )
                     ) {
                         OutlinedTextField(
                             value = field.value,
                             onValueChange = { onFieldChange(index, it) },
                             label = { Text(field.label) },
-                            singleLine = false,
-                            maxLines = 5,
-                            readOnly = isTelevision && editingIndex != index,
+                            singleLine = field.singleLine,
+                            maxLines = if (field.singleLine) 1 else 5,
+                            readOnly = tvFieldState != null && !tvFieldState.isEditing,
                             visualTransformation = field.visualTransformation,
-                            interactionSource = interactionSource,
+                            interactionSource = tvFieldState?.interactionSource,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
@@ -336,20 +268,9 @@ fun InputDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(
-                                    if (isTelevision) {
-                                        Modifier
-                                            .focusRequester(editorFocusRequester)
-                                            .focusProperties { canFocus = editingIndex == index }
-                                            .onFocusChanged { focusState ->
-                                                if (focusState.isFocused) {
-                                                    editorHasFocus = true
-                                                } else if (editorHasFocus) {
-                                                    finishEditing()
-                                                }
-                                            }
-                                    } else {
-                                        Modifier
-                                    }
+                                    tvFieldState?.let {
+                                        Modifier.tvTextFieldEditorFocus(it)
+                                    } ?: Modifier
                                 )
                         )
                     }

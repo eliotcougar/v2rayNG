@@ -49,6 +49,34 @@ internal class MainTopBarFocusRequesters(val start: FocusRequester) {
     val more = FocusRequester()
 }
 
+private fun List<FocusRequester>.adjacentTo(
+    current: FocusRequester,
+    offset: Int
+): FocusRequester? {
+    return getOrNull(indexOf(current) + offset)
+}
+
+@Composable
+private fun Modifier.inMainTopBarFocusOrder(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    onBeforeFirst: (() -> Unit)? = null,
+    onAfterLast: (() -> Unit)? = null
+): Modifier {
+    return dpadHorizontalFocusNavigation(
+        onMoveLeft = {
+            order.adjacentTo(current, -1)?.requestFocus()
+                ?: onBeforeFirst?.invoke()
+                ?: current.requestFocus()
+        },
+        onMoveRight = {
+            order.adjacentTo(current, 1)?.requestFocus()
+                ?: onAfterLast?.invoke()
+                ?: current.requestFocus()
+        }
+    )
+}
+
 @Composable
 internal fun rememberMainTopBarFocusRequesters(showSearch: Boolean): MainTopBarFocusRequesters {
     val start = rememberDpadFocusRequester(
@@ -87,6 +115,16 @@ internal fun MainTopBar(
         onMoveUp = { false },
         onMoveDown = onMoveDown
     )
+    val focusOrder = remember(isRunning, focusRequesters) {
+        buildList {
+            add(focusRequesters.start)
+            if (isRunning) add(focusRequesters.test)
+            add(focusRequesters.search)
+            add(focusRequesters.add)
+            if (isRunning) add(focusRequesters.restart)
+            add(focusRequesters.more)
+        }
+    }
 
     AppTopBar(
         title = stringResource(R.string.title_server),
@@ -149,12 +187,10 @@ internal fun MainTopBar(
                     },
                     onClick = { onAction(MainAction.ToggleService) },
                     focusRequester = focusRequesters.start,
-                    modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                        onMoveLeft = { onOpenDrawer(focusRequesters.start) },
-                        onMoveRight = {
-                            if (isRunning) focusRequesters.test.requestFocus()
-                            else focusRequesters.search.requestFocus()
-                        }
+                    modifier = moveDownModifier.inMainTopBarFocusOrder(
+                        current = focusRequesters.start,
+                        order = focusOrder,
+                        onBeforeFirst = { onOpenDrawer(focusRequesters.start) }
                     ),
                     containerColor = if (isRunning) colorFabActive else Color.Transparent,
                     contentColor = if (isRunning) Color.White else null
@@ -165,9 +201,9 @@ internal fun MainTopBar(
                         label = stringResource(R.string.connection_test_pending),
                         onClick = { onAction(MainAction.TestCurrentServer) },
                         focusRequester = focusRequesters.test,
-                        modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = { focusRequesters.start.requestFocus() },
-                            onMoveRight = { focusRequesters.search.requestFocus() }
+                        modifier = moveDownModifier.inMainTopBarFocusOrder(
+                            current = focusRequesters.test,
+                            order = focusOrder
                         )
                     )
                 }
@@ -176,12 +212,9 @@ internal fun MainTopBar(
                     label = stringResource(R.string.menu_item_search),
                     onClick = { onSearchToggle(true) },
                     focusRequester = focusRequesters.search,
-                    modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                        onMoveLeft = {
-                            if (isRunning) focusRequesters.test.requestFocus()
-                            else focusRequesters.start.requestFocus()
-                        },
-                        onMoveRight = { focusRequesters.add.requestFocus() }
+                    modifier = moveDownModifier.inMainTopBarFocusOrder(
+                        current = focusRequesters.search,
+                        order = focusOrder
                     )
                 )
             } else if (!showSearch) {
@@ -200,12 +233,9 @@ internal fun MainTopBar(
                         label = stringResource(R.string.menu_item_add_config),
                         onClick = { showImportMenu = true },
                         focusRequester = focusRequesters.add,
-                        modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = { focusRequesters.search.requestFocus() },
-                            onMoveRight = {
-                                if (isRunning && isTelevision) focusRequesters.restart.requestFocus()
-                                else focusRequesters.more.requestFocus()
-                            }
+                        modifier = moveDownModifier.inMainTopBarFocusOrder(
+                            current = focusRequesters.add,
+                            order = focusOrder
                         )
                     )
                     DropdownMenu(
@@ -231,9 +261,9 @@ internal fun MainTopBar(
                         label = stringResource(R.string.title_service_restart),
                         onClick = { onAction(MainAction.RestartService) },
                         focusRequester = focusRequesters.restart,
-                        modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = { focusRequesters.add.requestFocus() },
-                            onMoveRight = { focusRequesters.more.requestFocus() }
+                        modifier = moveDownModifier.inMainTopBarFocusOrder(
+                            current = focusRequesters.restart,
+                            order = focusOrder
                         )
                     )
                 }
@@ -243,12 +273,9 @@ internal fun MainTopBar(
                         label = stringResource(R.string.action_more),
                         onClick = { showMenu = true },
                         focusRequester = focusRequesters.more,
-                        modifier = moveDownModifier.dpadHorizontalFocusNavigation(
-                            onMoveLeft = {
-                                if (isRunning && isTelevision) focusRequesters.restart.requestFocus()
-                                else focusRequesters.add.requestFocus()
-                            },
-                            onMoveRight = { focusRequesters.more.requestFocus() }
+                        modifier = moveDownModifier.inMainTopBarFocusOrder(
+                            current = focusRequesters.more,
+                            order = focusOrder
                         )
                     )
                     DropdownMenu(
@@ -260,11 +287,7 @@ internal fun MainTopBar(
                             .heightIn(max = maxMenuHeight)
                             .dpadPopupHorizontalNavigation(onMovePrevious = {
                                 showMenu = false
-                                if (isRunning && isTelevision) {
-                                    focusRequesters.restart.requestFocus()
-                                } else {
-                                    focusRequesters.add.requestFocus()
-                                }
+                                focusOrder.adjacentTo(focusRequesters.more, -1)?.requestFocus()
                             })
                             .verticalScrollbar(moreMenuScrollState)
                     ) {

@@ -44,6 +44,7 @@ import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 
@@ -203,7 +204,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .then(if (isTelevision) Modifier.padding(horizontal = 48.dp) else Modifier)
+                .tvContentPadding()
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
         ) {

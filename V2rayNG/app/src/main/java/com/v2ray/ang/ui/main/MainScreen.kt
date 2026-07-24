@@ -38,6 +38,8 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalAppSnackbar
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -55,6 +57,7 @@ fun MainScreen(
     onAction: (MainAction) -> Unit,
     onNavigate: (MainDestination) -> Unit,
 ) {
+    val isTelevision = isTelevisionDevice()
     val uiState by mainViewModel.uiState.collectAsStateWithLifecycle()
     val groups = uiState.groups
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
@@ -133,10 +136,7 @@ fun MainScreen(
     LaunchedEffect(drawerState.targetValue, resumeFocusGeneration, isTelevision) {
         if (!isTelevision || drawerState.targetValue != DrawerValue.Closed) return@LaunchedEffect
         val requester = mainFocusToRestore ?: topBarFocus.start
-        repeat(30) {
-            if (requester.requestFocus() || topBarFocus.start.requestFocus()) return@LaunchedEffect
-            withFrameNanos { }
-        }
+        requestFocusWhenReady(requester, topBarFocus.start)
     }
 
     BackHandler(enabled = isTelevision && showSearch) {

@@ -54,26 +54,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.ItemDivider
-import com.v2ray.ang.compose.AppIconButton
-import com.v2ray.ang.compose.AppRowSwitch
-import com.v2ray.ang.compose.ConfirmDialog
-import com.v2ray.ang.compose.tvMenuItemFocus
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.ReorderableListItem
-import com.v2ray.ang.compose.SelectListDialog
-import com.v2ray.ang.compose.SettingsListItem
-import com.v2ray.ang.compose.colorConfigType
-import com.v2ray.ang.compose.colorFabActive
-import com.v2ray.ang.compose.dpadFocusOutline
-import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
-import com.v2ray.ang.compose.dpadLongPressToMove
-import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
-import com.v2ray.ang.compose.dpadVerticalFocusNavigation
-import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.verticalScrollbar
-import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.enums.RoutingType
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
@@ -81,13 +61,25 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDropdownMenuItems
+import com.v2ray.ang.ui.compose.AppIconButton
+import com.v2ray.ang.ui.compose.AppRowSwitch
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.ConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.colorConfigType
+import com.v2ray.ang.ui.compose.colorFabActive
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
@@ -479,12 +471,11 @@ fun RoutingSettingScreen(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { focusTargets.row.requestFocus() },
-                                            onMoveRight = { focusTargets.delete.requestFocus() }
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: true }
+                                        modifier = Modifier.dpadRowActionNavigation(
+                                            previous = focusTargets.row,
+                                            next = focusTargets.delete,
+                                            previousRow = previousTargets?.edit,
+                                            nextRow = nextTargets?.edit
                                         ),
                                         onClick = { onEditRule(index) }
                                     )
@@ -492,12 +483,11 @@ fun RoutingSettingScreen(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
                                         label = stringResource(R.string.action_delete),
                                         focusRequester = focusTargets.delete,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { focusTargets.edit.requestFocus() },
-                                            onMoveRight = { focusTargets.toggle.requestFocus() }
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.delete?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.delete?.requestFocus() ?: true }
+                                        modifier = Modifier.dpadRowActionNavigation(
+                                            previous = focusTargets.edit,
+                                            next = focusTargets.toggle,
+                                            previousRow = previousTargets?.delete,
+                                            nextRow = nextTargets?.delete
                                         ),
                                         onClick = { deleteRuleId = ruleset.id }
                                     )
@@ -510,12 +500,11 @@ fun RoutingSettingScreen(
                                         },
                                         label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = focusTargets.toggle,
-                                        modifier = Modifier.dpadHorizontalFocusNavigation(
-                                            onMoveLeft = { focusTargets.delete.requestFocus() },
-                                            onMoveRight = { focusTargets.toggle.requestFocus() }
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.toggle?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.toggle?.requestFocus() ?: true }
+                                        modifier = Modifier.dpadRowActionNavigation(
+                                            previous = focusTargets.delete,
+                                            next = focusTargets.toggle,
+                                            previousRow = previousTargets?.toggle,
+                                            nextRow = nextTargets?.toggle
                                         )
                                     )
                                 }
@@ -539,7 +528,7 @@ fun RoutingSettingScreen(
                                     modifier = Modifier.scale(0.7f),
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                        checkedTrackColor = colorFabActive
+                                        checkedTrackColor = MaterialTheme.colorScheme.secondary
                                     )
                                 )
                                 }
@@ -579,79 +568,5 @@ fun RoutingSettingScreen(
             },
             onDismiss = { showPresetDialog = false }
         )
-    }
-}
-
-@Composable
-private fun RoutingRulesetItem(
-    ruleset: RulesetItem,
-    onEdit: () -> Unit,
-    onEnabledChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = ruleset.remarks ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (ruleset.locked == true) {
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        painter = painterResource(R.drawable.ic_lock_24dp),
-                        contentDescription = stringResource(R.string.acc_locked),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            val domainIpInfo = (ruleset.domain ?: ruleset.ip ?: ruleset.process ?: ruleset.port)?.toString() ?: ""
-            if (domainIpInfo.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = domainIpInfo,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            if (!ruleset.outboundTag.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = ruleset.outboundTag,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colorConfigType
-                )
-            }
-        }
-
-        Column(
-            horizontalAlignment = Alignment.End,
-            modifier = Modifier.padding(start = 8.dp)
-        ) {
-            AppIconButton(
-                icon = painterResource(R.drawable.ic_edit_24dp),
-                label = stringResource(R.string.acc_edit),
-                onClick = onEdit
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Switch(
-                checked = ruleset.enabled ?: false,
-                onCheckedChange = onEnabledChange,
-                modifier = Modifier.scale(0.7f),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                    checkedTrackColor = MaterialTheme.colorScheme.secondary
-                )
-            )
-        }
     }
 }

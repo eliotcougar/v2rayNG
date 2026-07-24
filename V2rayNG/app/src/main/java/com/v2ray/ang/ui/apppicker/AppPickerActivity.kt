@@ -30,13 +30,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppDropdownMenuItem
 import com.v2ray.ang.compose.AppListItem
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
 import com.v2ray.ang.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
-import com.v2ray.ang.compose.tvMenuItemFocus
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.AppInfo

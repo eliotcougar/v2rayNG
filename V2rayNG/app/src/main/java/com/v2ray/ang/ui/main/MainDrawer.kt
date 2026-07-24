@@ -4,8 +4,6 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -55,10 +52,12 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
@@ -82,13 +81,15 @@ private val primaryDrawerItems = listOf(
     MainDestination.Settings
 )
 
-private val drawerItems = primaryDrawerItems + listOf(
+private val secondaryDrawerItems = listOf(
     MainDestination.Promotion,
     MainDestination.Logcat,
     MainDestination.CheckUpdate,
     MainDestination.BackupRestore,
     MainDestination.About
 )
+
+private val drawerItems = primaryDrawerItems + secondaryDrawerItems
 
 @Composable
 fun MainDrawerContent(
@@ -99,17 +100,14 @@ fun MainDrawerContent(
     onNavigate: (MainDestination) -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    val focusRequesters = remember(drawerItems) {
+    val focusRequesters = remember {
         List(drawerItems.size) { FocusRequester() }
     }
     val drawerScrollState = rememberScrollState()
 
     LaunchedEffect(isTelevision, isOpen, focusGeneration, focusRequesters) {
         if (isTelevision && isOpen) {
-            repeat(30) {
-                withFrameNanos { }
-                if (focusRequesters.firstOrNull()?.requestFocus() == true) return@LaunchedEffect
-            }
+            focusRequesters.firstOrNull()?.let { requestFocusWhenReady(it) }
         }
     }
 
@@ -212,7 +210,6 @@ fun DrawerMenuItem(
     onMoveToContent: () -> Unit = {}
 ) {
     val isTelevision = isTelevisionDevice()
-    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .then(if (isTelevision) Modifier.padding(horizontal = 12.dp) else Modifier)
@@ -227,17 +224,7 @@ fun DrawerMenuItem(
                 onMoveUp = { onMoveUp(); true },
                 onMoveDown = { onMoveDown(); true }
             )
-            .then(
-                if (isTelevision) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick
-                    )
-                } else {
-                    Modifier.clickable(onClick = onClick)
-                }
-            )
+            .dpadClickable(onClick = onClick)
             .background(
                 if (selected) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                 else Color.Transparent

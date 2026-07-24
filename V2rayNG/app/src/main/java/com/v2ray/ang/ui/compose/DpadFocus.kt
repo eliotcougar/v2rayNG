@@ -3,6 +3,8 @@ package com.v2ray.ang.ui.compose
 import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +31,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -51,15 +54,24 @@ fun rememberDpadFocusRequester(
 ): FocusRequester {
     val isTelevision = isTelevisionDevice()
     val requester = remember { FocusRequester() }
-    LaunchedEffect(isTelevision, requestFocus, requestKey) {
-        if (isTelevision && requestFocus) {
-            repeat(30) {
-                withFrameNanos { }
-                if (requester.requestFocus()) return@LaunchedEffect
-            }
+    if (isTelevision && requestFocus) {
+        LaunchedEffect(requester, requestKey) {
+            requestFocusWhenReady(requester)
         }
     }
     return requester
+}
+
+/**
+ * Focus nodes can be composed a frame after their surrounding screen or drawer. Try immediately
+ * for responsive TV navigation, then retry on subsequent frames while the node is being attached.
+ */
+suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
+    repeat(30) {
+        if (requesters.any { it.requestFocus() }) return true
+        withFrameNanos { }
+    }
+    return false
 }
 
 /**
@@ -119,6 +131,29 @@ fun Modifier.tvMenuItemFocus(): Modifier {
 fun Modifier.tvContentPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
     if (!isTelevisionDevice()) return this
     return padding(horizontal = horizontal, vertical = vertical)
+}
+
+/**
+ * Uses the normal Material indication on touch devices and the explicit focus outline on TV.
+ * This keeps the platform distinction in one place instead of duplicating clickable branches.
+ */
+@Composable
+fun Modifier.dpadClickable(
+    enabled: Boolean = true,
+    role: Role? = null,
+    onClick: () -> Unit
+): Modifier {
+    if (!isTelevisionDevice()) {
+        return clickable(enabled = enabled, role = role, onClick = onClick)
+    }
+    val interactionSource = remember { MutableInteractionSource() }
+    return clickable(
+        interactionSource = interactionSource,
+        indication = null,
+        enabled = enabled,
+        role = role,
+        onClick = onClick
+    )
 }
 
 /** Gives TV rows an explicit left/right focus chain while leaving touch devices unchanged. */
@@ -191,6 +226,26 @@ fun Modifier.dpadVerticalFocusNavigation(
             else -> false
         }
     }
+}
+
+/**
+ * Applies the uniform action-column navigation used by list rows. Down is consumed at the final
+ * row so focus cannot escape beyond the list; Up may fall back to the surrounding screen.
+ */
+@Composable
+fun Modifier.dpadRowActionNavigation(
+    previous: FocusRequester,
+    next: FocusRequester,
+    previousRow: FocusRequester?,
+    nextRow: FocusRequester?
+): Modifier {
+    return dpadHorizontalFocusNavigation(
+        onMoveLeft = { previous.requestFocus() },
+        onMoveRight = { next.requestFocus() }
+    ).dpadVerticalFocusNavigation(
+        onMoveUp = { previousRow?.requestFocus() ?: false },
+        onMoveDown = { nextRow?.requestFocus() ?: true }
+    )
 }
 
 /**
