@@ -47,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
@@ -271,6 +272,7 @@ private fun ServerListPage(
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
+                val isMoving = dpadReorderState.isMoving(row.guid)
                 val content: @Composable () -> Unit = {
                     ServerCollectionItem(
                         row, index, rows, rowFocusTargets, ServerRowLayout.TwoColumn,
@@ -280,8 +282,8 @@ private fun ServerListPage(
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
-                    ReorderableItem(reorderableGridState, key = row.guid) { isDragging ->
-                        ReorderableGridItem(this, isDragging, dpadReorderState.isMoving(row.guid)) { content() }
+                    ReorderableItem(reorderableGridState, key = row.guid, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
+                        ReorderableGridItem(this, isDragging, isMoving, moveModeCornerRadius = 12.dp) { content() }
                     }
                 } else {
                     content()
@@ -310,6 +312,7 @@ private fun ServerListPage(
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
+                val isMoving = dpadReorderState.isMoving(row.guid)
                 val content: @Composable () -> Unit = {
                     ServerCollectionItem(
                         row, index, rows, rowFocusTargets, ServerRowLayout.SingleColumn,
@@ -317,8 +320,8 @@ private fun ServerListPage(
                     )
                 }
                 if (canReorder && reorderableState != null) {
-                    ReorderableItem(reorderableState, key = row.guid) { isDragging ->
-                        ReorderableListItem(this, isDragging, dpadReorderState.isMoving(row.guid)) { content() }
+                    ReorderableItem(reorderableState, key = row.guid, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
+                        ReorderableListItem(this, isDragging, isMoving, moveModeCornerRadius = 12.dp) { content() }
                     }
                 } else {
                     content()
@@ -356,7 +359,7 @@ private fun LocateTargetEffect(
 
 @Composable
 private fun ServerItemDivider() {
-    AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (isTelevisionDevice()) 1.dp else 0.dp))
+    AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (isTelevisionDevice()) 2.dp else 0.dp))
 }
 
 @Composable

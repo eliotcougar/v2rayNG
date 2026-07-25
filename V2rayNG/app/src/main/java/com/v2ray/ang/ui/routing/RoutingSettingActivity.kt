@@ -45,6 +45,7 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
@@ -334,7 +335,7 @@ fun RoutingSettingScreen(
                 val actionFocusOrder = remember(focusTargets) {
                     listOf(focusTargets.row, focusTargets.edit, focusTargets.delete, focusTargets.toggle)
                 }
-                ReorderableItem(reorderableState, key = ruleset.id) { isDragging ->
+                ReorderableItem(reorderableState, key = ruleset.id, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                     ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier

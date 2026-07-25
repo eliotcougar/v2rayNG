@@ -43,6 +43,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.AppConfig
@@ -229,7 +230,7 @@ fun SubSettingScreen(
                         add(focusTargets.toggle)
                     }
                 }
-                ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
+                ReorderableItem(reorderableState, key = subCache.guid, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                     ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier

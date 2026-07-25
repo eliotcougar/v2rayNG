@@ -35,6 +35,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
@@ -459,7 +460,7 @@ fun ProxyChainScreen(
                     listOf(focusTargets.field, focusTargets.remove)
                 }
 
-                ReorderableItem(reorderableState, key = memberId) { isDragging ->
+                ReorderableItem(reorderableState, key = memberId, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                     ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier

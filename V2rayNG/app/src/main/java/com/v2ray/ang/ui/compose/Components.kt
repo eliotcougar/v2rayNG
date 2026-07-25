@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -74,6 +75,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -472,35 +474,26 @@ fun ReorderableListItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
     isMoving: Boolean = false,
+    moveModeCornerRadius: Dp = 16.dp,
     content: @Composable RowScope.() -> Unit
 ) {
     val elevation by reorderableElevation(isDragging, isMoving)
-    val shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .zIndex(if (isMoving) 1f else 0f),
-        shape = shape,
-        color = if (isMoving) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        border = if (isMoving) {
-            BorderStroke(4.dp, MaterialTheme.colorScheme.secondary)
-        } else {
-            null
-        },
-        shadowElevation = elevation,
-        tonalElevation = if (isMoving) 8.dp else 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(with(scope) { reorderableDragHandle() }),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content
-        )
+    val shape = if (isMoving) RoundedCornerShape(moveModeCornerRadius) else RectangleShape
+    Box(Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = shape,
+            color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shadowElevation = elevation,
+            tonalElevation = if (isMoving) 8.dp else 0.dp
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().then(with(scope) { reorderableDragHandle() }),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content
+            )
+        }
+        if (isMoving) Box(Modifier.matchParentSize().border(4.dp, MaterialTheme.colorScheme.secondary, shape))
     }
 }
 
@@ -509,29 +502,21 @@ fun ReorderableGridItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
     isMoving: Boolean = false,
+    moveModeCornerRadius: Dp = 16.dp,
     content: @Composable () -> Unit
 ) {
     val elevation by reorderableElevation(isDragging, isMoving)
-    val shape = if (isMoving) RoundedCornerShape(16.dp) else RectangleShape
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .zIndex(if (isMoving) 1f else 0f)
-            .then(with(scope) { reorderableDragHandle() }),
-        shape = shape,
-        color = if (isMoving) {
-            MaterialTheme.colorScheme.secondaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        },
-        border = if (isMoving) {
-            BorderStroke(4.dp, MaterialTheme.colorScheme.secondary)
-        } else {
-            null
-        },
-        shadowElevation = elevation,
-        tonalElevation = if (isMoving) 8.dp else 0.dp
-    ) {
-        content()
+    val shape = if (isMoving) RoundedCornerShape(moveModeCornerRadius) else RectangleShape
+    Box(Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().then(with(scope) { reorderableDragHandle() }),
+            shape = shape,
+            color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shadowElevation = elevation,
+            tonalElevation = if (isMoving) 8.dp else 0.dp
+        ) {
+            content()
+        }
+        if (isMoving) Box(Modifier.matchParentSize().border(4.dp, MaterialTheme.colorScheme.secondary, shape))
     }
 }
