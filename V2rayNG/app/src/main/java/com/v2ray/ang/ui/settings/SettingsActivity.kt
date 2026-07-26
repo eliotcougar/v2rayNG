@@ -52,10 +52,6 @@ class SettingsActivity : BaseComponentActivity() {
 
     private val viewModel: SettingsViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
-
     @Composable
     override fun ScreenContent() {
         SettingsScreen(

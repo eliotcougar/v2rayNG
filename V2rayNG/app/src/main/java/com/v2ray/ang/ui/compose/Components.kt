@@ -41,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -49,6 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.OutlinedTextField as MaterialOutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -87,9 +87,11 @@ import sh.calvin.reorderable.ReorderableCollectionItemScope
 
 private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
 
+internal data class AppTopBarAction(val icon: Painter, val label: String, val onClick: () -> Unit, val enabled: Boolean = true)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTopBar(
+internal fun AppTopBar(
     title: String,
     onBackClick: () -> Unit,
     initialFocus: Boolean = true,
@@ -102,6 +104,9 @@ fun AppTopBar(
     titleContent: (@Composable () -> Unit)? = null,
     navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
+    actionItems: List<AppTopBarAction> = emptyList(),
+    customActionFocusRequesters: List<FocusRequester> = emptyList(),
+    onMoveDown: (() -> Boolean)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val defaultNavigationFocusRequester = rememberDpadFocusRequester(
@@ -110,12 +115,33 @@ fun AppTopBar(
     )
     val resolvedNavigationFocusRequester =
         navigationFocusRequester ?: defaultNavigationFocusRequester
+    val actionFocusRequesters = remember(actionItems.size) {
+        List(actionItems.size) { FocusRequester() }
+    }
+    val resolvedActionFocusRequesters = if (actionItems.isEmpty()) {
+        customActionFocusRequesters
+    } else {
+        actionFocusRequesters
+    }
+    val topBarFocusOrder = remember(resolvedNavigationFocusRequester, resolvedActionFocusRequesters) {
+        listOf(resolvedNavigationFocusRequester) + resolvedActionFocusRequesters
+    }
+    val navigationModifier = Modifier.dpadTopBarFocusNavigation(
+        resolvedNavigationFocusRequester,
+        topBarFocusOrder,
+        onMoveDown = { onMoveDown?.invoke() ?: false }
+    )
 
     Column {
         TopAppBar(
             title = {
                 if (isSearchActive) {
-                    SearchInputField(searchQuery, onSearchQueryChange, searchPlaceholder)
+                    SearchInputField(
+                        searchQuery,
+                        onSearchQueryChange,
+                        searchPlaceholder,
+                        onMovePrevious = { resolvedNavigationFocusRequester.requestFocus() }
+                    )
                 } else if (titleContent != null) {
                     titleContent()
                 } else {
@@ -130,11 +156,29 @@ fun AppTopBar(
                         icon = painterResource(R.drawable.ic_arrow_back_24dp),
                         label = stringResource(R.string.action_back),
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        focusRequester = resolvedNavigationFocusRequester
+                        focusRequester = resolvedNavigationFocusRequester,
+                        modifier = navigationModifier
                     )
                 }
             },
-            actions = actions,
+            actions = {
+                actionItems.forEachIndexed { index, action ->
+                    val focusRequester = actionFocusRequesters[index]
+                    AppIconButton(
+                        icon = action.icon,
+                        label = action.label,
+                        onClick = action.onClick,
+                        enabled = action.enabled,
+                        focusRequester = focusRequester,
+                        modifier = Modifier.dpadTopBarFocusNavigation(
+                            focusRequester,
+                            topBarFocusOrder,
+                            onMoveDown = { onMoveDown?.invoke() ?: false }
+                        )
+                    )
+                }
+                actions()
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -240,7 +284,7 @@ fun AppIconButton(
  * 48 dp focus target. An optional label expands inside the focused outline.
  */
 @Composable
-fun TvExpandableSwitch(
+fun AppRowSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -314,11 +358,16 @@ fun AppDropdownMenuItem(text: String, onClick: () -> Unit, modifier: Modifier = 
 }
 
 @Composable
-private fun SearchInputField(query: String, onQueryChange: (String) -> Unit, placeholder: String?) {
+private fun SearchInputField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    placeholder: String?,
+    onMovePrevious: () -> Unit
+) {
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) { requestFocusWhenReady(focusRequester) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
+        MaterialOutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
             singleLine = true,
@@ -339,6 +388,7 @@ private fun SearchInputField(query: String, onQueryChange: (String) -> Unit, pla
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focusRequester)
+                .dpadMovePreviousNavigation(onMovePrevious)
         )
         if (query.isNotEmpty()) {
             AppIconButton(
@@ -357,7 +407,8 @@ fun AppListItem(
     icon: Any?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
     val isTelevision = isTelevisionDevice()
@@ -365,7 +416,7 @@ fun AppListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .dpadFocusOutline()
+            .dpadFocusOutline(focusRequester = focusRequester)
             .dpadClickable { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -470,39 +521,11 @@ fun ReorderableCollectionItemScope.reorderableDragHandle(): Modifier {
 }
 
 @Composable
-fun ReorderableListItem(
+private fun ReorderableSurface(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
-    isMoving: Boolean = false,
-    moveModeCornerRadius: Dp = 16.dp,
-    content: @Composable RowScope.() -> Unit
-) {
-    val elevation by reorderableElevation(isDragging, isMoving)
-    val shape = if (isMoving) RoundedCornerShape(moveModeCornerRadius) else RectangleShape
-    Box(Modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = shape,
-            color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-            shadowElevation = elevation,
-            tonalElevation = if (isMoving) 8.dp else 0.dp
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().then(with(scope) { reorderableDragHandle() }),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content
-            )
-        }
-        if (isMoving) Box(Modifier.matchParentSize().border(4.dp, MaterialTheme.colorScheme.secondary, shape))
-    }
-}
-
-@Composable
-fun ReorderableGridItem(
-    scope: ReorderableCollectionItemScope,
-    isDragging: Boolean,
-    isMoving: Boolean = false,
-    moveModeCornerRadius: Dp = 16.dp,
+    isMoving: Boolean,
+    moveModeCornerRadius: Dp,
     content: @Composable () -> Unit
 ) {
     val elevation by reorderableElevation(isDragging, isMoving)
@@ -514,9 +537,29 @@ fun ReorderableGridItem(
             color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
             shadowElevation = elevation,
             tonalElevation = if (isMoving) 8.dp else 0.dp
-        ) {
-            content()
-        }
+        ) { content() }
         if (isMoving) Box(Modifier.matchParentSize().border(4.dp, MaterialTheme.colorScheme.secondary, shape))
     }
 }
+
+@Composable
+fun ReorderableListItem(
+    scope: ReorderableCollectionItemScope,
+    isDragging: Boolean,
+    isMoving: Boolean = false,
+    moveModeCornerRadius: Dp = 16.dp,
+    content: @Composable RowScope.() -> Unit
+) {
+    ReorderableSurface(scope, isDragging, isMoving, moveModeCornerRadius) {
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
+@Composable
+fun ReorderableGridItem(
+    scope: ReorderableCollectionItemScope,
+    isDragging: Boolean,
+    isMoving: Boolean = false,
+    moveModeCornerRadius: Dp = 16.dp,
+    content: @Composable () -> Unit
+) = ReorderableSurface(scope, isDragging, isMoving, moveModeCornerRadius, content)

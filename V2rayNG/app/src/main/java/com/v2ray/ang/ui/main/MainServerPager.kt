@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,18 +23,20 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -63,13 +64,14 @@ import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
+import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
-import com.v2ray.ang.ui.compose.rememberDpadReorderState
+import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
 import com.v2ray.ang.ui.compose.twoColumnDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
@@ -106,14 +108,14 @@ private data class ServerRowActions(
     val more: () -> Unit,
     val movePrevious: ((FocusRequester) -> Unit)?,
     val moveUp: (() -> Unit)?,
-    val reorderItem: DpadReorderItem
+    val reorderItem: DpadReorderItem?
 )
 
 private data class ServerCollectionActions(
     val select: (String) -> Unit,
     val edit: (String, ProfileItem) -> Unit,
-    val share: (String, ProfileItem) -> Unit,
-    val more: (String, ProfileItem) -> Unit,
+    val share: (String, ProfileItem, FocusRequester) -> Unit,
+    val more: (String, ProfileItem, FocusRequester) -> Unit,
     val remove: (String) -> Unit,
     val move: (Int, Int) -> Unit,
     val movePrevious: (FocusRequester) -> Unit,
@@ -130,7 +132,8 @@ private fun ServerCollectionItem(
     reorderState: DpadReorderState,
     reorderTarget: (Int, DpadReorderDirection) -> Int,
     collectionActions: ServerCollectionActions,
-    selectedGuid: String?
+    selectedGuid: String?,
+    canReorder: Boolean
 ) {
     val stride = if (layout == ServerRowLayout.TwoColumn) 2 else 1
     val current = focusRequesters.getValue(row.guid)
@@ -142,9 +145,9 @@ private fun ServerCollectionItem(
     val adjacentColumn = if (layout == ServerRowLayout.TwoColumn && index % 2 == 0) {
         rows.getOrNull(index + 1)?.let { focusRequesters[it.guid] }
     } else null
-    val reorderItem = DpadReorderItem(
-        reorderState, row.guid, index, rows.size, reorderTarget, collectionActions.move
-    )
+    val reorderItem = if (canReorder) {
+        DpadReorderItem(reorderState, row.guid, index, rows.size, reorderTarget, collectionActions.move)
+    } else null
 
     Column {
         ServerListItem(
@@ -153,9 +156,9 @@ private fun ServerCollectionItem(
             actions = ServerRowActions(
                 select = { collectionActions.select(row.guid) },
                 edit = { collectionActions.edit(row.guid, row.profile) },
-                share = { collectionActions.share(row.guid, row.profile) },
+                share = { collectionActions.share(row.guid, row.profile, current.share) },
                 remove = { collectionActions.remove(row.guid) },
-                more = { collectionActions.more(row.guid, row.profile) },
+                more = { collectionActions.more(row.guid, row.profile, current.row) },
                 movePrevious = previousColumn?.let { target ->
                     { _: FocusRequester -> target.more.requestFocus() }
                 } ?: collectionActions.movePrevious,
@@ -181,14 +184,14 @@ fun GroupPagerPage(
     lazyGridStates: MutableMap<String, LazyGridState>,
     onSelectServer: (String) -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem) -> Unit,
-    onMoreServer: (String, ProfileItem) -> Unit,
+    onShareServer: (String, ProfileItem, FocusRequester) -> Unit,
+    onMoreServer: (String, ProfileItem, FocusRequester) -> Unit,
     onRemoveServer: (String) -> Unit,
     onOpenDrawer: (FocusRequester) -> Unit,
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
-    val groupStateFlow = remember(groupId) { mainViewModel.serverGroupState(groupId) }
+    val groupStateFlow = remember(mainViewModel, groupId) { mainViewModel.serverGroupState(groupId) }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
     ServerListPage(
@@ -211,7 +214,7 @@ fun GroupPagerPage(
             movePrevious = onOpenDrawer,
             moveUpFromFirstRow = onMoveUpFromFirstRow
         ),
-        onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
+        onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
         contentPadding = contentPadding
     )
 }
@@ -228,7 +231,7 @@ private fun ServerListPage(
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
     collectionActions: ServerCollectionActions,
-    onLocateHandled: () -> Unit,
+    onLocateHandled: (LocateTarget) -> Unit,
     contentPadding: PaddingValues
 ) {
     val isTelevision = isTelevisionDevice()
@@ -236,17 +239,15 @@ private fun ServerListPage(
     val serverGuids = rows.map { it.guid }
     val serverGuidSet = serverGuids.toSet()
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val dpadReorderState = rememberDpadReorderState(groupId)
     val rowFocusTargets = remember(groupId, serverGuidSet, doubleColumnDisplay) {
         rows.associate { it.guid to ServerRowFocusRequesters() }
     }
-    LaunchedEffect(canReorder, serverGuids) {
-        dpadReorderState.syncItems(serverGuids, enabled = isTelevision && canReorder)
-    }
-    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex) {
-        val guid = dpadReorderState.movingKey as? String ?: return@LaunchedEffect
-        withFrameNanos { }
-        rowFocusTargets[guid]?.row?.requestFocus()
+    val dpadReorderState = rememberSyncedDpadReorderState(
+        keys = serverGuids,
+        enabled = isTelevision && canReorder,
+        stateKey = groupId
+    ) { key ->
+        (key as? String)?.let { rowFocusTargets[it]?.row?.requestFocus() }
     }
 
     if (doubleColumnDisplay) {
@@ -278,7 +279,7 @@ private fun ServerListPage(
                         row, index, rows, rowFocusTargets, ServerRowLayout.TwoColumn,
                         dpadReorderState,
                         { currentIndex, direction -> twoColumnDpadReorderTarget(currentIndex, direction, isRtl) },
-                        collectionActions, selectedGuid
+                        collectionActions, selectedGuid, canReorder
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
@@ -316,7 +317,7 @@ private fun ServerListPage(
                 val content: @Composable () -> Unit = {
                     ServerCollectionItem(
                         row, index, rows, rowFocusTargets, ServerRowLayout.SingleColumn,
-                        dpadReorderState, ::verticalDpadReorderTarget, collectionActions, selectedGuid
+                        dpadReorderState, ::verticalDpadReorderTarget, collectionActions, selectedGuid, canReorder
                     )
                 }
                 if (canReorder && reorderableState != null) {
@@ -333,27 +334,29 @@ private fun ServerListPage(
 
 @Composable
 private fun LocateTargetEffect(
-    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyListState, onHandled: () -> Unit
+    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyListState,
+    onHandled: (LocateTarget) -> Unit
 ) {
     if (target == null) return
     LaunchedEffect(target, rows) {
         val index = rows.indexOfFirst { it.guid == target.serverGuid }
         if (index < 0) return@LaunchedEffect
         state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
-        onHandled()
+        onHandled(target)
     }
 }
 
 @Composable
 private fun LocateTargetEffect(
-    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyGridState, onHandled: () -> Unit
+    target: LocateTarget?, rows: List<ServerRowUiModel>, state: LazyGridState,
+    onHandled: (LocateTarget) -> Unit
 ) {
     if (target == null) return
     LaunchedEffect(target, rows) {
         val index = rows.indexOfFirst { it.guid == target.serverGuid }
         if (index < 0) return@LaunchedEffect
         state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
-        onHandled()
+        onHandled(target)
     }
 }
 
@@ -375,7 +378,9 @@ private fun ServerListItem(
     val nextFocus = focusTargets.next
     val isTwoColumn = focusTargets.layout == ServerRowLayout.TwoColumn
     val reorderItem = actions.reorderItem
-    val isMoving = reorderItem.state.isMoving(reorderItem.key)
+    val isMoving = reorderItem?.let { it.state.isMoving(it.key) } == true
+    val layoutDirection = LocalLayoutDirection.current
+    val moveIndicatorColor = MaterialTheme.colorScheme.secondary
     val compactActionModifier = if (isTelevision) Modifier else Modifier.size(36.dp)
     val actionFocusOrder = remember(currentFocus, isTwoColumn) {
         if (isTwoColumn) listOf(currentFocus.row, currentFocus.more)
@@ -391,6 +396,30 @@ private fun ServerListItem(
                 focusRequester = currentFocus.row,
                 focusContainerColor = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else null
             )
+            .drawBehind {
+                val stripWidth = if (isMoving) 8.dp.toPx() else 4.dp.toPx()
+                val verticalInset = if (isMoving) 6.dp.toPx() else 10.dp.toPx()
+                val startInset = if (isMoving) 0f else 6.dp.toPx()
+                val x = if (layoutDirection == LayoutDirection.Rtl) {
+                    size.width - startInset - stripWidth
+                } else {
+                    startInset
+                }
+                val stripHeight = (size.height - verticalInset * 2).coerceAtLeast(0f)
+                when {
+                    isMoving -> drawRoundRect(
+                        color = moveIndicatorColor,
+                        topLeft = Offset(x, verticalInset),
+                        size = Size(stripWidth, stripHeight),
+                        cornerRadius = CornerRadius(4.dp.toPx())
+                    )
+                    isSelected -> drawRect(
+                        color = colorFabActive,
+                        topLeft = Offset(x, verticalInset),
+                        size = Size(stripWidth, stripHeight)
+                    )
+                }
+            }
             .dpadOrderedFocusNavigation(
                 current = currentFocus.row,
                 order = actionFocusOrder,
@@ -406,27 +435,17 @@ private fun ServerListItem(
                 },
                 onMoveDown = { nextFocus?.row?.requestFocus() ?: true }
             )
-            .then(if (isTelevision) Modifier else Modifier.clickable(onClick = actions.select))
-            .dpadLongPressToMove(enabled = isTelevision, item = reorderItem, onClick = actions.select)
-    ) {
-        Box(Modifier.width(10.dp).fillMaxHeight()) {
-            if (isMoving) {
-                Box(
-                    Modifier
-                        .width(8.dp)
-                        .fillMaxHeight()
-                        .padding(vertical = 6.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.secondary)
-                )
-            } else if (isSelected) {
-                Row {
-                    Spacer(Modifier.width(6.dp))
-                    Box(Modifier.width(4.dp).fillMaxHeight().padding(vertical = 10.dp).background(colorFabActive))
+            .then(
+                if (!isTelevision) {
+                    Modifier.clickable(onClick = actions.select)
+                } else if (reorderItem != null) {
+                    Modifier.dpadLongPressToMove(enabled = true, item = reorderItem, onClick = actions.select)
+                } else {
+                    Modifier.dpadClickable(onClick = actions.select)
                 }
-            }
-        }
-
+            )
+    ) {
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f).padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(

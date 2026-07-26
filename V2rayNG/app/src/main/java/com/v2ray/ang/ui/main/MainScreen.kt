@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,11 +69,20 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val isDarkTheme = LocalDarkTheme.current
     val drawerCoordinator = rememberMainDrawerCoordinator(isTelevision)
     val dialogState = rememberMainDialogState()
-    val requestRemoveServer: (String) -> Unit = { guid ->
-        if (confirmRemove) dialogState.removeServerGuid = guid else onAction(MainAction.RemoveServer(guid))
+    var dialogFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
+    LaunchedEffect(dialogFocusToRestore, isTelevision) {
+        val requester = dialogFocusToRestore ?: return@LaunchedEffect
+        if (isTelevision) requestFocusWhenReady(requester)
+        dialogFocusToRestore = null
     }
-    var showSearch by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    val requestRemoveServer: (String) -> Unit = { guid ->
+        if (confirmRemove) {
+            dialogState.show(MainDialog.DeleteServer(guid))
+        } else {
+            onAction(MainAction.RemoveServer(guid))
+        }
+    }
+    var showSearch by rememberSaveable { mutableStateOf(uiState.searchQuery.isNotEmpty()) }
     val topBarFocus = rememberMainTopBarFocusRequesters(showSearch)
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -94,7 +104,6 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     }
 
     BackHandler(enabled = isTelevision && showSearch) {
-        searchQuery = ""
         onAction(MainAction.Search(""))
         showSearch = false
     }
@@ -111,39 +120,27 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     )
     val selectedGroupIndex = mainSelectedGroupIndex(groups, uiState.selectedGroupId)
 
-    MainDialogs(
-        showDelAllConfirm = dialogState.showDeleteAllConfirmation,
-        onDismissDelAll = { dialogState.showDeleteAllConfirmation = false },
-        onConfirmDelAll = {
-            dialogState.showDeleteAllConfirmation = false
-            onAction(MainAction.RemoveAllServers)
-        },
-        showDelDuplicateConfirm = dialogState.showDeleteDuplicateConfirmation,
-        onDismissDelDuplicate = { dialogState.showDeleteDuplicateConfirmation = false },
-        onConfirmDelDuplicate = {
-            dialogState.showDeleteDuplicateConfirmation = false
-            onAction(MainAction.RemoveDuplicateServers)
-        },
-        showDelInvalidConfirm = dialogState.showDeleteInvalidConfirmation,
-        onDismissDelInvalid = { dialogState.showDeleteInvalidConfirmation = false },
-        onConfirmDelInvalid = {
-            dialogState.showDeleteInvalidConfirmation = false
-            onAction(MainAction.RemoveInvalidServers)
-        },
-        showRemoveConfirm = dialogState.removeServerGuid,
-        onDismissRemove = { dialogState.removeServerGuid = null },
-        onConfirmRemove = { guid ->
-            dialogState.removeServerGuid = null
-            onAction(MainAction.RemoveServer(guid))
+    MainDialogs(dialog = dialogState.current, onDismiss = dialogState::dismiss, onConfirm = { dialog ->
+        dialogState.dismiss()
+        when (dialog) {
+            MainDialog.DeleteAll -> onAction(MainAction.RemoveAllServers)
+            MainDialog.DeleteDuplicate -> onAction(MainAction.RemoveDuplicateServers)
+            MainDialog.DeleteInvalid -> onAction(MainAction.RemoveInvalidServers)
+            is MainDialog.DeleteServer -> onAction(MainAction.RemoveServer(dialog.guid))
+            is MainDialog.Share -> Unit
         }
-    )
+    })
 
-    dialogState.shareTarget?.let { target ->
+    (dialogState.current as? MainDialog.Share)?.target?.let { target ->
         ShareMethodDialog(
             guid = target.guid,
             profile = target.profile,
             more = target.more,
-            onDismiss = { dialogState.shareTarget = null },
+            onDismiss = {
+                dialogState.dismiss()
+                dialogFocusToRestore = target.restoreFocusRequester
+            },
+            onActionSelected = dialogState::dismiss,
             onAction = onAction,
             onRemove = requestRemoveServer
         )
@@ -172,14 +169,12 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                         isLoading = isLoading,
                         isRunning = isRunning,
                         showSearch = showSearch,
-                        searchQuery = searchQuery,
+                        searchQuery = uiState.searchQuery,
                         focusRequesters = topBarFocus,
                         onSearchQueryChange = { query ->
-                            searchQuery = query
                             onAction(MainAction.Search(query))
                         },
                         onSearchClose = {
-                            searchQuery = ""
                             onAction(MainAction.Search(""))
                             showSearch = false
                         },
@@ -194,9 +189,9 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                         onMoreMenuAction = { action ->
                             when (action) {
                                 MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
-                                MainMoreMenuAction.DeleteAll -> dialogState.showDeleteAllConfirmation = true
-                                MainMoreMenuAction.DeleteDuplicate -> dialogState.showDeleteDuplicateConfirmation = true
-                                MainMoreMenuAction.DeleteInvalid -> dialogState.showDeleteInvalidConfirmation = true
+                                MainMoreMenuAction.DeleteAll -> dialogState.show(MainDialog.DeleteAll)
+                                MainMoreMenuAction.DeleteDuplicate -> dialogState.show(MainDialog.DeleteDuplicate)
+                                MainMoreMenuAction.DeleteInvalid -> dialogState.show(MainDialog.DeleteInvalid)
                                 MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
                                 MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
                                 MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
@@ -217,7 +212,6 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                             GroupTabBar(
                                 groups = groups,
                                 selectedTabIndex = selectedGroupIndex.coerceIn(0, groups.lastIndex),
-                                mainViewModel = mainViewModel,
                                 tabFocusRequesters = groupTabFocusRequesters,
                                 onOpenDrawer = drawerCoordinator::openFrom,
                                 onMoveUp = { topBarFocus.start.requestFocus() },
@@ -231,7 +225,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                             state = pagerCoordinator.pagerState,
                             modifier = Modifier.fillMaxSize(),
                             userScrollEnabled = !isTelevision,
-                            beyondViewportPageCount = 1,
+                            beyondViewportPageCount = if (isTelevision) 0 else 1,
                             key = { page -> groups.getOrNull(page)?.id ?: "group-page-$page" }
                         ) { page ->
                             val group = groups.getOrNull(page) ?: return@HorizontalPager
@@ -242,16 +236,36 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                 locateTarget = uiState.locateTarget,
                                 doubleColumnDisplay = doubleColumnDisplay,
                                 revealSelectedGeneration = resumeFocusGeneration,
-                                searchQuery = searchQuery,
+                                searchQuery = uiState.searchQuery,
                                 lazyListStates = pagerCoordinator.lazyListStates,
                                 lazyGridStates = pagerCoordinator.lazyGridStates,
-                                onSelectServer = { onAction(MainAction.SelectServer(it)) },
-                                onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
-                                onShareServer = { guid, profile ->
-                                    dialogState.shareTarget = MainShareTarget(guid, profile, more = false)
+                                onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                                onEditServer = { guid, profile ->
+                                    onAction(MainAction.EditServer(guid, profile))
                                 },
-                                onMoreServer = { guid, profile ->
-                                    dialogState.shareTarget = MainShareTarget(guid, profile, more = true)
+                                onShareServer = { guid, profile, restoreFocusRequester ->
+                                    dialogState.show(
+                                        MainDialog.Share(
+                                            MainShareTarget(
+                                                guid,
+                                                profile,
+                                                more = false,
+                                                restoreFocusRequester
+                                            )
+                                        )
+                                    )
+                                },
+                                onMoreServer = { guid, profile, restoreFocusRequester ->
+                                    dialogState.show(
+                                        MainDialog.Share(
+                                            MainShareTarget(
+                                                guid,
+                                                profile,
+                                                more = true,
+                                                restoreFocusRequester
+                                            )
+                                        )
+                                    )
                                 },
                                 onRemoveServer = requestRemoveServer,
                                 onOpenDrawer = drawerCoordinator::openFrom,

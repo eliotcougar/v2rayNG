@@ -12,9 +12,9 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField as MaterialOutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,10 +48,12 @@ private const val TvImeLayoutSettlingFrames = 3
 data class TvTextFieldNavigation(
     val focusRequester: FocusRequester? = null,
     val onMoveUp: (() -> Boolean)? = null,
-    val onMoveDown: (() -> Boolean)? = null
+    val onMoveDown: (() -> Boolean)? = null,
+    val onMovePrevious: (() -> Boolean)? = null,
+    val onMoveNext: (() -> Boolean)? = null
 )
 
-internal data class TvAwareTextFieldSpec(
+internal data class OutlinedTextFieldSpec(
     val label: String,
     val placeholder: String? = null,
     val supportingText: String? = null,
@@ -182,20 +184,35 @@ internal fun Modifier.tvAwareTextFieldFocus(
                     ?: focusManager.moveFocus(FocusDirection.Down)
             }
         )
+    ).then(
+        if (navigation.onMovePrevious != null || navigation.onMoveNext != null) {
+            Modifier.dpadLogicalHorizontalNavigation(
+                onMovePrevious = {
+                    navigation.onMovePrevious?.invoke()
+                        ?: state.passiveFocusRequester.requestFocus()
+                },
+                onMoveNext = {
+                    navigation.onMoveNext?.invoke()
+                        ?: state.passiveFocusRequester.requestFocus()
+                }
+            )
+        } else {
+            Modifier
+        }
     )
 }
 
 @Composable
-internal fun TvAwareOutlinedTextField(
+internal fun OutlinedTextField(
     value: String,
     onValueChange: (String) -> Unit,
-    spec: TvAwareTextFieldSpec,
+    spec: OutlinedTextFieldSpec,
     tvFieldState: TvTextFieldState?,
     modifier: Modifier = Modifier,
     trailingIcon: (@Composable () -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
-    OutlinedTextField(
+    MaterialOutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(spec.label) },

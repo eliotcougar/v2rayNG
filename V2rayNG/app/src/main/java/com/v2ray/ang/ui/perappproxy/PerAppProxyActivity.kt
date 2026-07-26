@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -64,9 +64,13 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 
@@ -153,6 +157,19 @@ fun PerAppProxyScreen(
     val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+    val perAppFocusRequester = remember { FocusRequester() }
+    val bypassFocusRequester = remember { FocusRequester() }
+    val infoFocusRequester = remember { FocusRequester() }
+    val modeFocusOrder = remember {
+        listOf(perAppFocusRequester, bypassFocusRequester, infoFocusRequester)
+    }
+    val packageNames = apps.map { it.packageName }
+    val rowFocusRequesters = remember(packageNames) {
+        packageNames.associateWith { FocusRequester() }
+    }
+    val focusFirstApp = {
+        apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: true
+    }
     val topBarFocusOrder = remember(backFocusRequester, searchFocusRequester, moreFocusRequester, showSearch) {
         if (showSearch) {
             listOf(backFocusRequester, moreFocusRequester)
@@ -185,11 +202,23 @@ fun PerAppProxyScreen(
                     showSearch = false
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
+                navigationFocusRequester = backFocusRequester,
+                customActionFocusRequesters = if (showSearch) {
+                    listOf(moreFocusRequester)
+                } else {
+                    listOf(searchFocusRequester, moreFocusRequester)
+                },
+                onMoveDown = perAppFocusRequester::requestFocus,
                 navigationIcon = {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_arrow_back_24dp),
                         label = stringResource(R.string.action_back),
                         focusRequester = backFocusRequester,
+                        modifier = Modifier.dpadTopBarFocusNavigation(
+                            backFocusRequester,
+                            topBarFocusOrder,
+                            perAppFocusRequester::requestFocus
+                        ),
                         onClick = if (showSearch) {
                             {
                                 searchQuery = ""
@@ -206,7 +235,11 @@ fun PerAppProxyScreen(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
-                            modifier = Modifier.dpadOrderedFocusNavigation(searchFocusRequester, topBarFocusOrder),
+                            modifier = Modifier.dpadTopBarFocusNavigation(
+                                searchFocusRequester,
+                                topBarFocusOrder,
+                                perAppFocusRequester::requestFocus
+                            ),
                             onClick = { showSearch = true }
                         )
                     }
@@ -220,7 +253,11 @@ fun PerAppProxyScreen(
                                 null
                             },
                             focusRequester = moreFocusRequester,
-                            modifier = Modifier.dpadOrderedFocusNavigation(moreFocusRequester, topBarFocusOrder),
+                            modifier = Modifier.dpadTopBarFocusNavigation(
+                                moreFocusRequester,
+                                topBarFocusOrder,
+                                perAppFocusRequester::requestFocus
+                            ),
                             onClick = { showMenu = true }
                         )
                         DropdownMenu(
@@ -229,7 +266,11 @@ fun PerAppProxyScreen(
                             containerColor = MaterialTheme.colorScheme.surface,
                             modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
                                 showMenu = false
-                                searchFocusRequester.requestFocus()
+                                if (showSearch) {
+                                    backFocusRequester.requestFocus()
+                                } else {
+                                    searchFocusRequester.requestFocus()
+                                }
                             })
                         ) {
                             AppDropdownMenuItems(PerAppMenuAction.entries, { it.labelRes }) { action ->
@@ -265,7 +306,14 @@ fun PerAppProxyScreen(
                         checked = perAppProxyEnabled,
                         isTelevision = isTelevision,
                         onCheckedChange = onPerAppProxyChanged,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(perAppFocusRequester)
+                            .dpadOrderedFocusNavigation(perAppFocusRequester, modeFocusOrder)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { false },
+                                onMoveDown = focusFirstApp
+                            )
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     PerAppModeToggle(
@@ -273,7 +321,14 @@ fun PerAppProxyScreen(
                         checked = bypassApps,
                         isTelevision = isTelevision,
                         onCheckedChange = onBypassAppsChanged,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(bypassFocusRequester)
+                            .dpadOrderedFocusNavigation(bypassFocusRequester, modeFocusOrder)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { false },
+                                onMoveDown = focusFirstApp
+                            )
                     )
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_about_24dp),
@@ -282,7 +337,14 @@ fun PerAppProxyScreen(
                             if (isTelevision) showInfoPopup = true else onInfoClick()
                         },
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        contentDescription = stringResource(R.string.acc_per_app_proxy_information)
+                        contentDescription = stringResource(R.string.acc_per_app_proxy_information),
+                        focusRequester = infoFocusRequester,
+                        modifier = Modifier
+                            .dpadOrderedFocusNavigation(infoFocusRequester, modeFocusOrder)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { false },
+                                onMoveDown = focusFirstApp
+                            )
                     )
                 }
             }
@@ -299,14 +361,28 @@ fun PerAppProxyScreen(
                     NavigationBarsBottomPadding()
                 }
             ) {
-                items(items = apps, key = { it.packageName }) { app ->
+                itemsIndexed(items = apps, key = { _, app -> app.packageName }) { index, app ->
                     val checked = blacklist.contains(app.packageName)
+                    val focusRequester = rowFocusRequesters.getValue(app.packageName)
                     AppListItem(
                         appName = app.appName,
                         packageName = app.packageName,
                         icon = null,
                         checked = checked,
-                        onCheckedChange = { onToggleApp(app.packageName) }
+                        onCheckedChange = { onToggleApp(app.packageName) },
+                        focusRequester = focusRequester,
+                        modifier = Modifier.dpadVerticalFocusNavigation(
+                            onMoveUp = {
+                                apps.getOrNull(index - 1)?.let {
+                                    rowFocusRequesters[it.packageName]?.requestFocus()
+                                } ?: perAppFocusRequester.requestFocus()
+                            },
+                            onMoveDown = {
+                                apps.getOrNull(index + 1)?.let {
+                                    rowFocusRequesters[it.packageName]?.requestFocus()
+                                } ?: true
+                            }
+                        )
                     )
                     ItemDivider()
                 }
@@ -362,7 +438,7 @@ private fun TvPerAppInfoPopup(message: String, onDismiss: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        requestFocusWhenReady(focusRequester)
     }
 
     AlertDialog(

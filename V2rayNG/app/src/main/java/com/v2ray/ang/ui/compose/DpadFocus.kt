@@ -309,6 +309,23 @@ fun Modifier.dpadPopupHorizontalNavigation(
     }
 }
 
+/** Lets an editor leave through its logical leading edge before it consumes the D-pad key. */
+@Composable
+fun Modifier.dpadMovePreviousNavigation(onMovePrevious: () -> Unit): Modifier {
+    if (!isTelevisionDevice()) return this
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown &&
+            logicalHorizontalDirection(event.key, isRtl) == DpadHorizontalDirection.Previous
+        ) {
+            onMovePrevious()
+            true
+        } else {
+            false
+        }
+    }
+}
+
 /** Gives TV controls an explicit up/down focus chain while preserving spatial fallback. */
 @Composable
 fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: () -> Boolean): Modifier {
@@ -322,6 +339,15 @@ fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: ()
         }
     }
 }
+
+/** Applies the shared logical and vertical navigation policy to one top-bar control. */
+@Composable
+fun Modifier.dpadTopBarFocusNavigation(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    onMoveDown: () -> Boolean
+): Modifier = dpadOrderedFocusNavigation(current, order)
+    .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
 
 /**
  * Applies the uniform action-column navigation used by list rows. Down is consumed at the final

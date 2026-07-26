@@ -64,7 +64,7 @@ import com.google.zxing.common.HybridBinarizer
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.AppIconButton
+import com.v2ray.ang.compose.AppTopBarAction
 import com.v2ray.ang.enums.PermissionType
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
@@ -162,8 +162,8 @@ fun ScannerScreen(
             AppTopBar(
                 title = stringResource(R.string.menu_item_import_config_qrcode),
                 onBackClick = onBackClick,
-                actions = {
-                    AppIconButton(
+                actionItems = buildList {
+                    add(AppTopBarAction(
                         icon = painterResource(
                             if (isScanning) R.drawable.ic_stop_24dp
                             else R.drawable.ic_scan_24dp
@@ -184,9 +184,9 @@ fun ScannerScreen(
                                 onStartScan()
                             }
                         }
-                    )
-                    if (isScanning && hasTorch) {
-                        AppIconButton(
+                    ))
+                    if (isScanning && hasTorch) add(
+                        AppTopBarAction(
                             icon = painterResource(
                                 if (torchEnabled) R.drawable.ic_flash_on_24dp
                                 else R.drawable.ic_flash_off_24dp
@@ -197,12 +197,12 @@ fun ScannerScreen(
                                 cameraControl?.enableTorch(torchEnabled)
                             }
                         )
-                    }
-                    AppIconButton(
+                    )
+                    add(AppTopBarAction(
                         icon = painterResource(R.drawable.ic_image_24dp),
                         label = stringResource(R.string.action_select_image),
                         onClick = onSelectPhoto
-                    )
+                    ))
                 }
             )
         }

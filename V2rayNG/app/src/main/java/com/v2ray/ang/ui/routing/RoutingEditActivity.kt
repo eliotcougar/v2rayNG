@@ -37,10 +37,11 @@ import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.AppTopBarAction
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.tvAwareImePadding
+import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
@@ -209,19 +210,19 @@ fun RoutingEditScreen(
             AppTopBar(
                 title = stringResource(R.string.routing_settings_rule_title),
                 onBackClick = onBackClick,
-                actions = {
-                    if (position >= 0) {
-                        AppIconButton(
+                actionItems = buildList {
+                    if (position >= 0) add(
+                        AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
                             label = stringResource(R.string.acc_delete),
                             onClick = { showDeleteConfirm = true }
                         )
-                    }
-                    AppIconButton(
+                    )
+                    add(AppTopBarAction(
                         icon = painterResource(R.drawable.ic_fab_check),
                         label = stringResource(R.string.acc_save),
                         onClick = { onSave(buildRuleset()) }
-                    )
+                    ))
                 }
             )
         }
@@ -351,7 +352,10 @@ fun RoutingEditScreen(
         if (showDeleteConfirm) {
             DeleteConfirmDialog(
                 message = stringResource(R.string.confirm_delete_routing_rule),
-                onConfirm = onDelete,
+                onConfirm = {
+                    showDeleteConfirm = false
+                    onDelete()
+                },
                 onDismiss = { showDeleteConfirm = false }
             )
         }

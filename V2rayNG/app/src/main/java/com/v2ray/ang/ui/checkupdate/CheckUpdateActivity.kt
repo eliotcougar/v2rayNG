@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.checkupdate
 
-import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -13,17 +12,21 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.compose.AppDialogButton
 import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.SettingsMenuItem
 import com.v2ray.ang.compose.SettingsSwitchItem
@@ -105,6 +108,9 @@ fun CheckUpdateScreen(
 
     if (showUpdateDialog && updateResult != null) {
         val result = updateResult!!
+        val dismissFocusRequester = rememberDpadFocusRequester()
+        val confirmFocusRequester = remember { FocusRequester() }
+        val buttonFocusOrder = remember { listOf(dismissFocusRequester, confirmFocusRequester) }
         AlertDialog(
             onDismissRequest = { viewModel.dismissUpdateDialog() },
             title = { Text(stringResource(R.string.update_new_version_found, result.latestVersion ?: "")) },
@@ -119,17 +125,23 @@ fun CheckUpdateScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.dismissUpdateDialog()
-                    result.downloadUrl?.let { Utils.openUri(context, it) }
-                }) {
-                    Text(stringResource(R.string.update_now))
-                }
+                AppDialogButton(
+                    text = stringResource(R.string.update_now),
+                    onClick = {
+                        viewModel.dismissUpdateDialog()
+                        result.downloadUrl?.let { Utils.openUri(context, it) }
+                    },
+                    focusRequester = confirmFocusRequester,
+                    modifier = Modifier.dpadOrderedFocusNavigation(confirmFocusRequester, buttonFocusOrder)
+                )
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
+                AppDialogButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = viewModel::dismissUpdateDialog,
+                    focusRequester = dismissFocusRequester,
+                    modifier = Modifier.dpadOrderedFocusNavigation(dismissFocusRequester, buttonFocusOrder)
+                )
             },
             containerColor = MaterialTheme.colorScheme.surface
         )

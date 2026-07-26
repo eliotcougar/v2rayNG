@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,24 +24,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
-
-@Composable
-fun PreferenceGroupHeader(title: String, modifier: Modifier = Modifier) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.secondary,
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp)
-    )
-}
 
 @Composable
 fun CollapsiblePreferenceGroupHeader(
@@ -87,6 +80,7 @@ private fun SettingsItemRow(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     showFocus: Boolean = true,
+    focusRequester: FocusRequester? = null,
     trailing: @Composable (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
@@ -102,7 +96,7 @@ private fun SettingsItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .dpadFocusOutline(showFocus = showFocus)
+            .dpadFocusOutline(focusRequester = focusRequester, showFocus = showFocus)
             .then(
                 onClick?.let { Modifier.dpadClickable(enabled, onClick = it) } ?: Modifier
             )
@@ -140,6 +134,41 @@ private fun SettingsItemRow(
     }
 }
 
+private class SettingsDialogState(val originFocusRequester: FocusRequester) {
+    var visible by mutableStateOf(false)
+        private set
+    var restoreOriginFocus by mutableStateOf(false)
+        private set
+
+    fun open() {
+        visible = true
+    }
+
+    fun close() {
+        visible = false
+        restoreOriginFocus = true
+    }
+
+    fun focusRestored() {
+        restoreOriginFocus = false
+    }
+}
+
+@Composable
+private fun rememberSettingsDialogState(originFocusRequester: FocusRequester? = null): SettingsDialogState {
+    val state = remember(originFocusRequester) {
+        SettingsDialogState(originFocusRequester ?: FocusRequester())
+    }
+    val isTelevision = isTelevisionDevice()
+    LaunchedEffect(state.visible, state.restoreOriginFocus, isTelevision) {
+        if (!state.visible && state.restoreOriginFocus) {
+            if (isTelevision) requestFocusWhenReady(state.originFocusRequester)
+            state.focusRestored()
+        }
+    }
+    return state
+}
+
 @Composable
 fun SettingsEditItem(
     icon: Painter? = null,
@@ -149,9 +178,10 @@ fun SettingsEditItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isPassword: Boolean = false,
-    keyboardNumber: Boolean = false
+    keyboardNumber: Boolean = false,
+    focusRequester: FocusRequester? = null
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    val dialogState = rememberSettingsDialogState(focusRequester)
     val description = if (isPassword) {
         if (value.isEmpty()) null else "******"
     } else {
@@ -164,13 +194,14 @@ fun SettingsEditItem(
         description = description,
         enabled = enabled,
         onClick = if (enabled) {
-            { showDialog = true }
+            dialogState::open
         } else null,
         modifier = modifier,
-        showFocus = !showDialog
+        showFocus = !dialogState.visible,
+        focusRequester = dialogState.originFocusRequester
     )
 
-    if (showDialog) {
+    if (dialogState.visible) {
         var text by remember { mutableStateOf(value) }
         InputDialog(
             title = title,
@@ -178,14 +209,22 @@ fun SettingsEditItem(
                 InputField(
                     label = title,
                     value = text,
-                    visualTransformation = VisualTransformation.None
+                    keyboardOptions = if (keyboardNumber) {
+                        KeyboardOptions(keyboardType = KeyboardType.Number)
+                    } else {
+                        KeyboardOptions.Default
+                    },
+                    visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None
                 )
             ),
             onFieldChange = { _, v -> text = v },
             confirmText = stringResource(R.string.action_ok),
             dismissText = stringResource(R.string.action_cancel),
-            onConfirm = { showDialog = false; onValueChanged(text) },
-            onDismiss = { showDialog = false }
+            onConfirm = {
+                dialogState.close()
+                onValueChanged(text)
+            },
+            onDismiss = dialogState::close
         )
     }
 }
@@ -199,9 +238,10 @@ fun SettingsListItem(
     selectedValue: String,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    val dialogState = rememberSettingsDialogState(focusRequester)
     val options = entries.zip(values)
     val selectedOption = options.find { it.second == selectedValue } ?: options.firstOrNull()
     val summary = selectedOption?.first.orEmpty()
@@ -212,22 +252,24 @@ fun SettingsListItem(
         description = summary.ifEmpty { null },
         enabled = enabled,
         onClick = if (enabled) {
-            { showDialog = true }
+            dialogState::open
         } else null,
-        modifier = modifier
+        modifier = modifier,
+        showFocus = !dialogState.visible,
+        focusRequester = dialogState.originFocusRequester
     )
 
-    if (showDialog) {
+    if (dialogState.visible) {
         SelectListDialog(
             title = title,
             options = options,
             optionText = { it.first },
             selectedOption = selectedOption,
             onSelected = { option ->
-                showDialog = false
+                dialogState.close()
                 onSelected(option.second)
             },
-            onDismiss = { showDialog = false },
+            onDismiss = dialogState::close,
             showRadio = true
         )
     }
@@ -274,7 +316,7 @@ fun SettingsSwitchItem(
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = if (enabled) onCheckedChange else null,
+                onCheckedChange = null,
                 modifier = Modifier.scale(if (isTelevision) 0.75f else 0.8f),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,

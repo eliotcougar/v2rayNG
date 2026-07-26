@@ -5,7 +5,10 @@ package com.v2ray.ang.ui.compose
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,7 +56,6 @@ import com.v2ray.ang.R
 @Composable
 fun DeleteConfirmDialog(title: String? = null, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val dismissFocusRequester = rememberDpadFocusRequester()
-    val isTelevision = isTelevisionDevice()
     val deleteText = stringResource(R.string.action_delete)
     val cancelText = stringResource(android.R.string.cancel)
 
@@ -62,35 +64,31 @@ fun DeleteConfirmDialog(title: String? = null, message: String, onConfirm: () ->
         title = title?.let { { Text(it) } },
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
-            if (isTelevision) {
-                TvDialogButton(
-                    text = deleteText,
-                    icon = painterResource(R.drawable.ic_delete_24dp),
-                    onClick = { onConfirm(); onDismiss() }
-                )
-            } else {
-                TextButton(onClick = { onConfirm(); onDismiss() }) { Text(deleteText) }
-            }
+            AppDialogButton(
+                text = deleteText,
+                icon = painterResource(R.drawable.ic_delete_24dp),
+                onClick = onConfirm
+            )
         },
         dismissButton = {
-            if (isTelevision) {
-                TvDialogButton(text = cancelText, onClick = onDismiss, focusRequester = dismissFocusRequester)
-            } else {
-                TextButton(onClick = onDismiss) { Text(cancelText) }
-            }
+            AppDialogButton(text = cancelText, onClick = onDismiss, focusRequester = dismissFocusRequester)
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
 }
 
 @Composable
-private fun TvDialogButton(
+internal fun AppDialogButton(
     text: String,
     icon: Painter? = null,
     onClick: () -> Unit,
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
+    if (!isTelevisionDevice()) {
+        TextButton(onClick = onClick, modifier = modifier) { Text(text) }
+        return
+    }
     val shape = RoundedCornerShape(24.dp)
     Button(
         onClick = onClick,
@@ -117,6 +115,7 @@ data class InputField(
     val label: String,
     val value: String,
     val singleLine: Boolean = true,
+    val keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     val visualTransformation: VisualTransformation = VisualTransformation.None
 )
 
@@ -147,6 +146,7 @@ fun InputDialog(
     val buttonFocusOrder = remember(dismissFocusRequester, confirmFocusRequester) {
         listOf(dismissFocusRequester, confirmFocusRequester)
     }
+    val contentScrollState = rememberScrollState()
     val keyboardController = LocalSoftwareKeyboardController.current
 
     if (isTelevision) {
@@ -159,7 +159,14 @@ fun InputDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScrollbar(contentScrollState)
+                    .verticalScroll(contentScrollState)
+                    .tvAwareImePadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 fields.forEachIndexed { index, field ->
                     val tvFieldState = if (isTelevision) {
                         rememberTvTextFieldState(passiveFocusRequester = fieldFocusRequesters[index])
@@ -190,13 +197,14 @@ fun InputDialog(
                                 onActivate = { tvFieldState?.beginEditing() }
                             )
                     ) {
-                        TvAwareOutlinedTextField(
+                        OutlinedTextField(
                             value = field.value,
                             onValueChange = { onFieldChange(index, it) },
-                            spec = TvAwareTextFieldSpec(
+                            spec = OutlinedTextFieldSpec(
                                 label = field.label,
                                 singleLine = field.singleLine,
                                 maxLines = if (field.singleLine) 1 else 5,
+                                keyboardOptions = field.keyboardOptions,
                                 visualTransformation = field.visualTransformation
                             ),
                             tvFieldState = tvFieldState,
@@ -209,10 +217,11 @@ fun InputDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            AppDialogButton(
+                text = confirmText,
                 onClick = onConfirm,
+                focusRequester = confirmFocusRequester,
                 modifier = Modifier
-                    .dpadFocusOutline(focusRequester = confirmFocusRequester)
                     .dpadOrderedFocusNavigation(current = confirmFocusRequester, order = buttonFocusOrder)
                     .dpadVerticalFocusNavigation(
                         onMoveUp = {
@@ -220,13 +229,14 @@ fun InputDialog(
                         },
                         onMoveDown = { true }
                     )
-            ) { Text(confirmText) }
+            )
         },
         dismissButton = {
-            TextButton(
+            AppDialogButton(
+                text = dismissText,
                 onClick = onDismiss,
+                focusRequester = dismissFocusRequester,
                 modifier = Modifier
-                    .dpadFocusOutline(focusRequester = dismissFocusRequester)
                     .dpadOrderedFocusNavigation(current = dismissFocusRequester, order = buttonFocusOrder)
                     .dpadVerticalFocusNavigation(
                         onMoveUp = {
@@ -234,7 +244,7 @@ fun InputDialog(
                         },
                         onMoveDown = { true }
                     )
-            ) { Text(dismissText) }
+            )
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -243,7 +253,6 @@ fun InputDialog(
 @Composable
 fun QRCodeDialog(bitmap: Bitmap?, onDismiss: () -> Unit) {
     if (bitmap == null) return
-    val isTelevision = isTelevisionDevice()
     val closeFocusRequester = rememberDpadFocusRequester()
     val closeText = stringResource(R.string.action_close)
     AlertDialog(
@@ -258,11 +267,7 @@ fun QRCodeDialog(bitmap: Bitmap?, onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            if (isTelevision) {
-                TvDialogButton(text = closeText, onClick = onDismiss, focusRequester = closeFocusRequester)
-            } else {
-                TextButton(onClick = onDismiss) { Text(closeText) }
-            }
+            AppDialogButton(text = closeText, onClick = onDismiss, focusRequester = closeFocusRequester)
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -281,7 +286,8 @@ fun <T> SelectListDialog(
     onDismiss: () -> Unit,
     title: String? = null,
     selectedOption: T? = null,
-    showRadio: Boolean = false
+    showRadio: Boolean = false,
+    onMovePrevious: (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
     val selectedIndex = if (showRadio) options.indexOf(selectedOption) else -1
@@ -295,6 +301,11 @@ fun <T> SelectListDialog(
         text = {
             LazyColumn(
                 state = listState,
+                modifier = if (onMovePrevious != null) {
+                    Modifier.dpadPopupHorizontalNavigation(onMovePrevious)
+                } else {
+                    Modifier
+                },
                 verticalArrangement = if (isTelevision && !showRadio) {
                     Arrangement.spacedBy(8.dp)
                 } else {
@@ -305,7 +316,7 @@ fun <T> SelectListDialog(
                     val option = options[index]
                     val isSelected = option == selectedOption
                     if (isTelevision && !showRadio) {
-                        TvDialogButton(
+                        AppDialogButton(
                             text = optionText(option),
                             onClick = { onSelected(option) },
                             focusRequester = if (index == initialIndex) {
@@ -353,13 +364,7 @@ fun <T> SelectListDialog(
         },
         confirmButton = {},
         dismissButton = {
-            if (isTelevision) {
-                TvDialogButton(text = stringResource(android.R.string.cancel), onClick = onDismiss)
-            } else {
-                TextButton(onClick = onDismiss) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
+            AppDialogButton(text = stringResource(R.string.action_cancel), onClick = onDismiss)
         },
         containerColor = MaterialTheme.colorScheme.surface
     )

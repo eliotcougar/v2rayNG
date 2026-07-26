@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import com.v2ray.ang.R
@@ -60,6 +61,8 @@ import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
+private val V2rayNgFontFamily = FontFamily(Font(R.font.montserrat_thin))
+
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
     Subscriptions(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting),
     PerAppProxy(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings),
@@ -71,6 +74,23 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
     CheckUpdate(R.drawable.ic_check_update_24dp, R.string.update_check_for_update),
     BackupRestore(R.drawable.ic_restore_24dp, R.string.title_configuration_backup_restore),
     About(R.drawable.ic_about_24dp, R.string.title_about)
+}
+
+@Composable
+internal fun AppBrandTitle(
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    textAlign: TextAlign? = null
+) {
+    Text(
+        text = stringResource(R.string.app_name),
+        modifier = modifier,
+        style = style.copy(
+            fontFamily = V2rayNgFontFamily,
+            fontWeight = FontWeight.Thin
+        ),
+        textAlign = textAlign
+    )
 }
 
 private val primaryDrawerItems = listOf(
@@ -149,18 +169,11 @@ fun MainDrawerContent(
                             }
                         )
                     }
-                    Text(
-                        text = stringResource(R.string.app_name),
+                    AppBrandTitle(
                         style = if (isTelevision) {
-                            MaterialTheme.typography.titleLarge.copy(
-                                fontFamily = FontFamily(Font(R.font.montserrat_thin)),
-                                fontWeight = FontWeight.Thin
-                            )
+                            MaterialTheme.typography.titleLarge
                         } else {
-                            MaterialTheme.typography.headlineLarge.copy(
-                                fontFamily = FontFamily(Font(R.font.montserrat_thin)),
-                                fontWeight = FontWeight.Thin
-                            )
+                            MaterialTheme.typography.headlineLarge
                         },
                         textAlign = TextAlign.Center
                     )
@@ -253,13 +266,14 @@ private fun Path.addDrawerPeekPath(
     if (closePath) close()
 }
 
+private val TvDrawerPeekShape = GenericShape { size, direction ->
+    addDrawerPeekPath(size.width, size.height, direction, closePath = true)
+}
+
 @Composable
 fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
     val borderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
     val layoutDirection = LocalLayoutDirection.current
-    val shape = GenericShape { size, direction ->
-        addDrawerPeekPath(size.width, size.height, direction, closePath = true)
-    }
     Surface(
         modifier = modifier
             .width(24.dp)
@@ -271,7 +285,7 @@ fun TvDrawerEdgePeek(modifier: Modifier = Modifier) {
                 }
                 drawPath(path = borderPath, color = borderColor, style = Stroke(width = 1.dp.toPx()))
             },
-        shape = shape,
+        shape = TvDrawerPeekShape,
         color = MaterialTheme.colorScheme.primaryContainer,
         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         tonalElevation = 3.dp

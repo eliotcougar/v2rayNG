@@ -54,13 +54,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.DeleteConfirmDialog
+import com.v2ray.ang.compose.AppTopBarAction
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.tvAwareImePadding
+import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.horizontalScrollbar
-import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -145,10 +145,10 @@ class ServerCustomConfigActivity : BaseComponentActivity() {
                 ?: ProfileItem.create(EConfigType.CUSTOM)
 
         config.remarks =
-            remarks.ifEmpty { parsedProfile?.remarks.orEmpty() }
+            remarks.ifEmpty { parsedProfile.remarks.orEmpty() }
 
-        config.server = parsedProfile?.server
-        config.serverPort = parsedProfile?.serverPort
+        config.server = parsedProfile.server
+        config.serverPort = parsedProfile.serverPort
         config.description =
             AngConfigManager.generateDescription(config)
 
@@ -254,6 +254,15 @@ fun ServerCustomConfigScreen(
                     EditorConstants.LINE_NUMBER_HORIZONTAL_PADDING * 2
         }
     }
+    val lineNumberColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val measuredLineNumbers = remember(textLayoutResult?.lineCount, lineNumberStyle, lineNumberColor) {
+        List(textLayoutResult?.lineCount ?: 1) { index ->
+            textMeasurer.measure(
+                text = (index + 1).toString(),
+                style = lineNumberStyle.copy(color = lineNumberColor, textAlign = TextAlign.End)
+            )
+        }
+    }
 
     LaunchedEffect(textFieldState, verticalScroll, horizontalScroll) {
         snapshotFlow {
@@ -323,19 +332,19 @@ fun ServerCustomConfigScreen(
             AppTopBar(
                 title = EConfigType.CUSTOM.toString(),
                 onBackClick = onBackClick,
-                actions = {
-                    if (showDelete) {
-                        AppIconButton(
+                actionItems = buildList {
+                    if (showDelete) add(
+                        AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
                             label = stringResource(R.string.acc_delete),
                             onClick = { showDeleteConfirm = true }
                         )
-                    }
-                    AppIconButton(
+                    )
+                    add(AppTopBarAction(
                         icon = painterResource(R.drawable.ic_fab_check),
                         label = stringResource(R.string.acc_save),
                         onClick = { onSave(remarks, textFieldState.text.toString()) }
-                    )
+                    ))
                 }
             )
         },
@@ -364,8 +373,6 @@ fun ServerCustomConfigScreen(
                         .fillMaxSize()
                         .verticalScroll(verticalScroll)
                 ) {
-                    val lineNumberColor =
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     val layoutForLineNumbers = textLayoutResult
 
                     if (layoutForLineNumbers != null && layoutForLineNumbers.lineCount > 0) {
@@ -377,14 +384,7 @@ fun ServerCustomConfigScreen(
                         ) {
                             val lc = layoutForLineNumbers.lineCount
                             for (i in 0 until lc) {
-                                val lineLabel = (i + 1).toString()
-                                val measured = textMeasurer.measure(
-                                    text = lineLabel,
-                                    style = lineNumberStyle.copy(
-                                        color = lineNumberColor,
-                                        textAlign = TextAlign.End,
-                                    ),
-                                )
+                                val measured = measuredLineNumbers[i]
                                 val lineTop = layoutForLineNumbers.getLineTop(i)
                                 val lineBaseline = layoutForLineNumbers.getLineBaseline(i)
                                 val measuredBaseline = measured.firstBaseline

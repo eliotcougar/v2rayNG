@@ -5,6 +5,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -12,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -32,10 +34,11 @@ import kotlinx.coroutines.launch
  * Android TV emulators and some keyboard/input translation paths can report a held
  * Enter/DPAD_CENTER as discrete ACTION_UP/ACTION_DOWN pairs whose repeatCount is zero.
  * Without a quiet period, one hold can start movement, drop the item, and then click it.
- * Keep the proven 160 ms floor, while allowing slower configured key-repeat delays to
- * extend it.
+ * Keep a conservative 500 ms floor, while allowing slower configured key-repeat
+ * delays to extend it. This only delays the Center press that drops a moving item;
+ * directional movement remains immediate.
  */
-private const val MIN_KEY_REPEAT_QUIET_PERIOD_MS = 160L
+private const val MIN_KEY_REPEAT_QUIET_PERIOD_MS = 500L
 
 enum class DpadReorderDirection { Up, Down, Left, Right }
 
@@ -157,13 +160,11 @@ class DpadReorderState internal constructor() {
         return DpadReorderActivation.StartedMoving
     }
 
-    internal fun onPointerClick(key: Any, index: Int): DpadReorderActivation {
+    internal fun onPointerClick(key: Any): DpadReorderActivation {
         return if (isMoving && activeKey == key) {
             reset()
             DpadReorderActivation.Dropped
         } else if (phase == DpadReorderPhase.Idle) {
-            activeKey = key
-            movingIndex = index
             reset()
             DpadReorderActivation.Click
         } else {
@@ -177,6 +178,12 @@ class DpadReorderState internal constructor() {
         movingIndex = index
         phase = DpadReorderPhase.MovingReady
         return DpadReorderActivation.StartedMoving
+    }
+
+    internal fun onDropRequest(key: Any): DpadReorderActivation {
+        if (!isMoving || activeKey != key) return DpadReorderActivation.None
+        reset()
+        return DpadReorderActivation.Dropped
     }
 
     internal fun cancelPress(key: Any) {
@@ -221,6 +228,25 @@ class DpadReorderItem(
 fun rememberDpadReorderState(key: Any? = Unit): DpadReorderState =
     remember(key) { DpadReorderState() }
 
+@Composable
+internal fun rememberSyncedDpadReorderState(
+    keys: List<*>,
+    enabled: Boolean,
+    stateKey: Any? = Unit,
+    onMovingItem: suspend (Any) -> Unit
+): DpadReorderState {
+    val state = rememberDpadReorderState(stateKey)
+    LaunchedEffect(state, enabled, keys) {
+        state.syncItems(keys, enabled)
+    }
+    LaunchedEffect(state.movingKey, state.movingIndex) {
+        val movingKey = state.movingKey ?: return@LaunchedEffect
+        withFrameNanos { }
+        onMovingItem(movingKey)
+    }
+    return state
+}
+
 fun verticalDpadReorderTarget(index: Int, direction: DpadReorderDirection): Int = when (direction) {
     DpadReorderDirection.Up -> index - 1
     DpadReorderDirection.Down -> index + 1
@@ -261,6 +287,8 @@ internal fun <T> reorderIndicesForKeys(keys: List<T>, fromKey: Any?, toKey: Any?
 internal fun dpadRepeatReleaseGuardMillis(keyRepeatDelayMillis: Int): Long =
     maxOf(MIN_KEY_REPEAT_QUIET_PERIOD_MS, keyRepeatDelayMillis.toLong() * 2L)
 
+private class LongPressTimer(var job: Job? = null)
+
 @Composable
 fun Modifier.dpadLongPressToMove(
     enabled: Boolean,
@@ -275,27 +303,27 @@ fun Modifier.dpadLongPressToMove(
         dpadRepeatReleaseGuardMillis(ViewConfiguration.getKeyRepeatDelay())
     }
     var isItemFocused by remember { mutableStateOf(false) }
-    var suppressNextCenterUp by remember { mutableStateOf(false) }
-    var longPressJob by remember(item.state, item.key) { mutableStateOf<Job?>(null) }
+    var suppressedKeyUp by remember { mutableStateOf<Key?>(null) }
+    val longPressTimer = remember(item.state, item.key) { LongPressTimer() }
 
     fun startLongPressTimer() {
-        if (longPressJob != null) return
-        longPressJob = coroutineScope.launch {
+        if (longPressTimer.job != null) return
+        longPressTimer.job = coroutineScope.launch {
             delay(ViewConfiguration.getLongPressTimeout().toLong())
             item.state.onLongPressTimeout(item.key)
-            longPressJob = null
+            longPressTimer.job = null
         }
     }
 
     fun cancelLongPressTimer() {
-        longPressJob?.cancel()
-        longPressJob = null
+        longPressTimer.job?.cancel()
+        longPressTimer.job = null
     }
 
     fun handleActivation(action: DpadReorderActivation) {
         when (action) {
             DpadReorderActivation.Click -> onClick()
-            DpadReorderActivation.Dropped -> suppressNextCenterUp = true
+            DpadReorderActivation.Dropped,
             DpadReorderActivation.StartedMoving,
             DpadReorderActivation.None -> Unit
         }
@@ -311,7 +339,7 @@ fun Modifier.dpadLongPressToMove(
     val movementModifier = pointerInput(item.state, item.key, item.index, onClick) {
         detectTapGestures(
             onTap = {
-                handleActivation(item.state.onPointerClick(item.key, item.index))
+                handleActivation(item.state.onPointerClick(item.key))
             },
             onLongPress = {
                 handleActivation(item.state.onPointerLongPress(item.key, item.index))
@@ -320,7 +348,7 @@ fun Modifier.dpadLongPressToMove(
     }
         .semantics {
             semanticsOnClick {
-                handleActivation(item.state.onPointerClick(item.key, item.index))
+                handleActivation(item.state.onPointerClick(item.key))
                 true
             }
             semanticsOnLongClick {
@@ -333,13 +361,25 @@ fun Modifier.dpadLongPressToMove(
             if (!it.isFocused) {
                 cancelLongPressTimer()
                 item.state.cancelPress(item.key)
+                suppressedKeyUp = null
             }
         }
         .onPreviewKeyEvent { event ->
             if (!isItemFocused) return@onPreviewKeyEvent false
 
             val isActivationKey = event.key == Key.DirectionCenter || event.key == Key.Enter
-            if (!isActivationKey) {
+            if (suppressedKeyUp == event.key) {
+                if (event.type == KeyEventType.KeyUp) suppressedKeyUp = null
+                true
+            } else if (event.key == Key.Back && item.state.isMoving(item.key)) {
+                if (event.type == KeyEventType.KeyDown) {
+                    cancelLongPressTimer()
+                    val action = item.state.onDropRequest(item.key)
+                    if (action == DpadReorderActivation.Dropped) suppressedKeyUp = event.key
+                    handleActivation(action)
+                }
+                true
+            } else if (!isActivationKey) {
                 val direction = when (event.key) {
                     Key.DirectionUp -> DpadReorderDirection.Up
                     Key.DirectionDown -> DpadReorderDirection.Down
@@ -358,9 +398,6 @@ fun Modifier.dpadLongPressToMove(
                         onMove = item.onMove
                     )
                 }
-                true
-            } else if (suppressNextCenterUp) {
-                if (event.type == KeyEventType.KeyUp) suppressNextCenterUp = false
                 true
             } else {
                 when (event.type) {
@@ -381,6 +418,7 @@ fun Modifier.dpadLongPressToMove(
                         } else {
                             cancelLongPressTimer()
                         }
+                        if (action == DpadReorderActivation.Dropped) suppressedKeyUp = event.key
                         handleActivation(action)
                         true
                     }

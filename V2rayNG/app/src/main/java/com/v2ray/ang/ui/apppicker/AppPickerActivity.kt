@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -35,8 +35,9 @@ import com.v2ray.ang.compose.AppListItem
 import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
 import com.v2ray.ang.compose.ItemDivider
-import com.v2ray.ang.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
@@ -139,6 +140,13 @@ fun AppPickerScreen(
     )
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
+    val packageNames = apps.map { it.packageName }
+    val rowFocusRequesters = remember(packageNames) {
+        packageNames.associateWith { FocusRequester() }
+    }
+    val focusFirstApp = {
+        apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: false
+    }
     val topBarFocusOrder = remember(
         backFocusRequester,
         searchFocusRequester,
@@ -176,15 +184,22 @@ fun AppPickerScreen(
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 navigationFocusRequester = backFocusRequester,
+                customActionFocusRequesters = if (showSearch) {
+                    listOf(moreFocusRequester)
+                } else {
+                    listOf(searchFocusRequester, moreFocusRequester)
+                },
+                onMoveDown = focusFirstApp,
                 actions = {
                     if (!showSearch) {
                         AppIconButton(
                             icon = painterResource(R.drawable.ic_search_24dp),
                             label = stringResource(R.string.menu_item_search),
                             focusRequester = searchFocusRequester,
-                            modifier = Modifier.dpadOrderedFocusNavigation(
-                                current = searchFocusRequester,
-                                order = topBarFocusOrder
+                            modifier = Modifier.dpadTopBarFocusNavigation(
+                                searchFocusRequester,
+                                topBarFocusOrder,
+                                focusFirstApp
                             ),
                             onClick = { showSearch = true }
                         )
@@ -194,9 +209,10 @@ fun AppPickerScreen(
                             icon = painterResource(R.drawable.ic_more_vert_24dp),
                             label = stringResource(R.string.action_more),
                             focusRequester = moreFocusRequester,
-                            modifier = Modifier.dpadOrderedFocusNavigation(
-                                current = moreFocusRequester,
-                                order = topBarFocusOrder
+                            modifier = Modifier.dpadTopBarFocusNavigation(
+                                moreFocusRequester,
+                                topBarFocusOrder,
+                                focusFirstApp
                             ),
                             onClick = { showMenu = true }
                         )
@@ -206,7 +222,11 @@ fun AppPickerScreen(
                             containerColor = MaterialTheme.colorScheme.surface,
                             modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
                                 showMenu = false
-                                searchFocusRequester.requestFocus()
+                                if (showSearch) {
+                                    backFocusRequester.requestFocus()
+                                } else {
+                                    searchFocusRequester.requestFocus()
+                                }
                             })
                         ) {
                             AppDropdownMenuItems(AppPickerMenuAction.entries, { it.labelRes }) { action ->
@@ -231,14 +251,28 @@ fun AppPickerScreen(
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {
-            items(items = apps, key = { it.packageName }) { app ->
+            itemsIndexed(items = apps, key = { _, app -> app.packageName }) { index, app ->
                 val checked = selectedPackages.contains(app.packageName)
+                val focusRequester = rowFocusRequesters.getValue(app.packageName)
                 AppListItem(
                     appName = app.appName,
                     packageName = app.packageName,
                     icon = null,
                     checked = checked,
-                    onCheckedChange = { onToggleApp(app.packageName) }
+                    onCheckedChange = { onToggleApp(app.packageName) },
+                    focusRequester = focusRequester,
+                    modifier = Modifier.dpadVerticalFocusNavigation(
+                        onMoveUp = {
+                            apps.getOrNull(index - 1)?.let {
+                                rowFocusRequesters[it.packageName]?.requestFocus()
+                            } ?: false
+                        },
+                        onMoveDown = {
+                            apps.getOrNull(index + 1)?.let {
+                                rowFocusRequesters[it.packageName]?.requestFocus()
+                            } ?: true
+                        }
+                    )
                 )
                 ItemDivider()
             }

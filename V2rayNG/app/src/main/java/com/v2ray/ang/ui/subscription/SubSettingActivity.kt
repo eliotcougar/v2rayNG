@@ -2,7 +2,6 @@ package com.v2ray.ang.ui.subscription
 
 import android.content.Intent
 import android.graphics.Bitmap
-import android.os.Bundle
 import androidx.compose.foundation.background
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
@@ -27,14 +26,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
@@ -52,10 +48,13 @@ import com.v2ray.ang.extension.toast
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppDialogButton
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppRowSwitch
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
+import com.v2ray.ang.ui.compose.DpadReorderItem
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.QRCodeDialog
@@ -64,11 +63,18 @@ import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
+import com.v2ray.ang.ui.compose.TvExpandableSwitch
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
+import com.v2ray.ang.ui.compose.reorderIndicesForKeys
+import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
@@ -82,10 +88,6 @@ private enum class SubscriptionShareAction(@StringRes val labelRes: Int) {
 
 class SubSettingActivity : BaseComponentActivity() {
     private val viewModel: SubscriptionsViewModel by viewModels()
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
 
     @Composable
     override fun ScreenContent() {
@@ -142,10 +144,9 @@ fun SubSettingScreen(
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
     val subscriptionIds = subscriptions.map { it.guid }
     var showUpdateDialog by remember { mutableStateOf(false) }
-    val rowFocusTargets = remember(subscriptionIds) {
+    val rowFocusTargets = remember(subscriptionIds.toSet()) {
         subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
     }
-    val dpadReorderState = rememberDpadReorderState()
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
@@ -160,14 +161,8 @@ fun SubSettingScreen(
         }
     }
 
-    LaunchedEffect(isTelevision, subscriptionIds) {
-        dpadReorderState.syncItems(subscriptionIds, enabled = isTelevision)
-    }
-    LaunchedEffect(dpadReorderState.movingKey, dpadReorderState.movingIndex) {
-        val subscriptionId = dpadReorderState.movingKey as? String
-            ?: return@LaunchedEffect
-        withFrameNanos { }
-        rowFocusTargets[subscriptionId]?.row?.requestFocus()
+    val dpadReorderState = rememberSyncedDpadReorderState(subscriptionIds, isTelevision) { key ->
+        (key as? String)?.let { rowFocusTargets[it]?.row?.requestFocus() }
     }
 
     Scaffold(
@@ -177,18 +172,23 @@ fun SubSettingScreen(
                 title = stringResource(R.string.title_sub_setting),
                 onBackClick = onBackClick,
                 isLoading = isLoading,
-                actions = {
-                    AppIconButton(
+                onMoveDown = {
+                    subscriptions.firstOrNull()?.let {
+                        rowFocusTargets[it.guid]?.row?.requestFocus()
+                    } ?: false
+                },
+                actionItems = listOf(
+                    AppTopBarAction(
                         icon = painterResource(R.drawable.ic_add_24dp),
                         label = stringResource(R.string.acc_add_subscription),
                         onClick = onAddClick
-                    )
-                    AppIconButton(
+                    ),
+                    AppTopBarAction(
                         icon = painterResource(R.drawable.ic_cloud_download_24dp),
                         label = stringResource(R.string.title_sub_update),
                         onClick = { showUpdateDialog = true }
                     )
-                }
+                )
             )
         }
     ) { innerPadding ->
@@ -355,7 +355,7 @@ fun SubSettingScreen(
                                         }
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    TvExpandableSwitch(
+                                    AppRowSwitch(
                                         checked = subCache.subscription.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = subCache.subscription.copy()
@@ -462,6 +462,9 @@ fun SubSettingScreen(
         var autoTestAfterUpdateSubscription by rememberMmkvBool(AppConfig.PREF_AUTO_TEST_AFTER_UPDATE_SUBSCRIPTION, false)
         var autoRemoveInvalidAfterTest by rememberMmkvBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)
         var autoSortAfterTest by rememberMmkvBool(AppConfig.PREF_AUTO_SORT_AFTER_TEST, false)
+        val dismissFocusRequester = rememberDpadFocusRequester()
+        val confirmFocusRequester = remember { FocusRequester() }
+        val buttonFocusOrder = remember { listOf(dismissFocusRequester, confirmFocusRequester) }
 
         AlertDialog(
             onDismissRequest = { showUpdateDialog = false },
@@ -495,17 +498,23 @@ fun SubSettingScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showUpdateDialog = false
-                    onSubUpdate()
-                }) {
-                    Text(text = stringResource(R.string.action_ok))
-                }
+                AppDialogButton(
+                    text = stringResource(R.string.action_ok),
+                    onClick = {
+                        showUpdateDialog = false
+                        onSubUpdate()
+                    },
+                    focusRequester = confirmFocusRequester,
+                    modifier = Modifier.dpadOrderedFocusNavigation(confirmFocusRequester, buttonFocusOrder)
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showUpdateDialog = false }) {
-                    Text(text = stringResource(R.string.action_cancel))
-                }
+                AppDialogButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = { showUpdateDialog = false },
+                    focusRequester = dismissFocusRequester,
+                    modifier = Modifier.dpadOrderedFocusNavigation(dismissFocusRequester, buttonFocusOrder)
+                )
             }
         )
     }

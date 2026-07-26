@@ -5,6 +5,8 @@ import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.handler.AngConfigManager
+import java.text.BreakIterator
+import java.util.Locale
 
 internal data class ServerRowUiModel(
     val guid: String,
@@ -30,7 +32,7 @@ internal fun buildServerRowUiModel(server: ServersCache, subscriptionRemarks: St
         statistics = profile.description.nullIfBlank() ?: AngConfigManager.generateDescription(profile),
         typeDescription = serverProtocolDescription(profile),
         testDelayMillis = server.testDelayMillis,
-        subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty()
+        subscriptionBadge = firstGrapheme(subscriptionRemarks)
     )
 }
 
@@ -52,4 +54,32 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
         }
     }
     return parts.joinToString(" / ")
+}
+
+internal fun firstGrapheme(text: String): String {
+    if (text.isEmpty()) return ""
+    val iterator = BreakIterator.getCharacterInstance(Locale.getDefault())
+    iterator.setText(text)
+    val end = iterator.following(0).takeIf { it != BreakIterator.DONE } ?: text.length
+    return text.substring(0, end)
+}
+
+/**
+ * Moves [movingKey] immediately before or after [targetKey] in the canonical list.
+ *
+ * A visible list may be filtered, so persisting its order directly would discard keys hidden by
+ * the filter. Moving by stable keys preserves every canonical entry.
+ */
+internal fun <T> moveCanonicalKey(
+    canonicalKeys: List<T>,
+    movingKey: T,
+    targetKey: T,
+    afterTarget: Boolean
+): List<T>? {
+    if (movingKey == targetKey || movingKey !in canonicalKeys || targetKey !in canonicalKeys) return null
+    val result = canonicalKeys.toMutableList()
+    result.remove(movingKey)
+    val targetIndex = result.indexOf(targetKey)
+    result.add(targetIndex + if (afterTarget) 1 else 0, movingKey)
+    return result
 }

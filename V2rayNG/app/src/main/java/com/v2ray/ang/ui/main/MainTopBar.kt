@@ -12,7 +12,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,9 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.Font
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
@@ -42,6 +38,8 @@ import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
+
+private enum class MainTopBarMenu { Import, More }
 
 internal class MainTopBarFocusRequesters(val start: FocusRequester) {
     val test = FocusRequester()
@@ -74,8 +72,7 @@ internal fun MainTopBar(
     onMoreMenuAction: (MainMoreMenuAction) -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    var showImportMenu by remember { mutableStateOf(false) }
-    var showMenu by remember { mutableStateOf(false) }
+    var openMenu by remember { mutableStateOf<MainTopBarMenu?>(null) }
     val importMenuScrollState = rememberScrollState()
     val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -92,6 +89,11 @@ internal fun MainTopBar(
             add(focusRequesters.more)
         }
     }
+    fun closeMenuAndMove(current: FocusRequester, direction: DpadHorizontalDirection) {
+        openMenu = null
+        adjacentDpadFocusTarget(current, focusOrder, direction)?.requestFocus()
+            ?: current.requestFocus()
+    }
 
     AppTopBar(
         title = stringResource(R.string.title_server),
@@ -106,13 +108,11 @@ internal fun MainTopBar(
         titleContent = if (isTelevision) {
             {
                 Box(modifier = Modifier.height(48.dp), contentAlignment = Alignment.CenterStart) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        fontFamily = FontFamily(Font(R.font.montserrat_thin)),
-                        fontWeight = FontWeight.Thin,
-                        fontSize = 40.sp,
-                        lineHeight = 48.sp,
-                        maxLines = 1
+                    AppBrandTitle(
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontSize = 40.sp,
+                            lineHeight = 48.sp
+                        )
                     )
                 }
             }
@@ -189,20 +189,28 @@ internal fun MainTopBar(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_add_24dp),
                         label = stringResource(R.string.menu_item_add_config),
-                        onClick = { showImportMenu = true },
+                        onClick = { openMenu = MainTopBarMenu.Import },
                         focusRequester = focusRequesters.add,
                         modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.add, focusOrder)
                     )
                     DropdownMenu(
-                        expanded = showImportMenu,
-                        onDismissRequest = { showImportMenu = false },
+                        expanded = openMenu == MainTopBarMenu.Import,
+                        onDismissRequest = { openMenu = null },
                         scrollState = importMenuScrollState,
                         containerColor = MaterialTheme.colorScheme.surface,
                         modifier = Modifier
                             .heightIn(max = maxMenuHeight)
+                            .dpadPopupHorizontalNavigation(
+                                onMovePrevious = {
+                                    closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Previous)
+                                },
+                                onMoveNext = {
+                                    closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Next)
+                                }
+                            )
                             .verticalScrollbar(importMenuScrollState)
                     ) {
-                        ImportMenuContent { action -> showImportMenu = false; onAction(action) }
+                        ImportMenuContent { action -> openMenu = null; onAction(action) }
                     }
                 }
                 if (isTelevision && isRunning) {
@@ -218,32 +226,32 @@ internal fun MainTopBar(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_more_vert_24dp),
                         label = stringResource(R.string.action_more),
-                        onClick = { showMenu = true },
+                        onClick = { openMenu = MainTopBarMenu.More },
                         focusRequester = focusRequesters.more,
                         modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.more, focusOrder)
                     )
                     DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
+                        expanded = openMenu == MainTopBarMenu.More,
+                        onDismissRequest = { openMenu = null },
                         scrollState = moreMenuScrollState,
                         containerColor = MaterialTheme.colorScheme.surface,
                         modifier = Modifier
                             .heightIn(max = maxMenuHeight)
-                            .dpadPopupHorizontalNavigation(onMovePrevious = {
-                                showMenu = false
-                                adjacentDpadFocusTarget(
-                                    current = focusRequesters.more,
-                                    order = focusOrder,
-                                    direction = DpadHorizontalDirection.Previous
-                                )?.requestFocus()
-                            })
+                            .dpadPopupHorizontalNavigation(
+                                onMovePrevious = {
+                                    closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Previous)
+                                },
+                                onMoveNext = {
+                                    closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Next)
+                                }
+                            )
                             .verticalScrollbar(moreMenuScrollState)
                     ) {
                         MoreMenuContent(
                             isRunning = isRunning,
                             isTelevision = isTelevision,
                             onSelected = { action ->
-                                showMenu = false
+                                openMenu = null
                                 onMoreMenuAction(action)
                             }
                         )

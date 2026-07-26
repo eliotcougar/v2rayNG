@@ -90,6 +90,7 @@ fun ShareMethodDialog(
     profile: ProfileItem,
     more: Boolean,
     onDismiss: () -> Unit,
+    onActionSelected: () -> Unit,
     onAction: (MainAction) -> Unit,
     onRemove: (String) -> Unit,
 ) {
@@ -101,7 +102,7 @@ fun ShareMethodDialog(
         options = menuActions,
         optionText = { stringResource(it.labelRes) },
         onSelected = { action ->
-            onDismiss()
+            onActionSelected()
             when (action) {
                 ServerMenuAction.ShareQRCode -> onAction(MainAction.ShareQRCode(guid))
                 ServerMenuAction.ShareClipboard -> onAction(MainAction.ShareClipboard(guid))
@@ -110,6 +111,7 @@ fun ShareMethodDialog(
                 ServerMenuAction.Delete -> onRemove(guid)
             }
         },
-        onDismiss = onDismiss
+        onDismiss = onDismiss,
+        onMovePrevious = onDismiss
     )
 }

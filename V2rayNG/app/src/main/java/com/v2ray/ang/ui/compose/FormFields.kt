@@ -3,34 +3,39 @@
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.v2ray.ang.R
 
 data class FormDropdownConfig(
     val editable: Boolean = false,
@@ -40,27 +45,28 @@ data class FormDropdownConfig(
 )
 
 @Stable
-class FormDropdownState internal constructor(initialExpanded: Boolean = false) {
-    var expanded by mutableStateOf(initialExpanded)
+class FormDropdownState internal constructor() {
+    var expanded by mutableStateOf(false)
         internal set
     internal var restoreFieldFocus by mutableStateOf(false)
-    internal var activationHandler: (() -> Unit)? = null
 
-    fun activate() {
-        activationHandler?.invoke()
+    fun open() {
+        restoreFieldFocus = false
+        expanded = true
     }
 
-    companion object {
-        internal val Saver = Saver<FormDropdownState, Boolean>(
-            save = { it.expanded },
-            restore = { FormDropdownState(initialExpanded = it) }
-        )
+    fun close(restoreFocus: Boolean = true) {
+        expanded = false
+        restoreFieldFocus = restoreFocus
+    }
+
+    fun toggle() {
+        if (expanded) close() else open()
     }
 }
 
 @Composable
-fun rememberFormDropdownState(): FormDropdownState =
-    rememberSaveable(saver = FormDropdownState.Saver) { FormDropdownState() }
+fun rememberFormDropdownState(): FormDropdownState = remember { FormDropdownState() }
 
 internal fun formDropdownMenuOptions(
     options: List<String>,
@@ -102,10 +108,10 @@ fun FormTextField(
                 onActivate = { tvFieldState?.beginEditing() }
             )
     ) {
-        TvAwareOutlinedTextField(
+        OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            spec = TvAwareTextFieldSpec(
+            spec = OutlinedTextFieldSpec(
                 label = label,
                 placeholder = placeholder,
                 enabled = enabled,
@@ -133,8 +139,7 @@ fun FormDropdownField(
     tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
     state: FormDropdownState? = null
 ) {
-    val ownedState = rememberFormDropdownState()
-    val dropdownState = state ?: ownedState
+    val dropdownState = state ?: remember { FormDropdownState() }
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -145,6 +150,8 @@ fun FormDropdownField(
         null
     }
     val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
+    val dropdownButtonFocusRequester = if (isTelevision && config.editable) remember { FocusRequester() } else null
+    val usesTvSelectionDialog = isTelevision && config.editable
     val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel)
     val selectedOptionIndex = formDropdownSelectedOptionIndex(menuOptions, value)
     val displayedValue = if (!config.editable && value.isEmpty()) {
@@ -154,8 +161,7 @@ fun FormDropdownField(
     }
 
     fun dismissMenu() {
-        dropdownState.expanded = false
-        dropdownState.restoreFieldFocus = isTelevision
+        dropdownState.close(restoreFocus = isTelevision)
     }
 
     fun activateTvField() {
@@ -164,20 +170,26 @@ fun FormDropdownField(
             textFieldState.beginEditing()
         } else {
             keyboardController?.hide()
-            if (dropdownState.expanded) dismissMenu() else dropdownState.expanded = true
+            if (dropdownState.expanded) dismissMenu() else dropdownState.open()
         }
     }
 
-    SideEffect {
-        dropdownState.activationHandler = ::activateTvField
+    fun openTvDropdown() {
+        keyboardController?.hide()
+        tvFieldState?.finishEditing()
+        dropdownState.open()
     }
-    DisposableEffect(dropdownState) {
-        onDispose { dropdownState.activationHandler = null }
+
+    val resolvedTvNavigation = if (dropdownButtonFocusRequester == null) {
+        tvNavigation
+    } else {
+        tvNavigation.copy(onMoveNext = dropdownButtonFocusRequester::requestFocus)
     }
 
     LaunchedEffect(dropdownState.expanded, dropdownState.restoreFieldFocus, selectedOptionIndex) {
         when {
             dropdownState.expanded &&
+                !usesTvSelectionDialog &&
                 menuOptions.isNotEmpty() &&
                 selectedOptionFocusRequester != null ->
                 requestFocusWhenReady(selectedOptionFocusRequester)
@@ -192,80 +204,134 @@ fun FormDropdownField(
         }
     }
 
-    ExposedDropdownMenuBox(
-        expanded = dropdownState.expanded,
-        onExpandedChange = { newExpanded ->
-            if (!enabled) return@ExposedDropdownMenuBox
-            if (!config.editable && newExpanded) {
-                keyboardController?.hide()
-            }
-            if (newExpanded) dropdownState.expanded = true else dismissMenu()
-        },
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .tvAwareTextFieldFocus(
-                state = tvFieldState,
-                enabled = enabled,
-                navigation = tvNavigation,
-                onActivate = ::activateTvField
-            )
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        TvAwareOutlinedTextField(
-            value = displayedValue,
-            onValueChange = { if (config.editable) onValueChange(it) },
-            spec = TvAwareTextFieldSpec(
-                label = label,
-                placeholder = config.placeholder,
-                supportingText = config.supportingText,
-                enabled = enabled,
-                readOnly = !config.editable
-            ),
-            tvFieldState = tvFieldState,
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownState.expanded)
+        ExposedDropdownMenuBox(
+            expanded = dropdownState.expanded && !usesTvSelectionDialog,
+            onExpandedChange = { newExpanded ->
+                if (!enabled) return@ExposedDropdownMenuBox
+                if (!config.editable && newExpanded) keyboardController?.hide()
+                if (newExpanded) dropdownState.open() else dismissMenu()
             },
             modifier = Modifier
-                .then(tvFieldState?.let {
-                    Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
-                } ?: Modifier)
-                .menuAnchor(
-                    type = if (config.editable) ExposedDropdownMenuAnchorType.PrimaryEditable
-                    else ExposedDropdownMenuAnchorType.PrimaryNotEditable
-                )
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    if (!config.editable && focusState.isFocused) {
-                        keyboardController?.hide()
+                .weight(1f)
+                .tvAwareTextFieldFocus(
+                state = tvFieldState,
+                enabled = enabled,
+                navigation = resolvedTvNavigation,
+                onActivate = ::activateTvField
+            )
+        ) {
+            OutlinedTextField(
+                value = displayedValue,
+                onValueChange = { if (config.editable) onValueChange(it) },
+                spec = OutlinedTextFieldSpec(
+                    label = label,
+                    placeholder = config.placeholder,
+                    supportingText = config.supportingText,
+                    enabled = enabled,
+                    readOnly = !config.editable
+                ),
+                tvFieldState = tvFieldState,
+                trailingIcon = if (dropdownButtonFocusRequester == null) {
+                    {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownState.expanded)
+                    }
+                } else {
+                    null
+                },
+                modifier = Modifier
+                    .then(tvFieldState?.let {
+                        Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
+                    } ?: Modifier)
+                    .menuAnchor(
+                        type = if (config.editable) ExposedDropdownMenuAnchorType.PrimaryEditable
+                        else ExposedDropdownMenuAnchorType.PrimaryNotEditable
+                    )
+                    .fillMaxWidth()
+                    .onFocusChanged { focusState ->
+                        if (!config.editable && focusState.isFocused) keyboardController?.hide()
+                    }
+            )
+            if (!usesTvSelectionDialog) {
+                ExposedDropdownMenu(
+                    expanded = dropdownState.expanded,
+                    onDismissRequest = ::dismissMenu,
+                    modifier = Modifier.verticalScrollbar(menuScrollState),
+                    scrollState = menuScrollState,
+                    containerColor = MaterialTheme.colorScheme.surface
+                ) {
+                    menuOptions.forEachIndexed { index, option ->
+                        AppDropdownMenuItem(
+                            text = if (option.isEmpty() && config.emptyOptionLabel != null) {
+                                config.emptyOptionLabel
+                            } else {
+                                option
+                            },
+                            modifier = if (index == selectedOptionIndex && selectedOptionFocusRequester != null) {
+                                Modifier.focusRequester(selectedOptionFocusRequester)
+                            } else {
+                                Modifier
+                            },
+                            onClick = {
+                                onValueChange(option)
+                                dismissMenu()
+                                if (!isTelevision) focusManager.clearFocus()
+                            }
+                        )
                     }
                 }
-        )
-        ExposedDropdownMenu(
-            expanded = dropdownState.expanded,
-            onDismissRequest = ::dismissMenu,
-            modifier = Modifier.verticalScrollbar(menuScrollState),
-            scrollState = menuScrollState,
-            containerColor = MaterialTheme.colorScheme.surface
-        ) {
-            menuOptions.forEachIndexed { index, option ->
-                AppDropdownMenuItem(
-                    text = if (option.isEmpty() && config.emptyOptionLabel != null) {
-                        config.emptyOptionLabel
-                    } else {
-                        option
-                    },
-                    modifier = if (index == selectedOptionIndex && selectedOptionFocusRequester != null) {
-                        Modifier.focusRequester(selectedOptionFocusRequester)
-                    } else {
-                        Modifier
-                    },
-                    onClick = {
-                        onValueChange(option)
-                        dismissMenu()
-                        if (!isTelevision) focusManager.clearFocus()
-                    }
+            }
+        }
+        if (dropdownButtonFocusRequester != null) {
+            Box(
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(48.dp)
+                    .dpadFocusOutline(focusRequester = dropdownButtonFocusRequester, cornerRadius = 24.dp)
+                    .dpadLogicalHorizontalNavigation(
+                        onMovePrevious = { tvFieldState?.passiveFocusRequester?.requestFocus() },
+                        onMoveNext = {
+                            tvNavigation.onMoveNext?.invoke() ?: dropdownButtonFocusRequester.requestFocus()
+                        }
+                    )
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = {
+                            tvNavigation.onMoveUp?.invoke() ?: focusManager.moveFocus(FocusDirection.Up)
+                        },
+                        onMoveDown = {
+                            tvNavigation.onMoveDown?.invoke() ?: focusManager.moveFocus(FocusDirection.Down)
+                        }
+                    )
+                    .dpadClickable(role = Role.Button, onClick = ::openTvDropdown),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_drop_down_24dp),
+                    contentDescription = null,
+                    modifier = Modifier.graphicsLayer { rotationZ = if (dropdownState.expanded) 180f else 0f }
                 )
             }
         }
+    }
+    if (usesTvSelectionDialog && dropdownState.expanded) {
+        val displayOptions = menuOptions.map {
+            if (it.isEmpty() && config.emptyOptionLabel != null) config.emptyOptionLabel else it
+        }
+        SelectListDialog(
+            title = label,
+            options = displayOptions,
+            selectedOption = displayOptions.getOrElse(selectedOptionIndex) { "" },
+            showRadio = true,
+            onSelected = { index, _ ->
+                onValueChange(menuOptions[index])
+                dismissMenu()
+            },
+            onDismiss = ::dismissMenu
+        )
     }
 }

@@ -24,6 +24,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,8 +84,9 @@ class MainViewModel(
     private val groupUiFlows = ConcurrentHashMap<String, MutableStateFlow<ServerGroupUiState>>()
     private val groupServerFlows = ConcurrentHashMap<String, StateFlow<List<ServersCache>>>()
     private val groupLoadMutexes = ConcurrentHashMap<String, Mutex>()
-    private val serverOrderPersistenceJobs = mutableMapOf<String, Job>()
+    private val groupReorderChannels = ConcurrentHashMap<String, Channel<GroupReorderRequest>>()
 
+    private var initializeJob: Job? = null
     private var setupGroupJob: Job? = null
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
@@ -217,7 +219,7 @@ class MainViewModel(
         mutableServerGroupState(uiState.value.selectedGroupId).value.servers
 
     // ---------- Action handler ----------
-    fun onAction(action: MainAction) {
+    fun onAction(action: MainAction.ViewModelIntent) {
         when (action) {
             MainAction.Initialize -> initialize()
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
@@ -230,12 +232,12 @@ class MainViewModel(
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
+            MainAction.LocateSelectedServer -> triggerLocateSelectedServer()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
-            is MainAction.SelectServer -> updateSelectedGuid(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
-            MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.LocateHandled -> consumeLocateTarget(action.target)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -244,27 +246,13 @@ class MainViewModel(
             MainAction.DismissQRCodeDialog -> {
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
-
-            MainAction.ToggleService,
-            MainAction.TestCurrentServer,
-            MainAction.ImportQRcode,
-            MainAction.ImportClipboard,
-            MainAction.ImportConfigLocal,
-            is MainAction.ImportManually,
-            MainAction.RestartService,
-            MainAction.Exit,
-            MainAction.LocateSelectedServer,
-            is MainAction.EditServer,
-            is MainAction.ShareClipboard,
-            is MainAction.ShareFullContent -> {
-                // Handled by Activity via its onAction lambda
-            }
         }
     }
 
     // ---------- Initialization ----------
     fun initialize() {
-        viewModelScope.launch(preloadDispatcher) {
+        if (initializeJob != null) return
+        initializeJob = viewModelScope.launch(preloadDispatcher) {
             try {
                 initialPageReady.await()
                 delay(32)
@@ -339,6 +327,16 @@ class MainViewModel(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers)
         )
+        _uiState.update { state ->
+            val index = state.groups.indexOfFirst { it.id == groupId }
+            if (index < 0 || state.groups[index].serverCount == filteredServers.size) {
+                state
+            } else {
+                val groups = state.groups.toMutableList()
+                groups[index] = groups[index].copy(serverCount = filteredServers.size)
+                state.copy(groups = groups)
+            }
+        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -360,8 +358,6 @@ class MainViewModel(
             )
         }
     }
-
-    fun getSubscriptions(): List<SubscriptionCache> = dataSource.getSubscriptions()
 
     private fun resolveSelectedGroup(groups: List<GroupMapItem>): String {
         val current = uiState.value.selectedGroupId
@@ -406,6 +402,9 @@ class MainViewModel(
                 groupUiFlows.keys.removeAll { it !in validIds }
                 groupServerFlows.keys.removeAll { it !in validIds }
                 groupLoadMutexes.keys.removeAll { it !in validIds }
+                groupReorderChannels.entries.removeIf { (groupId, channel) ->
+                    (groupId !in validIds).also { removed -> if (removed) channel.close() }
+                }
 
                 _uiState.update {
                     it.copy(
@@ -669,14 +668,6 @@ class MainViewModel(
         }
     }
 
-    fun reloadServerList() {
-        val groupId = uiState.value.selectedGroupId
-        selectedGroupLoadJob?.cancel()
-        selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
-            updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
-        }
-    }
-
     fun reloadAllGroups(groupIds: List<String>) {
         reloadJob?.cancel()
         reloadJob = viewModelScope.launch(preloadDispatcher) {
@@ -696,6 +687,7 @@ class MainViewModel(
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
         keywordFilter = keyword
+        _uiState.update { it.copy(searchQuery = keyword) }
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
             delay(300)
@@ -730,20 +722,44 @@ class MainViewModel(
     }
 
     fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
-        val groupState = mutableServerGroupState(groupId).value
+        if (groupId.isEmpty()) return
+        val groupFlow = mutableServerGroupState(groupId)
+        val groupState = groupFlow.value
+        if (fromPosition !in groupState.rows.indices || toPosition !in groupState.rows.indices || fromPosition == toPosition) return
+        val movingGuid = groupState.rows[fromPosition].guid
+        val targetGuid = groupState.rows[toPosition].guid
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return
         val rows = groupState.rows.toMutableList()
         rows.moveItem(fromPosition, toPosition)
-        val guids = servers.map { it.guid }
-        mutableServerGroupState(groupId).value = ServerGroupUiState(servers, rows)
-        // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
-        val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
-        serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
-            previousPersistenceJob?.join()
-            dataSource.encodeServerList(guids, groupId)
-            cacheMutex.withLock { groupDataCache[groupId] = servers }
+        groupFlow.value = ServerGroupUiState(servers, rows)
+        reorderChannel(groupId).trySend(
+            GroupReorderRequest(movingGuid, targetGuid, afterTarget = fromPosition < toPosition)
+        )
+    }
+
+    private fun reorderChannel(groupId: String): Channel<GroupReorderRequest> =
+        groupReorderChannels.computeIfAbsent(groupId) {
+            Channel<GroupReorderRequest>(Channel.UNLIMITED).also { channel ->
+                viewModelScope.launch(ioDispatcher) {
+                    for (request in channel) persistReorder(groupId, request)
+                }
+            }
         }
+
+    private suspend fun persistReorder(groupId: String, request: GroupReorderRequest) {
+        val canonicalServers = loadGroup(groupId)
+        val reorderedGuids = moveCanonicalKey(
+            canonicalKeys = canonicalServers.map { it.guid },
+            movingKey = request.movingGuid,
+            targetKey = request.targetGuid,
+            afterTarget = request.afterTarget
+        ) ?: return
+        val serversByGuid = canonicalServers.associateBy { it.guid }
+        val reorderedServers = reorderedGuids.mapNotNull(serversByGuid::get)
+        if (reorderedServers.size != canonicalServers.size) return
+        dataSource.encodeServerList(reorderedGuids, groupId)
+        cacheMutex.withLock { groupDataCache[groupId] = reorderedServers }
     }
 
     // ---------- Testing ----------
@@ -836,9 +852,17 @@ class MainViewModel(
         }
     }
 
-    private fun consumeLocateTarget() {
-        _uiState.update { it.copy(locateTarget = null) }
+    private fun consumeLocateTarget(target: LocateTarget) {
+        _uiState.update { state ->
+            if (state.locateTarget == target) state.copy(locateTarget = null) else state
+        }
     }
+
+    private data class GroupReorderRequest(
+        val movingGuid: String,
+        val targetGuid: String,
+        val afterTarget: Boolean
+    )
 
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {

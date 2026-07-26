@@ -1,7 +1,6 @@
 package com.v2ray.ang.ui
 
 import android.content.Intent
-import android.os.Bundle
 import android.webkit.WebView
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -15,7 +14,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,23 +28,18 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.SettingsMenuItem
-import com.v2ray.ang.compose.VersionInfoBlock
 import com.v2ray.ang.core.CoreNativeManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppDialogButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.VersionInfoBlock
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.util.Utils
 
 class AboutActivity : BaseComponentActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-    }
 
     @Composable
     override fun ScreenContent() {
@@ -126,6 +119,7 @@ fun AboutScreen(
     }
 
     if (showOssDialog) {
+        val closeFocusRequester = rememberDpadFocusRequester()
         AlertDialog(
             onDismissRequest = { showOssDialog = false },
             title = { Text(stringResource(R.string.title_oss_license)) },
@@ -142,9 +136,11 @@ fun AboutScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showOssDialog = false }) {
-                    Text(stringResource(R.string.action_ok))
-                }
+                AppDialogButton(
+                    text = stringResource(R.string.action_ok),
+                    onClick = { showOssDialog = false },
+                    focusRequester = closeFocusRequester
+                )
             },
             containerColor = MaterialTheme.colorScheme.surface,
             modifier = Modifier.padding(bottom = 60.dp)

@@ -25,8 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppIconButton
 import com.v2ray.ang.compose.AppTopBar
+import com.v2ray.ang.compose.AppTopBarAction
 import com.v2ray.ang.compose.DeleteConfirmDialog
 import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
@@ -38,7 +38,6 @@ import com.v2ray.ang.compose.tvAwareImePadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
-import com.v2ray.ang.extension.toLongEx
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
@@ -142,7 +141,7 @@ fun SubEditScreen(
     onSave: (SubscriptionItem) -> Boolean,
     onDelete: () -> Unit
 ) {
-    //val context = LocalContext.current
+    val context = LocalContext.current
     var remarks by rememberSaveable { mutableStateOf(initial.remarks.orEmpty()) }
     var url by rememberSaveable { mutableStateOf(initial.url.orEmpty()) }
     var userAgent by rememberSaveable { mutableStateOf(initial.userAgent.orEmpty()) }
@@ -161,7 +160,12 @@ fun SubEditScreen(
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
-    fun buildSubItem(): SubscriptionItem {
+    fun buildSubItem(): SubscriptionItem? {
+        val parsedUpdateInterval = updateInterval.toLongOrNull()
+        if (parsedUpdateInterval == null) {
+            context.toast(R.string.toast_invalid_update_interval)
+            return null
+        }
         val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
         subItem.remarks = remarks
         subItem.url = url
@@ -170,7 +174,7 @@ fun SubEditScreen(
         subItem.filter = filter
         subItem.enabled = enabled
         subItem.autoUpdate = autoUpdate
-        subItem.updateInterval = updateInterval.toLongEx()
+        subItem.updateInterval = parsedUpdateInterval
         subItem.prevProfile = prevProfile
         subItem.nextProfile = nextProfile
         subItem.allowInsecureUrl = allowInsecureUrl
@@ -183,30 +187,30 @@ fun SubEditScreen(
             AppTopBar(
                 title = stringResource(R.string.title_sub_setting),
                 onBackClick = onBackClick,
-                actions = {
-                    if (isTelevision) {
-                        AppIconButton(
+                actionItems = buildList {
+                    if (isTelevision) add(
+                        AppTopBarAction(
                             icon = painterResource(R.drawable.ic_fab_check),
                             label = stringResource(R.string.menu_item_save_config),
                             onClick = { buildSubItem()?.let { onSave(it) } }
                         )
-                    }
-                    if (editSubId.isNotEmpty()) {
-                        AppIconButton(
+                    )
+                    if (editSubId.isNotEmpty()) add(
+                        AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
                             label = stringResource(R.string.acc_delete),
                             onClick = {
                                 if (confirmRemove) showDeleteConfirm = true else onDelete()
                             }
                         )
-                    }
-                    if (!isTelevision) {
-                        AppIconButton(
+                    )
+                    if (!isTelevision) add(
+                        AppTopBarAction(
                             icon = painterResource(R.drawable.ic_fab_check),
                             label = stringResource(R.string.acc_save),
                             onClick = { buildSubItem()?.let { onSave(it) } }
                         )
-                    }
+                    )
                 }
             )
         }
@@ -281,7 +285,10 @@ fun SubEditScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_subscription_group),
-            onConfirm = onDelete,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
             onDismiss = { showDeleteConfirm = false }
         )
     }

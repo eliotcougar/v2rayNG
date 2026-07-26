@@ -3,7 +3,6 @@ package com.v2ray.ang.ui.shortcut
 import android.content.Intent
 import android.os.Bundle
 import android.text.TextUtils
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,17 +23,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.AppIconButton
-import com.v2ray.ang.compose.tvContentPadding
+import com.v2ray.ang.compose.AppTopBarAction
 import com.v2ray.ang.compose.SettingsSwitchItem
+import com.v2ray.ang.compose.dpadClickable
+import com.v2ray.ang.compose.dpadFocusOutline
+import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
@@ -132,19 +136,21 @@ fun TaskerScreen(
     onSave: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    val switchFocusRequester = remember { FocusRequester() }
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             AppTopBar(
                 title = "",
                 onBackClick = onBackClick,
-                actions = {
-                    AppIconButton(
+                onMoveDown = switchFocusRequester::requestFocus,
+                actionItems = listOf(
+                    AppTopBarAction(
                         icon = painterResource(R.drawable.ic_fab_check),
                         label = stringResource(R.string.acc_save),
                         onClick = onSave
                     )
-                }
+                )
             )
         }
     ) { innerPadding ->
@@ -157,7 +163,8 @@ fun TaskerScreen(
             SettingsSwitchItem(
                 title = stringResource(R.string.tasker_start_service),
                 checked = switchState.value,
-                onCheckedChange = { switchState.value = it }
+                onCheckedChange = { switchState.value = it },
+                modifier = Modifier.focusRequester(switchFocusRequester)
             )
             LazyColumn(
                 state = listState,
@@ -170,13 +177,14 @@ fun TaskerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedPosition.value = index }
+                            .dpadFocusOutline()
+                            .dpadClickable { selectedPosition.value = index }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selectedPosition.value == index,
-                            onClick = { selectedPosition.value = index }
+                            onClick = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = remarks, style = MaterialTheme.typography.bodyLarge)

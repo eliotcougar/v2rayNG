@@ -72,15 +72,32 @@ internal fun rememberMainDrawerCoordinator(isTelevision: Boolean): MainDrawerCoo
     }
 }
 
-internal data class MainShareTarget(val guid: String, val profile: ProfileItem, val more: Boolean)
+internal data class MainShareTarget(
+    val guid: String,
+    val profile: ProfileItem,
+    val more: Boolean,
+    val restoreFocusRequester: FocusRequester
+)
+
+internal sealed interface MainDialog {
+    data object DeleteAll : MainDialog
+    data object DeleteDuplicate : MainDialog
+    data object DeleteInvalid : MainDialog
+    data class DeleteServer(val guid: String) : MainDialog
+    data class Share(val target: MainShareTarget) : MainDialog
+}
 
 @Stable
 internal class MainDialogState {
-    var showDeleteAllConfirmation by mutableStateOf(false)
-    var showDeleteDuplicateConfirmation by mutableStateOf(false)
-    var showDeleteInvalidConfirmation by mutableStateOf(false)
-    var removeServerGuid by mutableStateOf<String?>(null)
-    var shareTarget by mutableStateOf<MainShareTarget?>(null)
+    var current by mutableStateOf<MainDialog?>(null)
+
+    fun show(dialog: MainDialog) {
+        current = dialog
+    }
+
+    fun dismiss() {
+        current = null
+    }
 }
 
 @Composable

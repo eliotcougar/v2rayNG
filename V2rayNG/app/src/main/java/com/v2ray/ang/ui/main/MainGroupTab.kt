@@ -16,27 +16,24 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.R
 import com.v2ray.ang.dto.GroupMapItem
-import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
-import kotlinx.coroutines.flow.StateFlow
 
 @Composable
 fun GroupTabBar(
-    groups: List<GroupMapItem>, selectedTabIndex: Int, mainViewModel: MainViewModel,
+    groups: List<GroupMapItem>, selectedTabIndex: Int,
     tabFocusRequesters: List<FocusRequester>, onOpenDrawer: (FocusRequester) -> Unit,
     onMoveUp: () -> Unit, onTabClick: (Int) -> Unit, modifier: Modifier = Modifier
 ) {
@@ -57,7 +54,6 @@ fun GroupTabBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         itemsIndexed(items = groups, key = { _, group -> group.id }) { index, group ->
-            val serverFlow = remember(group.id, mainViewModel) { mainViewModel.serversForGroup(group.id) }
             val focusRequester = tabFocusRequesters[index]
             val tabModifier = if (isTelevision) {
                 Modifier
@@ -78,7 +74,6 @@ fun GroupTabBar(
             GroupTabItem(
                 group = group,
                 selected = index == selectedIndex,
-                serverFlow = serverFlow,
                 showInactiveIndicator = isTelevision,
                 modifier = tabModifier,
                 onClick = { onTabClick(index) }
@@ -89,11 +84,11 @@ fun GroupTabBar(
 
 @Composable
 private fun GroupTabItem(
-    group: GroupMapItem, selected: Boolean, serverFlow: StateFlow<List<ServersCache>>,
+    group: GroupMapItem, selected: Boolean,
     showInactiveIndicator: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit
 ) {
-    val servers by serverFlow.collectAsStateWithLifecycle()
-    val text = if (group.id.isEmpty()) group.remarks else "${group.remarks} (${servers.size})"
+    val text = if (group.id.isEmpty()) stringResource(R.string.filter_config_all)
+    else "${group.remarks} (${group.serverCount})"
 
     Box(Modifier.widthIn(min = 56.dp)) {
         Tab(
