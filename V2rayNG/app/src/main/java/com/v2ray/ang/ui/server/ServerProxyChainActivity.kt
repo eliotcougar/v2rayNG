@@ -51,6 +51,7 @@ import com.v2ray.ang.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.compose.dpadTopBarFocusNavigation
 import com.v2ray.ang.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.compose.isTelevisionDevice
+import com.v2ray.ang.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.compose.rememberDpadFocusRequester
 import com.v2ray.ang.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.compose.rememberFormDropdownState
@@ -246,12 +247,11 @@ fun ProxyChainScreen(
     }
 
     val lazyListState = rememberLazyListState()
-    val dpadReorderState = rememberSyncedDpadReorderState(memberIds, isTelevision) { key ->
+    val dpadReorderState = rememberSyncedDpadReorderState(memberIds, isTelevision) { key, index ->
         val memberId = key as? Long ?: return@rememberSyncedDpadReorderState
-        val index = memberIds.indexOf(memberId)
         val focusTargets = memberFocusTargets[memberId]
         if (index >= 0 && focusTargets != null) {
-            lazyListState.animateScrollToItem(index + 2)
+            lazyListState.keepDpadReorderItemVisible(memberId, index + 2)
             requestFocusWhenReady(focusTargets.field)
         }
     }

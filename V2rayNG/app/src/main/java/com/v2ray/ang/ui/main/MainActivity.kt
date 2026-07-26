@@ -59,12 +59,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 class MainActivity : HelperBaseComponentActivity() {
     private companion object {
         const val SERVICE_STOP_TIMEOUT_MILLIS = 5_000L
+        const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
     }
 
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
     private var autoConnectAttempted = false
+    private var autoConnectJob: Job? = null
     private var serviceTransitionJob: Job? = null
 
     private val requestVpnPermission =
@@ -112,6 +114,7 @@ class MainActivity : HelperBaseComponentActivity() {
         if (intent.action == Intent.ACTION_MAIN &&
             (intent.hasCategory(Intent.CATEGORY_LAUNCHER) ||
                 intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER))
+            && !mainViewModel.uiState.value.isRunning
         ) {
             autoConnectAttempted = false
         }
@@ -121,7 +124,18 @@ class MainActivity : HelperBaseComponentActivity() {
         super.onPostResume()
         if (autoConnectAttempted || !MmkvManager.decodeAutoConnectOnAppStart()) return
         autoConnectAttempted = true
-        autoConnectOnAppStart()
+        autoConnectJob?.cancel()
+        autoConnectJob = lifecycleScope.launch {
+            val currentState = mainViewModel.uiState.value
+            val resolvedState = if (currentState.serviceStateKnown) {
+                currentState
+            } else {
+                withTimeoutOrNull(SERVICE_STATE_QUERY_TIMEOUT_MILLIS) {
+                    mainViewModel.uiState.first { it.serviceStateKnown }
+                }
+            }
+            if (resolvedState?.isRunning != true) autoConnectOnAppStart()
+        }
     }
 
     @Composable
@@ -211,7 +225,10 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun autoConnectOnAppStart() {
-        if (CoreServiceManager.isRunning() || MmkvManager.getSelectServer().isNullOrEmpty()) return
+        if (mainViewModel.uiState.value.isRunning ||
+            CoreServiceManager.isRunning() ||
+            MmkvManager.getSelectServer().isNullOrEmpty()
+        ) return
 
         if (SettingsManager.isVpnMode()) {
             val intent = VpnService.prepare(this)

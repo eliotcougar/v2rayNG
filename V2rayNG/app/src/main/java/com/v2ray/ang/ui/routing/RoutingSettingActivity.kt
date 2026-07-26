@@ -76,6 +76,7 @@ import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
@@ -251,12 +252,13 @@ fun RoutingSettingScreen(
         rulesets.firstOrNull()?.let { rowFocusTargets[it.id]?.row?.requestFocus() } ?: false
     }
 
-    val dpadReorderState = rememberSyncedDpadReorderState(rulesetIds, isTelevision) { key ->
-        (key as? String)?.let { rowFocusTargets[it]?.row?.requestFocus() }
-    }
-
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
+    val dpadReorderState = rememberSyncedDpadReorderState(rulesetIds, isTelevision) { key, index ->
+        val id = key as? String ?: return@rememberSyncedDpadReorderState
+        if (index >= 0) lazyListState.keepDpadReorderItemVisible(id, index + 1)
+        rowFocusTargets[id]?.row?.requestFocus()
+    }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(rulesetIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
             viewModel.swap(fromIndex, toIndex)
@@ -370,7 +372,11 @@ fun RoutingSettingScreen(
                                         Modifier
                                             .padding(vertical = 8.dp)
                                             .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
-                                            .dpadFocusOutline(focusRequester = focusTargets.row, cornerRadius = 16.dp)
+                                            .dpadFocusOutline(
+                                                focusRequester = focusTargets.row,
+                                                cornerRadius = 16.dp,
+                                                showFocus = !isMoving
+                                            )
                                             .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {

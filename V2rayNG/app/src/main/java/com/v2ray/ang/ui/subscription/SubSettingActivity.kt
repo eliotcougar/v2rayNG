@@ -71,6 +71,7 @@ import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
@@ -161,8 +162,10 @@ fun SubSettingScreen(
         }
     }
 
-    val dpadReorderState = rememberSyncedDpadReorderState(subscriptionIds, isTelevision) { key ->
-        (key as? String)?.let { rowFocusTargets[it]?.row?.requestFocus() }
+    val dpadReorderState = rememberSyncedDpadReorderState(subscriptionIds, isTelevision) { key, index ->
+        val id = key as? String ?: return@rememberSyncedDpadReorderState
+        if (index >= 0) lazyListState.keepDpadReorderItemVisible(id, index)
+        rowFocusTargets[id]?.row?.requestFocus()
     }
 
     Scaffold(
@@ -243,11 +246,7 @@ fun SubSettingScreen(
                                             .dpadFocusOutline(
                                                 focusRequester = focusTargets.row,
                                                 cornerRadius = 16.dp,
-                                                focusContainerColor = if (isMoving) {
-                                                    MaterialTheme.colorScheme.secondaryContainer
-                                                } else {
-                                                    null
-                                                }
+                                                showFocus = !isMoving
                                             )
                                             .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
                                             .dpadVerticalFocusNavigation(

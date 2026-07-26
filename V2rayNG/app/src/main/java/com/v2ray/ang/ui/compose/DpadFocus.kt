@@ -100,18 +100,19 @@ fun Modifier.dpadFocusOutline(
     focusContainerColor: Color? = null,
     showFocus: Boolean = true
 ): Modifier {
-    if (!isTelevisionDevice() || !showFocus) return this
+    if (!isTelevisionDevice()) return this
 
-    var isFocused by remember { mutableStateOf(false) }
-    val focusColor = MaterialTheme.colorScheme.primary
-    val resolvedFocusContainerColor = focusContainerColor ?: MaterialTheme.colorScheme.primaryContainer
-    val shape = RoundedCornerShape(cornerRadius)
     val requesterModifier = if (focusRequester != null) {
         Modifier.focusRequester(focusRequester)
     } else {
         Modifier
     }
+    if (!showFocus) return then(requesterModifier)
 
+    var isFocused by remember { mutableStateOf(false) }
+    val focusColor = MaterialTheme.colorScheme.primary
+    val resolvedFocusContainerColor = focusContainerColor ?: MaterialTheme.colorScheme.primaryContainer
+    val shape = RoundedCornerShape(cornerRadius)
     val focusDecoration = if (isFocused) {
         Modifier
             .background(resolvedFocusContainerColor, shape)

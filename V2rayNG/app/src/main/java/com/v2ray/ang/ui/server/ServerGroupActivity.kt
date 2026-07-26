@@ -28,7 +28,6 @@ import com.v2ray.ang.compose.AppTopBarAction
 import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.tvAwareImePadding
 import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.FormDropdownConfig
 import com.v2ray.ang.compose.FormDropdownField
 import com.v2ray.ang.compose.FormTextField
 import com.v2ray.ang.compose.SettingsSwitchItem
@@ -310,8 +309,7 @@ fun ServerGroupScreen(
                         label = stringResource(R.string.title_policy_group_fallback),
                         value = fallbackTag,
                         options = fallbackSuggestions,
-                        onValueChange = { fallbackTag = it },
-                        config = FormDropdownConfig(editable = true)
+                        onValueChange = { fallbackTag = it }
                     )
                 }
                 NavigationBarsSpacer()

@@ -869,6 +869,7 @@ class MainViewModel(
         _uiState.update { state ->
             state.copy(
                 isRunning = running,
+                serviceStateKnown = true,
                 status = if (!clearTestingText && state.isTesting) state.status
                 else if (running) MainStatus.Connected else MainStatus.Disconnected
             )

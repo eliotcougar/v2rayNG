@@ -6,7 +6,6 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardOptions
@@ -29,6 +28,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -37,6 +37,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.IntSize
@@ -93,7 +94,7 @@ internal class TvTextFieldState(val passiveFocusRequester: FocusRequester, priva
         isEditing = false
         editorHasFocus = false
         imeWasVisible = false
-        restorePassiveFocus = restoreFocus
+        restorePassiveFocus = restoreFocus && !passiveFocusRequester.requestFocus()
         if (wasEditing) hideKeyboard()
     }
 
@@ -105,8 +106,14 @@ internal class TvTextFieldState(val passiveFocusRequester: FocusRequester, priva
         }
     }
 
-    internal suspend fun bringEditorAboveIme() {
-        bringIntoViewRequester.bringIntoView()
+    internal suspend fun bringEditorAboveIme(bottomClearancePx: Float) {
+        val size = measuredSize
+        val bounds = if (size == IntSize.Zero) {
+            null
+        } else {
+            Rect(0f, 0f, size.width.toFloat(), size.height + bottomClearancePx)
+        }
+        bringIntoViewRequester.bringIntoView(bounds)
     }
 }
 
@@ -115,6 +122,8 @@ internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = n
     val defaultPassiveFocusRequester = remember { FocusRequester() }
     val resolvedPassiveFocusRequester = passiveFocusRequester ?: defaultPassiveFocusRequester
     val keyboardController = LocalSoftwareKeyboardController.current
+    val density = LocalDensity.current
+    val imeBottomClearancePx = with(density) { TvImeBottomClearance.toPx() }
     val currentKeyboardController = rememberUpdatedState(keyboardController)
     val state = remember(resolvedPassiveFocusRequester) {
         TvTextFieldState(
@@ -142,7 +151,7 @@ internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = n
                 if (isImeVisible) {
                     state.imeWasVisible = true
                     repeat(TvImeLayoutSettlingFrames) { withFrameNanos { } }
-                    state.bringEditorAboveIme()
+                    state.bringEditorAboveIme(imeBottomClearancePx)
                 }
                 keyboardController?.show()
             }
@@ -259,7 +268,6 @@ internal fun Modifier.tvPassiveTextFieldFocus(
 ): Modifier {
     return bringIntoViewRequester(state.bringIntoViewRequester)
         .onSizeChanged { state.measuredSize = it }
-        .padding(bottom = if (state.isEditing) TvImeBottomClearance else 0.dp)
         .onPreviewKeyEvent { event ->
             if (
                 event.type == KeyEventType.KeyDown &&
@@ -274,7 +282,7 @@ internal fun Modifier.tvPassiveTextFieldFocus(
         }
         .dpadTextFieldNavigation(onMoveUp = onMoveUp, onMoveDown = onMoveDown)
         .focusRequester(state.passiveFocusRequester)
-        .focusable(enabled = enabled && !state.isEditing, interactionSource = state.interactionSource)
+        .focusable(enabled = enabled, interactionSource = state.interactionSource)
 }
 
 internal fun Modifier.tvTextFieldEditorFocus(state: TvTextFieldState, enabled: Boolean = true): Modifier {

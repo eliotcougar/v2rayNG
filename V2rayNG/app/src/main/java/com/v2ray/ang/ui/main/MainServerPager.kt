@@ -71,6 +71,7 @@ import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
 import com.v2ray.ang.ui.compose.twoColumnDpadReorderTarget
@@ -242,16 +243,29 @@ private fun ServerListPage(
     val rowFocusTargets = remember(groupId, serverGuidSet, doubleColumnDisplay) {
         rows.associate { it.guid to ServerRowFocusRequesters() }
     }
+    val gridState = remember(groupId) {
+        lazyGridStates.getOrPut(groupId) { LazyGridState() }
+    }
+    val listState = remember(groupId) {
+        lazyListStates.getOrPut(groupId) { LazyListState() }
+    }
     val dpadReorderState = rememberSyncedDpadReorderState(
         keys = serverGuids,
         enabled = isTelevision && canReorder,
         stateKey = groupId
-    ) { key ->
-        (key as? String)?.let { rowFocusTargets[it]?.row?.requestFocus() }
+    ) { key, index ->
+        val guid = key as? String ?: return@rememberSyncedDpadReorderState
+        if (index >= 0) {
+            if (doubleColumnDisplay) {
+                gridState.keepDpadReorderItemVisible(guid, index)
+            } else {
+                listState.keepDpadReorderItemVisible(guid, index)
+            }
+        }
+        rowFocusTargets[guid]?.row?.requestFocus()
     }
 
     if (doubleColumnDisplay) {
-        val gridState = remember(groupId) { lazyGridStates.getOrPut(groupId) { LazyGridState() } }
         LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
             if (isTelevision && selectedServerIndex >= 0) {
                 gridState.scrollToItem(selectedServerIndex, -gridState.layoutInfo.viewportSize.height / 3)
@@ -292,7 +306,6 @@ private fun ServerListPage(
             }
         }
     } else {
-        val listState = remember(groupId) { lazyListStates.getOrPut(groupId) { LazyListState() } }
         LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
             if (isTelevision && selectedServerIndex >= 0) {
                 listState.scrollToItem(selectedServerIndex, -listState.layoutInfo.viewportSize.height / 3)
@@ -394,7 +407,7 @@ private fun ServerListItem(
             .semantics { if (selectedStateDescription != null) stateDescription = selectedStateDescription }
             .dpadFocusOutline(
                 focusRequester = currentFocus.row,
-                focusContainerColor = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else null
+                showFocus = !isMoving
             )
             .drawBehind {
                 val stripWidth = if (isMoving) 8.dp.toPx() else 4.dp.toPx()

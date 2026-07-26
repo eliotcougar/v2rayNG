@@ -3,6 +3,9 @@ package com.v2ray.ang.ui.compose
 import android.view.ViewConfiguration
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -233,7 +236,7 @@ internal fun rememberSyncedDpadReorderState(
     keys: List<*>,
     enabled: Boolean,
     stateKey: Any? = Unit,
-    onMovingItem: suspend (Any) -> Unit
+    onMovingItem: suspend (key: Any, index: Int) -> Unit
 ): DpadReorderState {
     val state = rememberDpadReorderState(stateKey)
     LaunchedEffect(state, enabled, keys) {
@@ -242,7 +245,7 @@ internal fun rememberSyncedDpadReorderState(
     LaunchedEffect(state.movingKey, state.movingIndex) {
         val movingKey = state.movingKey ?: return@LaunchedEffect
         withFrameNanos { }
-        onMovingItem(movingKey)
+        onMovingItem(movingKey, state.movingIndex)
     }
     return state
 }
@@ -286,6 +289,56 @@ internal fun <T> reorderIndicesForKeys(keys: List<T>, fromKey: Any?, toKey: Any?
 
 internal fun dpadRepeatReleaseGuardMillis(keyRepeatDelayMillis: Int): Long =
     maxOf(MIN_KEY_REPEAT_QUIET_PERIOD_MS, keyRepeatDelayMillis.toLong() * 2L)
+
+internal fun dpadReorderScrollDelta(
+    viewportStart: Int,
+    viewportEnd: Int,
+    itemStart: Int,
+    itemSize: Int
+): Float {
+    val viewportSize = (viewportEnd - viewportStart).coerceAtLeast(0)
+    val edgePadding = minOf(itemSize / 2, ((viewportSize - itemSize).coerceAtLeast(0)) / 2)
+    val safeStart = viewportStart + edgePadding
+    val safeEnd = viewportEnd - edgePadding
+    val itemEnd = itemStart + itemSize
+    return when {
+        itemStart < safeStart -> (itemStart - safeStart).toFloat()
+        itemEnd > safeEnd -> (itemEnd - safeEnd).toFloat()
+        else -> 0f
+    }
+}
+
+suspend fun LazyListState.keepDpadReorderItemVisible(key: Any, index: Int) {
+    val layout = layoutInfo
+    val item = layout.visibleItemsInfo.firstOrNull { it.key == key }
+    if (item == null) {
+        scrollToItem(index.coerceAtLeast(0), -layout.viewportSize.height / 3)
+        return
+    }
+    val delta = dpadReorderScrollDelta(
+        viewportStart = layout.viewportStartOffset,
+        viewportEnd = layout.viewportEndOffset,
+        itemStart = item.offset,
+        itemSize = item.size
+    )
+    if (delta != 0f) scrollBy(delta)
+}
+
+suspend fun LazyGridState.keepDpadReorderItemVisible(key: Any, index: Int) {
+    val layout = layoutInfo
+    val item = layout.visibleItemsInfo.firstOrNull { it.key == key }
+    if (item == null) {
+        scrollToItem(index.coerceAtLeast(0), -layout.viewportSize.height / 3)
+        return
+    }
+    val delta = dpadReorderScrollDelta(
+        viewportStart = layout.viewportStartOffset,
+        viewportEnd = layout.viewportEndOffset,
+        itemStart = item.offset.y,
+        itemSize = item.size.height
+    )
+    if (delta != 0f) scrollBy(delta)
+}
 
 private class LongPressTimer(var job: Job? = null)
 
