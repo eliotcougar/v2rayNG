@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.Painter
@@ -55,9 +56,10 @@ import com.v2ray.ang.R
 
 @Composable
 fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val dismissFocusRequester = rememberDpadFocusRequester()
+    val dismissFocusRequester = remember { FocusRequester() }
     val deleteText = stringResource(R.string.action_delete)
     val cancelText = stringResource(android.R.string.cancel)
+    LaunchedEffect(Unit) { requestFocusWhenReady(dismissFocusRequester) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -66,7 +68,7 @@ fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () ->
             AppDialogButton(
                 text = deleteText,
                 icon = painterResource(R.drawable.ic_delete_24dp),
-                onClick = onConfirm
+                onClick = { onConfirm(); onDismiss() }
             )
         },
         dismissButton = {
@@ -85,7 +87,16 @@ internal fun AppDialogButton(
     modifier: Modifier = Modifier
 ) {
     if (!isTelevisionDevice()) {
-        TextButton(onClick = onClick, modifier = modifier) { Text(text) }
+        TextButton(
+            onClick = onClick,
+            modifier = focusRequester?.let { modifier.focusRequester(it) } ?: modifier
+        ) {
+            if (icon != null) {
+                Icon(painter = icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(text)
+        }
         return
     }
     val shape = RoundedCornerShape(24.dp)
