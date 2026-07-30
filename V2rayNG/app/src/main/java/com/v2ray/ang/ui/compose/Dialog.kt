@@ -54,14 +54,13 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 
 @Composable
-fun DeleteConfirmDialog(title: String? = null, message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val dismissFocusRequester = rememberDpadFocusRequester()
     val deleteText = stringResource(R.string.action_delete)
     val cancelText = stringResource(android.R.string.cancel)
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = title?.let { { Text(it) } },
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
         confirmButton = {
             AppDialogButton(

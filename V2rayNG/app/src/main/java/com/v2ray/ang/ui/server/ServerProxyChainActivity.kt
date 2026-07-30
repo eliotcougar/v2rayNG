@@ -507,8 +507,8 @@ fun ProxyChainScreen(
                                         onMoveDown = {
                                             nextTargets?.remove?.requestFocus()
                                                 ?: addFocusRequester.requestFocus()
-                                         }
-                                     ),
+                                        }
+                                    ),
                                 onClick = {
                                     if (member.isBlank()) removeMember(index)
                                     else memberToDeleteIndex = index
