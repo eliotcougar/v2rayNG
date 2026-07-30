@@ -219,7 +219,7 @@ fun SubSettingScreen(
                     index = index,
                     itemCount = subscriptions.size,
                     targetIndex = ::verticalDpadReorderTarget,
-                    onMove = viewModel::swap
+                    onMove = viewModel::move
                 )
                 val isMoving = dpadReorderState.isMoving(subCache.guid)
                 val actionFocusOrder = remember(focusTargets, subCache.subscription.url) {

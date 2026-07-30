@@ -257,19 +257,12 @@ fun ProxyChainScreen(
     }
 
     fun moveMember(fromIdx: Int, toIdx: Int) {
-        if (
-            fromIdx !in members.indices ||
-            toIdx !in members.indices ||
-            fromIdx == toIdx
-        ) {
-            return
-        }
-        members = members.toMutableList().apply {
-            add(toIdx, removeAt(fromIdx))
-        }
-        memberIds = memberIds.toMutableList().apply {
-            add(toIdx, removeAt(fromIdx))
-        }
+        val movedMembers = members.toMutableList()
+        val movedIds = memberIds.toMutableList()
+        if (!movedMembers.moveItem(fromIdx, toIdx)) return
+        movedIds.moveItem(fromIdx, toIdx)
+        members = movedMembers
+        memberIds = movedIds
     }
 
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->

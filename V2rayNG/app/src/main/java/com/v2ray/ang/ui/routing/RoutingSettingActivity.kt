@@ -261,7 +261,7 @@ fun RoutingSettingScreen(
     }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(rulesetIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
-            viewModel.swap(fromIndex, toIndex)
+            viewModel.move(fromIndex, toIndex)
         }
     }
 
@@ -356,7 +356,7 @@ fun RoutingSettingScreen(
                     index = index,
                     itemCount = rulesets.size,
                     targetIndex = ::verticalDpadReorderTarget,
-                    onMove = viewModel::swap
+                    onMove = viewModel::move
                 )
                 val isMoving = dpadReorderState.isMoving(ruleset.id)
                 val actionFocusOrder = remember(focusTargets) {

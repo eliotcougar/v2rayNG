@@ -63,23 +63,3 @@ internal fun firstGrapheme(text: String): String {
     val end = iterator.following(0).takeIf { it != BreakIterator.DONE } ?: text.length
     return text.substring(0, end)
 }
-
-/**
- * Moves [movingKey] immediately before or after [targetKey] in the canonical list.
- *
- * A visible list may be filtered, so persisting its order directly would discard keys hidden by
- * the filter. Moving by stable keys preserves every canonical entry.
- */
-internal fun <T> moveCanonicalKey(
-    canonicalKeys: List<T>,
-    movingKey: T,
-    targetKey: T,
-    afterTarget: Boolean
-): List<T>? {
-    if (movingKey == targetKey || movingKey !in canonicalKeys || targetKey !in canonicalKeys) return null
-    val result = canonicalKeys.toMutableList()
-    result.remove(movingKey)
-    val targetIndex = result.indexOf(targetKey)
-    result.add(targetIndex + if (afterTarget) 1 else 0, movingKey)
-    return result
-}

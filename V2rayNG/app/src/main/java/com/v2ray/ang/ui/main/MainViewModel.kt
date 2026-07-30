@@ -24,7 +24,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,7 +83,7 @@ class MainViewModel(
     private val groupUiFlows = ConcurrentHashMap<String, MutableStateFlow<ServerGroupUiState>>()
     private val groupServerFlows = ConcurrentHashMap<String, StateFlow<List<ServersCache>>>()
     private val groupLoadMutexes = ConcurrentHashMap<String, Mutex>()
-    private val groupReorderChannels = ConcurrentHashMap<String, Channel<GroupReorderRequest>>()
+    private val serverOrderPersistenceJobs = mutableMapOf<String, Job>()
 
     private var initializeJob: Job? = null
     private var setupGroupJob: Job? = null
@@ -402,9 +401,6 @@ class MainViewModel(
                 groupUiFlows.keys.removeAll { it !in validIds }
                 groupServerFlows.keys.removeAll { it !in validIds }
                 groupLoadMutexes.keys.removeAll { it !in validIds }
-                groupReorderChannels.entries.removeIf { (groupId, channel) ->
-                    (groupId !in validIds).also { removed -> if (removed) channel.close() }
-                }
 
                 _uiState.update {
                     it.copy(
@@ -725,41 +721,19 @@ class MainViewModel(
         if (groupId.isEmpty()) return
         val groupFlow = mutableServerGroupState(groupId)
         val groupState = groupFlow.value
-        if (fromPosition !in groupState.rows.indices || toPosition !in groupState.rows.indices || fromPosition == toPosition) return
-        val movingGuid = groupState.rows[fromPosition].guid
-        val targetGuid = groupState.rows[toPosition].guid
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return
         val rows = groupState.rows.toMutableList()
         rows.moveItem(fromPosition, toPosition)
+        val guids = servers.map { it.guid }
         groupFlow.value = ServerGroupUiState(servers, rows)
-        reorderChannel(groupId).trySend(
-            GroupReorderRequest(movingGuid, targetGuid, afterTarget = fromPosition < toPosition)
-        )
-    }
-
-    private fun reorderChannel(groupId: String): Channel<GroupReorderRequest> =
-        groupReorderChannels.computeIfAbsent(groupId) {
-            Channel<GroupReorderRequest>(Channel.UNLIMITED).also { channel ->
-                viewModelScope.launch(ioDispatcher) {
-                    for (request in channel) persistReorder(groupId, request)
-                }
-            }
+        // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
+        val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
+        serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
+            previousPersistenceJob?.join()
+            dataSource.encodeServerList(guids, groupId)
+            cacheMutex.withLock { groupDataCache[groupId] = servers }
         }
-
-    private suspend fun persistReorder(groupId: String, request: GroupReorderRequest) {
-        val canonicalServers = loadGroup(groupId)
-        val reorderedGuids = moveCanonicalKey(
-            canonicalKeys = canonicalServers.map { it.guid },
-            movingKey = request.movingGuid,
-            targetKey = request.targetGuid,
-            afterTarget = request.afterTarget
-        ) ?: return
-        val serversByGuid = canonicalServers.associateBy { it.guid }
-        val reorderedServers = reorderedGuids.mapNotNull(serversByGuid::get)
-        if (reorderedServers.size != canonicalServers.size) return
-        dataSource.encodeServerList(reorderedGuids, groupId)
-        cacheMutex.withLock { groupDataCache[groupId] = reorderedServers }
     }
 
     // ---------- Testing ----------
@@ -857,12 +831,6 @@ class MainViewModel(
             if (state.locateTarget == target) state.copy(locateTarget = null) else state
         }
     }
-
-    private data class GroupReorderRequest(
-        val movingGuid: String,
-        val targetGuid: String,
-        val afterTarget: Boolean
-    )
 
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
