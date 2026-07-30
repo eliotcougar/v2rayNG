@@ -11,7 +11,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -28,8 +27,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import com.v2ray.ang.extension.delay
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 
 data class ScrollbarConfig(
@@ -40,28 +37,21 @@ data class ScrollbarConfig(
     val padding: Dp = 2.dp,
     val cornerRadius: Dp = 2.dp,
     val fadeOutDurationMs: Int = 1500,
-    val fadeAnimDurationMs: Int = 300
+    val fadeAnimDurationMs: Int = 300,
 )
 
-private data class ScrollbarThumb(val offset: Float, val length: Float, val viewport: Float)
+private data class ScrollbarThumb(val offset: Float, val length: Float, val trackLength: Float)
 
 @Composable
-private fun rememberScrollbarAlpha(
+private fun <T> rememberScrollbarAlpha(
     key: Any,
     config: ScrollbarConfig,
-    position: () -> Any
+    position: () -> T,
 ): State<Float> {
     val alpha = remember(key) { Animatable(0f) }
     val lifecycleState = LocalLifecycleOwner.current.lifecycle.currentStateAsState()
-    val currentPosition = rememberUpdatedState(position)
-    val changes = remember(key) {
-        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
-    }
-    LaunchedEffect(key) {
-        snapshotFlow { currentPosition.value() }.collect { changes.tryEmit(Unit) }
-    }
-    LaunchedEffect(changes, config.fadeOutDurationMs, config.fadeAnimDurationMs) {
-        changes.collectLatest {
+    LaunchedEffect(key, config.fadeOutDurationMs, config.fadeAnimDurationMs) {
+        snapshotFlow(position).collectLatest {
             alpha.snapTo(1f)
             delay(config.fadeOutDurationMs.toLong())
             alpha.animateTo(0f, tween(config.fadeAnimDurationMs))
@@ -81,22 +71,21 @@ private fun scrollbarThumbColor(config: ScrollbarConfig): Color =
 
 private fun calculateThumb(
     viewport: Float,
-    estimatedContent: Float,
+    contentLength: Float,
     scrolled: Float,
-    minLength: Float
+    minLength: Float,
 ): ScrollbarThumb? {
-    if (viewport <= 0f || estimatedContent <= viewport) return null
-    val length = (viewport * viewport / estimatedContent).coerceIn(minLength, viewport * 0.5f)
-    val maxScroll = estimatedContent - viewport
-    val offset = (scrolled / maxScroll).coerceIn(0f, 1f) * (viewport - length)
+    if (viewport <= 0f || contentLength <= viewport) return null
+    val length = (viewport * viewport / contentLength).coerceAtLeast(minLength).coerceAtMost(viewport * 0.5f)
+    val offset = (scrolled / (contentLength - viewport)).coerceIn(0f, 1f) * (viewport - length)
     return ScrollbarThumb(offset, length, viewport)
 }
 
-private fun DrawScope.drawVerticalThumb(
+private fun DrawScope.drawVerticalScrollbar(
     thumb: ScrollbarThumb,
     alpha: Float,
     config: ScrollbarConfig,
-    thumbColor: Color
+    thumbColor: Color,
 ) {
     val thickness = config.thickness.toPx()
     val padding = config.padding.toPx()
@@ -106,7 +95,7 @@ private fun DrawScope.drawVerticalThumb(
         drawRoundRect(
             config.trackColor.copy(alpha = config.trackColor.alpha * alpha),
             Offset(x, 0f),
-            Size(thickness, thumb.viewport),
+            Size(thickness, thumb.trackLength),
             radius
         )
     }
@@ -118,21 +107,20 @@ private fun DrawScope.drawVerticalThumb(
     )
 }
 
-private fun DrawScope.drawHorizontalThumb(
+private fun DrawScope.drawHorizontalScrollbar(
     thumb: ScrollbarThumb,
     alpha: Float,
     config: ScrollbarConfig,
-    thumbColor: Color
+    thumbColor: Color,
 ) {
     val thickness = config.thickness.toPx()
-    val padding = config.padding.toPx()
+    val y = size.height - thickness - config.padding.toPx()
     val radius = CornerRadius(config.cornerRadius.toPx())
-    val y = size.height - thickness - padding
     if (config.trackColor != Color.Transparent) {
         drawRoundRect(
             config.trackColor.copy(alpha = config.trackColor.alpha * alpha),
             Offset(0f, y),
-            Size(thumb.viewport, thickness),
+            Size(thumb.trackLength, thickness),
             radius
         )
     }
@@ -144,46 +132,35 @@ private fun DrawScope.drawHorizontalThumb(
     )
 }
 
-fun Modifier.verticalScrollbar(scrollState: ScrollState, config: ScrollbarConfig = ScrollbarConfig()): Modifier =
-    composed {
-        val alpha = rememberScrollbarAlpha(scrollState, config) { scrollState.value }
-        val thumbColor = scrollbarThumbColor(config)
-        drawWithContent {
-            drawContent()
-            if (alpha.value <= 0f) return@drawWithContent
-            val viewport = size.height
-            val thumb = calculateThumb(
-                viewport,
-                viewport + scrollState.maxValue,
-                scrollState.value.toFloat(),
-                config.minThumbSize.toPx()
-            ) ?: return@drawWithContent
-            drawVerticalThumb(thumb, alpha.value, config, thumbColor)
-        }
+fun Modifier.verticalScrollbar(scrollState: ScrollState, config: ScrollbarConfig = ScrollbarConfig()): Modifier = composed {
+    val alpha = rememberScrollbarAlpha(scrollState, config) { scrollState.value }
+    val thumbColor = scrollbarThumbColor(config)
+    drawWithContent {
+        drawContent()
+        if (alpha.value <= 0f) return@drawWithContent
+        val viewport = size.height
+        val contentLength = viewport + scrollState.maxValue
+        val thumb = calculateThumb(viewport, contentLength, scrollState.value.toFloat(), config.minThumbSize.toPx())
+            ?: return@drawWithContent
+        drawVerticalScrollbar(thumb, alpha.value, config, thumbColor)
     }
+}
 
-fun Modifier.horizontalScrollbar(scrollState: ScrollState, config: ScrollbarConfig = ScrollbarConfig()): Modifier =
-    composed {
-        val alpha = rememberScrollbarAlpha(scrollState, config) { scrollState.value }
-        val thumbColor = scrollbarThumbColor(config)
-        drawWithContent {
-            drawContent()
-            if (alpha.value <= 0f) return@drawWithContent
-            val viewport = size.width
-            val thumb = calculateThumb(
-                viewport,
-                viewport + scrollState.maxValue,
-                scrollState.value.toFloat(),
-                config.minThumbSize.toPx()
-            ) ?: return@drawWithContent
-            drawHorizontalThumb(thumb, alpha.value, config, thumbColor)
-        }
+fun Modifier.horizontalScrollbar(scrollState: ScrollState, config: ScrollbarConfig = ScrollbarConfig()): Modifier = composed {
+    val alpha = rememberScrollbarAlpha(scrollState, config) { scrollState.value }
+    val thumbColor = scrollbarThumbColor(config)
+    drawWithContent {
+        drawContent()
+        if (alpha.value <= 0f) return@drawWithContent
+        val viewport = size.width
+        val contentLength = viewport + scrollState.maxValue
+        val thumb = calculateThumb(viewport, contentLength, scrollState.value.toFloat(), config.minThumbSize.toPx())
+            ?: return@drawWithContent
+        drawHorizontalScrollbar(thumb, alpha.value, config, thumbColor)
     }
+}
 
-fun Modifier.verticalScrollbar(
-    lazyListState: LazyListState,
-    config: ScrollbarConfig = ScrollbarConfig()
-): Modifier = composed {
+fun Modifier.verticalScrollbar(lazyListState: LazyListState, config: ScrollbarConfig = ScrollbarConfig()): Modifier = composed {
     val alpha = rememberScrollbarAlpha(lazyListState, config) {
         lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
     }
@@ -195,22 +172,15 @@ fun Modifier.verticalScrollbar(
         if (alpha.value <= 0f || visible.isEmpty()) return@drawWithContent
         val viewport = layout.viewportSize.height.toFloat()
         val averageItemHeight = visible.sumOf { it.size } / visible.size.toFloat()
-        val scrolled = visible.first().index * averageItemHeight +
-            layout.viewportStartOffset - visible.first().offset
-        val thumb = calculateThumb(
-            viewport,
-            averageItemHeight * layout.totalItemsCount,
-            scrolled,
-            config.minThumbSize.toPx()
-        ) ?: return@drawWithContent
-        drawVerticalThumb(thumb, alpha.value, config, thumbColor)
+        val scrolled = visible.first().index * averageItemHeight + layout.viewportStartOffset - visible.first().offset
+        val contentLength = averageItemHeight * layout.totalItemsCount
+        val thumb = calculateThumb(viewport, contentLength, scrolled, config.minThumbSize.toPx())
+            ?: return@drawWithContent
+        drawVerticalScrollbar(thumb, alpha.value, config, thumbColor)
     }
 }
 
-fun Modifier.verticalScrollbar(
-    lazyGridState: LazyGridState,
-    config: ScrollbarConfig = ScrollbarConfig()
-): Modifier = composed {
+fun Modifier.verticalScrollbar(lazyGridState: LazyGridState, config: ScrollbarConfig = ScrollbarConfig()): Modifier = composed {
     val alpha = rememberScrollbarAlpha(lazyGridState, config) {
         lazyGridState.firstVisibleItemIndex to lazyGridState.firstVisibleItemScrollOffset
     }
@@ -222,16 +192,14 @@ fun Modifier.verticalScrollbar(
         if (alpha.value <= 0f || visible.isEmpty()) return@drawWithContent
         val rows = visible.groupBy { it.row }
         val averageRowHeight = rows.values.map { row -> row.maxOf { it.size.height } }.average().toFloat()
-        val columns = visible.maxOf { it.column } + 1
+        val columns = rows.values.first().size
         val totalRows = (layout.totalItemsCount + columns - 1) / columns
         val first = visible.first()
         val scrolled = first.row * averageRowHeight + layout.viewportStartOffset - first.offset.y
-        val thumb = calculateThumb(
-            layout.viewportSize.height.toFloat(),
-            averageRowHeight * totalRows,
-            scrolled,
-            config.minThumbSize.toPx()
-        ) ?: return@drawWithContent
-        drawVerticalThumb(thumb, alpha.value, config, thumbColor)
+        val viewport = layout.viewportSize.height.toFloat()
+        val contentLength = averageRowHeight * totalRows
+        val thumb = calculateThumb(viewport, contentLength, scrolled, config.minThumbSize.toPx())
+            ?: return@drawWithContent
+        drawVerticalScrollbar(thumb, alpha.value, config, thumbColor)
     }
 }
