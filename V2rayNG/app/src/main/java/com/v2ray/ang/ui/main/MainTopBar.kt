@@ -1,6 +1,8 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.height
@@ -21,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -69,7 +72,7 @@ internal fun MainTopBar(
     onOpenDrawer: (FocusRequester?) -> Unit,
     onMoveDown: () -> Boolean,
     onAction: (MainAction) -> Unit,
-    onMoreMenuAction: (MainMoreMenuAction) -> Unit
+    onBulkDelete: (BulkDeleteTarget) -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
     var openMenu by remember { mutableStateOf<MainTopBarMenu?>(null) }
@@ -89,10 +92,45 @@ internal fun MainTopBar(
             add(focusRequesters.more)
         }
     }
-    fun closeMenuAndMove(current: FocusRequester, direction: DpadHorizontalDirection) {
-        openMenu = null
-        adjacentDpadFocusTarget(current, focusOrder, direction)?.requestFocus()
-            ?: current.requestFocus()
+
+    @Composable
+    fun MenuButton(
+        menu: MainTopBarMenu,
+        icon: Painter,
+        label: String,
+        focusRequester: FocusRequester,
+        scrollState: ScrollState,
+        content: @Composable ColumnScope.() -> Unit
+    ) {
+        fun closeAndMove(direction: DpadHorizontalDirection) {
+            openMenu = null
+            adjacentDpadFocusTarget(focusRequester, focusOrder, direction)?.requestFocus()
+                ?: focusRequester.requestFocus()
+        }
+
+        Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
+            AppIconButton(
+                icon = icon,
+                label = label,
+                onClick = { openMenu = menu },
+                focusRequester = focusRequester,
+                modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequester, focusOrder)
+            )
+            DropdownMenu(
+                expanded = openMenu == menu,
+                onDismissRequest = { openMenu = null },
+                scrollState = scrollState,
+                containerColor = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .heightIn(max = maxMenuHeight)
+                    .dpadPopupHorizontalNavigation(
+                        onMovePrevious = { closeAndMove(DpadHorizontalDirection.Previous) },
+                        onMoveNext = { closeAndMove(DpadHorizontalDirection.Next) }
+                    )
+                    .verticalScrollbar(scrollState),
+                content = content
+            )
+        }
     }
 
     AppTopBar(
@@ -185,34 +223,13 @@ internal fun MainTopBar(
             }
 
             if (!isTelevision || !showSearch) {
-                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                    AppIconButton(
-                        icon = painterResource(R.drawable.ic_add_24dp),
-                        label = stringResource(R.string.menu_item_add_config),
-                        onClick = { openMenu = MainTopBarMenu.Import },
-                        focusRequester = focusRequesters.add,
-                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.add, focusOrder)
-                    )
-                    DropdownMenu(
-                        expanded = openMenu == MainTopBarMenu.Import,
-                        onDismissRequest = { openMenu = null },
-                        scrollState = importMenuScrollState,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .heightIn(max = maxMenuHeight)
-                            .dpadPopupHorizontalNavigation(
-                                onMovePrevious = {
-                                    closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Previous)
-                                },
-                                onMoveNext = {
-                                    closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Next)
-                                }
-                            )
-                            .verticalScrollbar(importMenuScrollState)
-                    ) {
-                        ImportMenuContent { action -> openMenu = null; onAction(action) }
-                    }
-                }
+                MenuButton(
+                    menu = MainTopBarMenu.Import,
+                    icon = painterResource(R.drawable.ic_add_24dp),
+                    label = stringResource(R.string.menu_item_add_config),
+                    focusRequester = focusRequesters.add,
+                    scrollState = importMenuScrollState
+                ) { ImportMenuContent { action -> openMenu = null; onAction(action) } }
                 if (isTelevision && isRunning) {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_restore_24dp),
@@ -222,40 +239,19 @@ internal fun MainTopBar(
                         modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.restart, focusOrder)
                     )
                 }
-                Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                    AppIconButton(
-                        icon = painterResource(R.drawable.ic_more_vert_24dp),
-                        label = stringResource(R.string.action_more),
-                        onClick = { openMenu = MainTopBarMenu.More },
-                        focusRequester = focusRequesters.more,
-                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.more, focusOrder)
+                MenuButton(
+                    menu = MainTopBarMenu.More,
+                    icon = painterResource(R.drawable.ic_more_vert_24dp),
+                    label = stringResource(R.string.action_more),
+                    focusRequester = focusRequesters.more,
+                    scrollState = moreMenuScrollState
+                ) {
+                    MoreMenuContent(
+                        isRunning = isRunning,
+                        isTelevision = isTelevision,
+                        onAction = { action -> openMenu = null; onAction(action) },
+                        onBulkDelete = { target -> openMenu = null; onBulkDelete(target) }
                     )
-                    DropdownMenu(
-                        expanded = openMenu == MainTopBarMenu.More,
-                        onDismissRequest = { openMenu = null },
-                        scrollState = moreMenuScrollState,
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier
-                            .heightIn(max = maxMenuHeight)
-                            .dpadPopupHorizontalNavigation(
-                                onMovePrevious = {
-                                    closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Previous)
-                                },
-                                onMoveNext = {
-                                    closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Next)
-                                }
-                            )
-                            .verticalScrollbar(moreMenuScrollState)
-                    ) {
-                        MoreMenuContent(
-                            isRunning = isRunning,
-                            isTelevision = isTelevision,
-                            onSelected = { action ->
-                                openMenu = null
-                                onMoreMenuAction(action)
-                            }
-                        )
-                    }
                 }
             }
         }

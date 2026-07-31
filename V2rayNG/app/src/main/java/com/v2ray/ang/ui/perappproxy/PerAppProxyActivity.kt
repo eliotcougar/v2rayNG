@@ -2,11 +2,9 @@ package com.v2ray.ang.ui.perappproxy
 
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -53,10 +50,8 @@ import com.v2ray.ang.extension.toastInfo
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDivider
-import com.v2ray.ang.ui.compose.AppDropdownMenuItems
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppListItem
-import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
@@ -64,22 +59,13 @@ import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
-import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
-import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
-import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
+import com.v2ray.ang.ui.compose.AppSelectionMenuAction
+import com.v2ray.ang.ui.compose.AppSelectionTopBar
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
-
-private enum class PerAppMenuAction(@StringRes val labelRes: Int) {
-    SelectAll(R.string.menu_item_select_all),
-    InvertSelection(R.string.menu_item_invert_selection),
-    SelectProxyApps(R.string.menu_item_select_proxy_app),
-    ImportSelection(R.string.menu_item_import_proxy_app),
-    ExportSelection(R.string.menu_item_export_proxy_app)
-}
 
 class PerAppProxyActivity : BaseComponentActivity() {
 
@@ -149,13 +135,9 @@ fun PerAppProxyScreen(
 ) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var showMenu by remember { mutableStateOf(false) }
     var showInfoPopup by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val isTelevision = isTelevisionDevice()
-    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
-    val searchFocusRequester = remember { FocusRequester() }
-    val moreFocusRequester = remember { FocusRequester() }
     val perAppFocusRequester = remember { FocusRequester() }
     val bypassFocusRequester = remember { FocusRequester() }
     val infoFocusRequester = remember { FocusRequester() }
@@ -169,122 +151,34 @@ fun PerAppProxyScreen(
     val focusFirstApp = {
         apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: true
     }
-    val topBarFocusOrder = remember(backFocusRequester, searchFocusRequester, moreFocusRequester, showSearch) {
-        if (showSearch) {
-            listOf(backFocusRequester, moreFocusRequester)
-        } else {
-            listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
-        }
-    }
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(searchQuery) {
         onSearch(searchQuery)
     }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            AppTopBar(
+            AppSelectionTopBar(
                 title = stringResource(R.string.per_app_proxy_settings),
-                onBackClick = onBackClick,
-                initialFocus = false,
                 isLoading = isLoading,
                 isSearchActive = showSearch,
                 searchQuery = searchQuery,
-                onSearchQueryChange = { query ->
-                    searchQuery = query
-                    onSearch(query)
-                },
+                onSearchQueryChange = { searchQuery = it },
                 onSearchClose = {
                     searchQuery = ""
                     onSearch("")
                     showSearch = false
                 },
-                searchPlaceholder = stringResource(R.string.menu_item_search),
-                navigationFocusRequester = backFocusRequester,
-                customActionFocusRequesters = if (showSearch) {
-                    listOf(moreFocusRequester)
-                } else {
-                    listOf(searchFocusRequester, moreFocusRequester)
-                },
+                onSearchOpen = { showSearch = true },
+                onBackClick = onBackClick,
                 onMoveDown = perAppFocusRequester::requestFocus,
-                navigationIcon = {
-                    AppIconButton(
-                        icon = painterResource(R.drawable.ic_arrow_back_24dp),
-                        label = stringResource(R.string.action_back),
-                        focusRequester = backFocusRequester,
-                        modifier = Modifier.dpadTopBarFocusNavigation(
-                            backFocusRequester,
-                            topBarFocusOrder,
-                            perAppFocusRequester::requestFocus
-                        ),
-                        onClick = if (showSearch) {
-                            {
-                                searchQuery = ""
-                                showSearch = false
-                            }
-                        } else {
-                            onBackClick
-                        }
-                    )
-                },
-                actions = {
-                    if (!showSearch) {
-                        AppIconButton(
-                            icon = painterResource(R.drawable.ic_search_24dp),
-                            label = stringResource(R.string.menu_item_search),
-                            focusRequester = searchFocusRequester,
-                            modifier = Modifier.dpadTopBarFocusNavigation(
-                                searchFocusRequester,
-                                topBarFocusOrder,
-                                perAppFocusRequester::requestFocus
-                            ),
-                            onClick = { showSearch = true }
-                        )
-                    }
-                    Box {
-                        AppIconButton(
-                            icon = painterResource(R.drawable.ic_more_vert_24dp),
-                            label = stringResource(R.string.action_more),
-                            contentDescription = if (isTelevision) {
-                                stringResource(R.string.action_more)
-                            } else {
-                                null
-                            },
-                            focusRequester = moreFocusRequester,
-                            modifier = Modifier.dpadTopBarFocusNavigation(
-                                moreFocusRequester,
-                                topBarFocusOrder,
-                                perAppFocusRequester::requestFocus
-                            ),
-                            onClick = { showMenu = true }
-                        )
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
-                                showMenu = false
-                                if (showSearch) {
-                                    backFocusRequester.requestFocus()
-                                } else {
-                                    searchFocusRequester.requestFocus()
-                                }
-                            })
-                        ) {
-                            AppDropdownMenuItems(PerAppMenuAction.entries, { it.labelRes }) { action ->
-                                showMenu = false
-                                when (action) {
-                                    PerAppMenuAction.SelectAll -> onSelectAll()
-                                    PerAppMenuAction.InvertSelection -> onInvertSelection()
-                                    PerAppMenuAction.SelectProxyApps -> onSelectProxyAuto()
-                                    PerAppMenuAction.ImportSelection -> onImportProxyApp()
-                                    PerAppMenuAction.ExportSelection -> onExportProxyApp()
-                                }
-                            }
-                        }
-                    }
-                }
+                menuActions = listOf(
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_select_all), onSelectAll),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_invert_selection), onInvertSelection),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_select_proxy_app), onSelectProxyAuto),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_import_proxy_app), onImportProxyApp),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_export_proxy_app), onExportProxyApp)
+                )
             )
         }
     ) { innerPadding ->

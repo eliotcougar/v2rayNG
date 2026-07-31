@@ -130,11 +130,10 @@ private fun ServerCollectionItem(
     rows: List<ServerRowUiModel>,
     focusRequesters: Map<String, ServerRowFocusRequesters>,
     layout: ServerRowLayout,
-    reorderState: DpadReorderState,
+    reorderState: DpadReorderState?,
     reorderTarget: (Int, DpadReorderDirection) -> Int,
     collectionActions: ServerCollectionActions,
-    selectedGuid: String?,
-    canReorder: Boolean
+    selectedGuid: String?
 ) {
     val stride = if (layout == ServerRowLayout.TwoColumn) 2 else 1
     val current = focusRequesters.getValue(row.guid)
@@ -146,10 +145,9 @@ private fun ServerCollectionItem(
     val adjacentColumn = if (layout == ServerRowLayout.TwoColumn && index % 2 == 0) {
         rows.getOrNull(index + 1)?.let { focusRequesters[it.guid] }
     } else null
-    val reorderItem = if (canReorder) {
-        DpadReorderItem(reorderState, row.guid, index, rows.size, reorderTarget, collectionActions.move)
-    } else null
-
+    val reorderItem = reorderState?.let {
+        DpadReorderItem(it, row.guid, index, rows.size, reorderTarget, collectionActions.move)
+    }
     Column {
         ServerListItem(
             model = row,
@@ -160,15 +158,28 @@ private fun ServerCollectionItem(
                 share = { collectionActions.share(row.guid, row.profile, current.share) },
                 remove = { collectionActions.remove(row.guid) },
                 more = { collectionActions.more(row.guid, row.profile, current.row) },
-                movePrevious = previousColumn?.let { target ->
-                    { _: FocusRequester -> target.more.requestFocus() }
-                } ?: collectionActions.movePrevious,
+                movePrevious = previousColumn?.let { target -> { _: FocusRequester -> target.more.requestFocus() } }
+                    ?: collectionActions.movePrevious,
                 moveUp = if (index < stride) collectionActions.moveUpFromFirstRow else null,
                 reorderItem = reorderItem
             ),
             focusTargets = ServerRowFocusTargets(current, previous, next, adjacentColumn, layout)
         )
         ServerItemDivider()
+    }
+}
+
+@Composable
+private fun RevealSelectedServerEffect(
+    isTelevision: Boolean,
+    generation: Int,
+    selectedGuid: String?,
+    serverGuids: Set<String>,
+    selectedIndex: Int,
+    reveal: suspend (Int) -> Unit
+) {
+    LaunchedEffect(isTelevision, generation, selectedGuid, serverGuids) {
+        if (isTelevision && selectedIndex >= 0) reveal(selectedIndex)
     }
 }
 
@@ -266,10 +277,14 @@ private fun ServerListPage(
     }
 
     if (doubleColumnDisplay) {
-        LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
-            if (isTelevision && selectedServerIndex >= 0) {
-                gridState.scrollToItem(selectedServerIndex, -gridState.layoutInfo.viewportSize.height / 3)
-            }
+        RevealSelectedServerEffect(
+            isTelevision,
+            revealSelectedGeneration,
+            selectedGuid,
+            serverGuidSet,
+            selectedServerIndex
+        ) { index ->
+            gridState.scrollToItem(index, -gridState.layoutInfo.viewportSize.height / 3)
         }
         LocateTargetEffect(locateTarget, rows, gridState, onLocateHandled)
         val reorderableGridState = if (canReorder) {
@@ -291,9 +306,9 @@ private fun ServerListPage(
                 val content: @Composable () -> Unit = {
                     ServerCollectionItem(
                         row, index, rows, rowFocusTargets, ServerRowLayout.TwoColumn,
-                        dpadReorderState,
+                        dpadReorderState.takeIf { canReorder },
                         { currentIndex, direction -> twoColumnDpadReorderTarget(currentIndex, direction, isRtl) },
-                        collectionActions, selectedGuid, canReorder
+                        collectionActions, selectedGuid
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
@@ -306,10 +321,14 @@ private fun ServerListPage(
             }
         }
     } else {
-        LaunchedEffect(isTelevision, revealSelectedGeneration, selectedGuid, serverGuidSet) {
-            if (isTelevision && selectedServerIndex >= 0) {
-                listState.scrollToItem(selectedServerIndex, -listState.layoutInfo.viewportSize.height / 3)
-            }
+        RevealSelectedServerEffect(
+            isTelevision,
+            revealSelectedGeneration,
+            selectedGuid,
+            serverGuidSet,
+            selectedServerIndex
+        ) { index ->
+            listState.scrollToItem(index, -listState.layoutInfo.viewportSize.height / 3)
         }
         LocateTargetEffect(locateTarget, rows, listState, onLocateHandled)
         val reorderableState = if (canReorder) {
@@ -330,7 +349,8 @@ private fun ServerListPage(
                 val content: @Composable () -> Unit = {
                     ServerCollectionItem(
                         row, index, rows, rowFocusTargets, ServerRowLayout.SingleColumn,
-                        dpadReorderState, ::verticalDpadReorderTarget, collectionActions, selectedGuid, canReorder
+                        dpadReorderState.takeIf { canReorder }, ::verticalDpadReorderTarget,
+                        collectionActions, selectedGuid
                     )
                 }
                 if (canReorder && reorderableState != null) {

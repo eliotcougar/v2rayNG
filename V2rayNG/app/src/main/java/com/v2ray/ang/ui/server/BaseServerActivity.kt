@@ -45,6 +45,7 @@ import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.JsonUtil
@@ -481,6 +482,7 @@ abstract class BaseServerActivity : BaseComponentActivity() {
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding)
                     .tvAwareImePadding()
+                    .tvSafeAreaPadding()
                     .verticalScroll(scrollState)
                     .verticalScrollbar(scrollState)
                     .padding(bottom = 36.dp),

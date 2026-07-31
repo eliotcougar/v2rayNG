@@ -2,7 +2,6 @@ package com.v2ray.ang.ui.compose
 
 import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
@@ -12,7 +11,6 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
@@ -68,7 +66,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -82,8 +79,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
-import androidx.compose.ui.zIndex
-import sh.calvin.reorderable.ReorderableCollectionItemScope
 
 private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
 
@@ -497,68 +492,3 @@ fun VersionInfoBlock(versionText: String, appIdText: String? = null, modifier: M
         }
     }
 }
-
-@Composable
-private fun reorderableElevation(isDragging: Boolean, isMoving: Boolean) = animateDpAsState(
-    targetValue = when {
-        isMoving -> 16.dp
-        isDragging -> 4.dp
-        else -> 0.dp
-    },
-    label = "ReorderableElevation"
-)
-
-@Composable
-fun ReorderableCollectionItemScope.reorderableDragHandle(): Modifier {
-    val hapticFeedback = LocalHapticFeedback.current
-    return Modifier.longPressDraggableHandle(
-        onDragStarted = {
-            // Platform haptics honor the user's touch-feedback setting.
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-        }
-    )
-}
-
-@Composable
-private fun ReorderableSurface(
-    scope: ReorderableCollectionItemScope,
-    isDragging: Boolean,
-    isMoving: Boolean,
-    moveModeCornerRadius: Dp,
-    content: @Composable () -> Unit
-) {
-    val elevation by reorderableElevation(isDragging, isMoving)
-    val shape = if (isMoving) RoundedCornerShape(moveModeCornerRadius) else RectangleShape
-    Box(Modifier.fillMaxWidth()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth().then(with(scope) { reorderableDragHandle() }),
-            shape = shape,
-            color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-            shadowElevation = elevation,
-            tonalElevation = if (isMoving) 8.dp else 0.dp
-        ) { content() }
-        if (isMoving) Box(Modifier.matchParentSize().border(4.dp, MaterialTheme.colorScheme.secondary, shape))
-    }
-}
-
-@Composable
-fun ReorderableListItem(
-    scope: ReorderableCollectionItemScope,
-    isDragging: Boolean,
-    isMoving: Boolean = false,
-    moveModeCornerRadius: Dp = 16.dp,
-    content: @Composable RowScope.() -> Unit
-) {
-    ReorderableSurface(scope, isDragging, isMoving, moveModeCornerRadius) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, content = content)
-    }
-}
-
-@Composable
-fun ReorderableGridItem(
-    scope: ReorderableCollectionItemScope,
-    isDragging: Boolean,
-    isMoving: Boolean = false,
-    moveModeCornerRadius: Dp = 16.dp,
-    content: @Composable () -> Unit
-) = ReorderableSurface(scope, isDragging, isMoving, moveModeCornerRadius, content)

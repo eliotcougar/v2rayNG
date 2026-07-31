@@ -177,25 +177,18 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                             }
                         },
                         onAction = onAction,
-                        onMoreMenuAction = { action ->
-                            when (action) {
-                                MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
-                                MainMoreMenuAction.DeleteAll -> dialogState.show(MainDialog.DeleteAll)
-                                MainMoreMenuAction.DeleteDuplicate -> dialogState.show(MainDialog.DeleteDuplicate)
-                                MainMoreMenuAction.DeleteInvalid -> dialogState.show(MainDialog.DeleteInvalid)
-                                MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
-                                MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
-                                MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
-                                MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
-                                MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
-                                MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
-                                MainMoreMenuAction.Exit -> onAction(MainAction.Exit)
-                            }
+                        onBulkDelete = { target ->
+                            dialogState.show(when (target) {
+                                BulkDeleteTarget.All -> MainDialog.DeleteAll
+                                BulkDeleteTarget.Duplicate -> MainDialog.DeleteDuplicate
+                                BulkDeleteTarget.Invalid -> MainDialog.DeleteInvalid
+                            })
                         }
                     )
                 },
-                bottomBar = { MainBottomBar(displayText, isRunning, isDarkTheme, onAction) },
-                floatingActionButton = {}
+                bottomBar = {
+                    MainBottomBar(displayText, isRunning, isDarkTheme, onAction)
+                }
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {
                     Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {

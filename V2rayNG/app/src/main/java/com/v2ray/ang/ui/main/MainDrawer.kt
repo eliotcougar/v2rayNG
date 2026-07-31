@@ -3,7 +3,7 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,8 +62,6 @@ import androidx.tv.material3.lightColorScheme as tvColorScheme
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
-import com.v2ray.ang.ui.compose.dpadClickable
-import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
@@ -319,10 +317,7 @@ private fun DrawerMenuItem(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
-            .dpadFocusOutline()
-            .dpadLogicalHorizontalNavigation(onMovePrevious = {}, onMoveNext = {})
-            .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = { true })
-            .dpadClickable(onClick = onClick)
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

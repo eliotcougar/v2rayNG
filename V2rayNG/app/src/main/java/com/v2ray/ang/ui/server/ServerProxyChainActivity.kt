@@ -76,6 +76,8 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
 
+private const val PROXY_CHAIN_LIST_HEADER_COUNT = 2
+
 private data class ProxyChainMemberFocusTargets(
     val field: FocusRequester = FocusRequester(),
     val remove: FocusRequester = FocusRequester()
@@ -247,7 +249,7 @@ fun ProxyChainScreen(
         val memberId = key as? Long ?: return@rememberSyncedDpadReorderState
         val focusTargets = memberFocusTargets[memberId]
         if (index >= 0 && focusTargets != null) {
-            lazyListState.keepDpadReorderItemVisible(memberId, index + 2)
+            lazyListState.keepDpadReorderItemVisible(memberId, index + PROXY_CHAIN_LIST_HEADER_COUNT)
             requestFocusWhenReady(focusTargets.field)
         }
     }
@@ -276,7 +278,7 @@ fun ProxyChainScreen(
         val index = memberIds.indexOf(memberId)
         val focusTargets = memberFocusTargets[memberId]
         if (index >= 0 && focusTargets != null) {
-            lazyListState.animateScrollToItem(index + 2)
+            lazyListState.animateScrollToItem(index + PROXY_CHAIN_LIST_HEADER_COUNT)
             requestFocusWhenReady(focusTargets.field)
         }
         pendingMemberFocusId = null

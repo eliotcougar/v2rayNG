@@ -54,10 +54,11 @@ import com.v2ray.ang.R
 
 @Composable
 fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val isTelevision = isTelevisionDevice()
     val dismissFocusRequester = remember { FocusRequester() }
     val deleteText = stringResource(R.string.action_delete)
     val cancelText = stringResource(android.R.string.cancel)
-    LaunchedEffect(Unit) { requestFocusWhenReady(dismissFocusRequester) }
+    if (isTelevision) LaunchedEffect(Unit) { requestFocusWhenReady(dismissFocusRequester) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

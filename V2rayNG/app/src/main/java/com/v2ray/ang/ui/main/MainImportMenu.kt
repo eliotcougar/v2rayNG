@@ -52,6 +52,8 @@ internal enum class ServerMenuAction(
     Delete(R.string.action_delete, isShareAction = false, supportsComplexProfiles = true),
 }
 
+internal enum class BulkDeleteTarget { All, Duplicate, Invalid }
+
 internal fun serverMenuActions(isComplexProfile: Boolean, includeManagementActions: Boolean): List<ServerMenuAction> {
     return ServerMenuAction.entries.filter { action ->
         (includeManagementActions || action.isShareAction) &&
@@ -67,10 +69,11 @@ fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
 )
 
 @Composable
-fun MoreMenuContent(
+internal fun MoreMenuContent(
     isRunning: Boolean,
     isTelevision: Boolean,
-    onSelected: (MainMoreMenuAction) -> Unit
+    onAction: (MainAction) -> Unit,
+    onBulkDelete: (BulkDeleteTarget) -> Unit
 ) = AppDropdownMenuItems(
     items = MainMoreMenuAction.entries.filter { action ->
         when (action) {
@@ -81,7 +84,21 @@ fun MoreMenuContent(
         }
     },
     labelRes = { it.labelRes },
-    onSelected = onSelected
+    onSelected = { action ->
+        when (action) {
+            MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
+            MainMoreMenuAction.DeleteAll -> onBulkDelete(BulkDeleteTarget.All)
+            MainMoreMenuAction.DeleteDuplicate -> onBulkDelete(BulkDeleteTarget.Duplicate)
+            MainMoreMenuAction.DeleteInvalid -> onBulkDelete(BulkDeleteTarget.Invalid)
+            MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
+            MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
+            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
+            MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
+            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
+            MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
+            MainMoreMenuAction.Exit -> onAction(MainAction.Exit)
+        }
+    }
 )
 
 @Composable

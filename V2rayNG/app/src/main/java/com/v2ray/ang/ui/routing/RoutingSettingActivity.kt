@@ -106,6 +106,7 @@ private enum class RoutingPreset(val type: RoutingType, @StringRes val labelRes:
     IranWhitelist(RoutingType.WHITE_IRAN, R.string.routing_preset_iran_whitelist),
     RussiaWhitelist(RoutingType.WHITE_RUSSIA, R.string.routing_preset_russia_whitelist)
 }
+private const val ROUTING_LIST_HEADER_COUNT = 1
 
 class RoutingSettingActivity : HelperBaseComponentActivity() {
     private val viewModel: RoutingSettingsViewModel by viewModels()
@@ -255,7 +256,9 @@ fun RoutingSettingScreen(
     val lazyListState = rememberLazyListState()
     val dpadReorderState = rememberSyncedDpadReorderState(rulesetIds, isTelevision) { key, index ->
         val id = key as? String ?: return@rememberSyncedDpadReorderState
-        if (index >= 0) lazyListState.keepDpadReorderItemVisible(id, index + 1)
+        if (index >= 0) {
+            lazyListState.keepDpadReorderItemVisible(id, index + ROUTING_LIST_HEADER_COUNT)
+        }
         rowFocusTargets[id]?.row?.requestFocus()
     }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
