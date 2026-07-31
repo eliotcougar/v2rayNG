@@ -26,7 +26,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDialogButton
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.core.CoreNativeManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -83,7 +83,7 @@ fun CheckUpdateScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .tvContentPadding()
+                .tvSafeAreaPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             SettingsSwitchItem(

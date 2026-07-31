@@ -27,7 +27,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.FormDropdownConfig
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
@@ -214,7 +214,7 @@ fun SubEditScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .tvAwareImePadding()
-                .tvContentPadding()
+                .tvSafeAreaPadding()
                 .verticalScroll(scrollState)
                 .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)

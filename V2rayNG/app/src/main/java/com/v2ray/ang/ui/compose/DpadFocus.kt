@@ -138,9 +138,9 @@ fun Modifier.tvMenuItemFocus(): Modifier {
         .clip(shape)
 }
 
-/** Applies the same television safe-area inset to screen content without changing touch UIs. */
+/** Applies the fixed television safe-area inset without changing touch UIs. */
 @Composable
-fun Modifier.tvContentPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
+fun Modifier.tvSafeAreaPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
     if (!isTelevisionDevice()) return this
     return padding(horizontal = horizontal, vertical = vertical)
 }

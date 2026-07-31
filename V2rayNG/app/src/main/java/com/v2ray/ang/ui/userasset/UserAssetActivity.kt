@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.dto.entities.AssetUrlCache
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.extension.toTrafficString
@@ -63,7 +64,6 @@ import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
-import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -374,7 +374,7 @@ internal fun UserAssetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .tvContentPadding()
+                .tvSafeAreaPadding()
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {

@@ -50,7 +50,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.ToastType
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.isTelevisionDevice
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -237,7 +237,7 @@ fun LogcatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .tvContentPadding()
+                .tvSafeAreaPadding()
         ) {
             LazyColumn(
                 state = listState,

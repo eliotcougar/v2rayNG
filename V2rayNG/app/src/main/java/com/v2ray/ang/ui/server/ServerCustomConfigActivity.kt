@@ -59,7 +59,7 @@ import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberTvTextFieldState
 import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.ui.compose.tvAwareTextFieldFocus
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvTextFieldEditorFocus
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -356,7 +356,7 @@ fun ServerCustomConfigScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .tvAwareImePadding()
-                .tvContentPadding()
+                .tvSafeAreaPadding()
         ) {
             FormTextField(
                 label = stringResource(R.string.server_lab_remarks),

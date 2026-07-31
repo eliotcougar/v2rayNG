@@ -37,7 +37,7 @@ import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBarAction
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.ui.compose.FormDropdownConfig
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
@@ -226,7 +226,7 @@ fun RoutingEditScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .tvAwareImePadding()
-                .tvContentPadding()
+                .tvSafeAreaPadding()
                 .verticalScroll(scrollState)
                 .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)

@@ -185,7 +185,7 @@ internal fun AppTopBar(
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.onSurface
             ),
-            modifier = Modifier.tvContentPadding(horizontal = 48.dp, vertical = 12.dp)
+            modifier = Modifier.tvSafeAreaPadding(horizontal = 48.dp, vertical = 12.dp)
         )
         AnimatedVisibility(
             visible = isLoading,

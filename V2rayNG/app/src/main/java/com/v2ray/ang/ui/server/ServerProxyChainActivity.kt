@@ -67,7 +67,7 @@ import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.tvAwareImePadding
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
@@ -388,7 +388,7 @@ fun ProxyChainScreen(
                 .consumeWindowInsets(innerPadding)
                 .tvAwareImePadding()
                 .verticalScrollbar(lazyListState)
-                .tvContentPadding(),
+                .tvSafeAreaPadding(),
             contentPadding = PaddingValues(
                 top = 8.dp,
                 start = 16.dp,

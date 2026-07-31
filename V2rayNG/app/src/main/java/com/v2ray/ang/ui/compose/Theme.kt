@@ -1,7 +1,4 @@
-@file:OptIn(
-    androidx.compose.foundation.ExperimentalFoundationApi::class,
-    androidx.compose.foundation.layout.ExperimentalLayoutApi::class
-)
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.v2ray.ang.ui.compose
 

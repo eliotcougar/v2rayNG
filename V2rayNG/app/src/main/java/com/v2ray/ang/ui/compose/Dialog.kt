@@ -1,5 +1,3 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-
 package com.v2ray.ang.ui.compose
 
 import android.graphics.Bitmap

@@ -24,7 +24,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
 import com.v2ray.ang.ui.compose.tvAwareImePadding
-import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.extension.toast
@@ -181,7 +181,7 @@ fun UserAssetUrlScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .tvContentPadding()
+                .tvSafeAreaPadding()
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
                 .tvAwareImePadding()

@@ -1,9 +1,8 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-
 package com.v2ray.ang.ui.compose
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.relocation.BringIntoViewRequester
@@ -118,6 +117,7 @@ internal class TvTextFieldState(val passiveFocusRequester: FocusRequester, priva
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = null): TvTextFieldState {
     val defaultPassiveFocusRequester = remember { FocusRequester() }
     val resolvedPassiveFocusRequester = passiveFocusRequester ?: defaultPassiveFocusRequester
