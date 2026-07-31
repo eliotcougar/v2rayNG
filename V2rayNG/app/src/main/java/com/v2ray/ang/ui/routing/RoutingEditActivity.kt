@@ -49,7 +49,6 @@ import com.v2ray.ang.compose.SettingsSwitchItem
 import com.v2ray.ang.compose.TvTextFieldNavigation
 import com.v2ray.ang.compose.dpadFocusOutline
 import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.tvContentPadding
 import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.extension.nullIfBlank

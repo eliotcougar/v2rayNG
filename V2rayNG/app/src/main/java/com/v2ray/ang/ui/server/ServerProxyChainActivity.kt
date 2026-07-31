@@ -37,30 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppIconButton
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.DpadReorderItem
-import com.v2ray.ang.compose.FormDropdownConfig
-import com.v2ray.ang.compose.FormDropdownField
-import com.v2ray.ang.compose.FormTextField
-import com.v2ray.ang.compose.ReorderableListItem
-import com.v2ray.ang.compose.TvTextFieldNavigation
-import com.v2ray.ang.compose.dpadLongPressToMove
-import com.v2ray.ang.compose.dpadOrderedFocusNavigation
-import com.v2ray.ang.compose.dpadTopBarFocusNavigation
-import com.v2ray.ang.compose.dpadVerticalFocusNavigation
-import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.keepDpadReorderItemVisible
-import com.v2ray.ang.compose.rememberDpadFocusRequester
-import com.v2ray.ang.compose.rememberSyncedDpadReorderState
-import com.v2ray.ang.compose.rememberFormDropdownState
-import com.v2ray.ang.compose.reorderIndicesForKeys
-import com.v2ray.ang.compose.requestFocusWhenReady
-import com.v2ray.ang.compose.tvAwareImePadding
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.verticalDpadReorderTarget
-import com.v2ray.ang.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isComplexType
@@ -70,11 +46,29 @@ import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
+import com.v2ray.ang.ui.compose.DpadReorderItem
+import com.v2ray.ang.ui.compose.FormDropdownConfig
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
-import com.v2ray.ang.ui.compose.reorderableDragHandle
+import com.v2ray.ang.ui.compose.ReorderableListItem
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.rememberFormDropdownState
+import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
+import com.v2ray.ang.ui.compose.reorderIndicesForKeys
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -220,7 +214,6 @@ fun ProxyChainScreen(
     }
     var showProfileDeleteConfirm by remember { mutableStateOf(false) }
     var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    val dpadReorderState = rememberDpadReorderState()
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }
     var pendingAddFocus by remember { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning

@@ -52,11 +52,11 @@ internal enum class ServerMenuAction(
     Delete(R.string.action_delete, isShareAction = false, supportsComplexProfiles = true),
 }
 
-internal fun serverMenuActions(
-    isComplexProfile: Boolean,
-    includeManagementActions: Boolean,
-): List<ServerMenuAction> = ServerMenuAction.entries.filter { action ->
-    (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
+internal fun serverMenuActions(isComplexProfile: Boolean, includeManagementActions: Boolean): List<ServerMenuAction> {
+    return ServerMenuAction.entries.filter { action ->
+        (includeManagementActions || action.isShareAction) &&
+            (!isComplexProfile || action.supportsComplexProfiles)
+    }
 }
 
 @Composable
@@ -94,10 +94,8 @@ fun ShareMethodDialog(
     onAction: (MainAction) -> Unit,
     onRemove: (String) -> Unit,
 ) {
-    val menuActions = serverMenuActions(
-        isComplexProfile = profile.configType.isComplexType(),
-        includeManagementActions = more,
-    )
+    val isCustom = profile.configType.isComplexType()
+    val menuActions = serverMenuActions(isComplexProfile = isCustom, includeManagementActions = more)
     SelectListDialog(
         options = menuActions,
         optionText = { stringResource(it.labelRes) },
