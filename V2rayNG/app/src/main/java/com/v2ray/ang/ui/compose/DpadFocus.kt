@@ -310,16 +310,30 @@ fun Modifier.dpadPopupHorizontalNavigation(
     }
 }
 
-/** Lets an editor leave through its logical leading edge before it consumes the D-pad key. */
+/** Lets a focused subtree leave through its logical leading edge before a child consumes the key. */
 @Composable
-fun Modifier.dpadMovePreviousNavigation(onMovePrevious: () -> Unit): Modifier {
-    if (!isTelevisionDevice()) return this
+fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMovePrevious: () -> Unit): Modifier {
+    if (!isTelevisionDevice() || !enabled) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onPreviewKeyEvent { event ->
         if (event.type == KeyEventType.KeyDown &&
             logicalHorizontalDirection(event.key, isRtl) == DpadHorizontalDirection.Previous
         ) {
             onMovePrevious()
+            true
+        } else {
+            false
+        }
+    }
+}
+
+/** Handles Back inside a focused TV subtree before the activity fallback closes the screen. */
+@Composable
+fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Modifier {
+    if (!isTelevisionDevice() || !enabled) return this
+    return onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown && event.key == Key.Back) {
+            onBack()
             true
         } else {
             false

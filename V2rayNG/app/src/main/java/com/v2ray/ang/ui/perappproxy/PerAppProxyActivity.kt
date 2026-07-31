@@ -58,9 +58,11 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.AppSelectionMenuAction
 import com.v2ray.ang.ui.compose.AppSelectionTopBar
@@ -137,6 +139,7 @@ fun PerAppProxyScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showInfoPopup by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val isTelevision = isTelevisionDevice()
     val perAppFocusRequester = remember { FocusRequester() }
     val bypassFocusRequester = remember { FocusRequester() }
@@ -171,6 +174,7 @@ fun PerAppProxyScreen(
                 },
                 onSearchOpen = { showSearch = true },
                 onBackClick = onBackClick,
+                backFocusRequester = backFocusRequester,
                 onMoveDown = perAppFocusRequester::requestFocus,
                 menuActions = listOf(
                     AppSelectionMenuAction(stringResource(R.string.menu_item_select_all), onSelectAll),
@@ -247,6 +251,7 @@ fun PerAppProxyScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                     .verticalScrollbar(listState),
                 contentPadding = if (isTelevision) {
                     PaddingValues(horizontal = 48.dp, vertical = 8.dp)

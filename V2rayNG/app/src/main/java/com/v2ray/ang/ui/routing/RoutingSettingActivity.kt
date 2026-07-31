@@ -70,6 +70,7 @@ import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
@@ -330,6 +331,9 @@ fun RoutingSettingScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .tvSafeAreaPadding()
+                .dpadMovePreviousNavigation(enabled = !dpadReorderState.isMoving) {
+                    navigationFocusRequester.requestFocus()
+                }
                 .verticalScrollbar(lazyListState),
             contentPadding = NavigationBarsBottomPadding()
         ) {

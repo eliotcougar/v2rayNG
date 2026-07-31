@@ -29,6 +29,8 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.VPN
 import com.v2ray.ang.R
 import com.v2ray.ang.handler.AppLocaleManager
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
@@ -70,6 +72,7 @@ fun SettingsScreen(
     onModeHelpClicked: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val backFocusRequester = rememberDpadFocusRequester()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val isTelevision = isTelevisionDevice()
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -192,7 +195,8 @@ fun SettingsScreen(
             AppTopBar(
                 title = stringResource(R.string.title_settings),
                 onBackClick = onBackClick,
-                isLoading = isLoading
+                isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester
             )
         }
     ) { innerPadding ->
@@ -201,6 +205,7 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .tvSafeAreaPadding()
+                .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
         ) {

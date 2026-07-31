@@ -26,11 +26,11 @@ internal fun AppSelectionTopBar(
     onSearchClose: () -> Unit,
     onSearchOpen: () -> Unit,
     onBackClick: () -> Unit,
+    backFocusRequester: FocusRequester,
     onMoveDown: () -> Boolean,
     menuActions: List<AppSelectionMenuAction>
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !isSearchActive, requestKey = isSearchActive)
     val searchFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
     val topBarFocusOrder = remember(backFocusRequester, searchFocusRequester, moreFocusRequester, isSearchActive) {

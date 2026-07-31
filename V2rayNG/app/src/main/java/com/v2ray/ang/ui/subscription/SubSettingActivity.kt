@@ -67,6 +67,7 @@ import com.v2ray.ang.ui.compose.TvExpandableSwitch
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
@@ -156,6 +157,7 @@ fun SubSettingScreen(
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     val lazyListState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(subscriptionIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
             viewModel.move(fromIndex, toIndex)
@@ -175,6 +177,7 @@ fun SubSettingScreen(
                 title = stringResource(R.string.title_sub_setting),
                 onBackClick = onBackClick,
                 isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester,
                 onMoveDown = {
                     subscriptions.firstOrNull()?.let {
                         rowFocusTargets[it.guid]?.row?.requestFocus()
@@ -200,6 +203,9 @@ fun SubSettingScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .dpadMovePreviousNavigation(enabled = !dpadReorderState.isMoving) {
+                    backFocusRequester.requestFocus()
+                }
                 .verticalScrollbar(lazyListState),
             contentPadding = if (isTelevision) {
                 PaddingValues(horizontal = 48.dp, vertical = 12.dp)

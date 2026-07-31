@@ -253,6 +253,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                 },
                                 onRemoveServer = requestRemoveServer,
                                 onOpenDrawer = openDrawer,
+                                onBackFromList = { topBarFocus.start.requestFocus() },
                                 onMoveUpFromFirstRow = if (groups.size > 1) {
                                     { groupTabFocusRequesters.getOrNull(page)?.requestFocus() }
                                 } else null,

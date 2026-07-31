@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.dto.entities.AssetUrlCache
 import com.v2ray.ang.dto.entities.AssetUrlItem
@@ -375,6 +376,7 @@ internal fun UserAssetScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .tvSafeAreaPadding()
+                .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {

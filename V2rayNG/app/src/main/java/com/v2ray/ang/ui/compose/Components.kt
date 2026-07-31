@@ -383,7 +383,7 @@ private fun SearchInputField(
             modifier = Modifier
                 .weight(1f)
                 .focusRequester(focusRequester)
-                .dpadMovePreviousNavigation(onMovePrevious)
+                .dpadMovePreviousNavigation(onMovePrevious = onMovePrevious)
         )
         if (query.isNotEmpty()) {
             AppIconButton(

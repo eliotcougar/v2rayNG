@@ -58,6 +58,7 @@ import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
@@ -454,6 +455,9 @@ fun ProxyChainScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .dpadMovePreviousNavigation(enabled = !dpadReorderState.isMoving) {
+                                    backFocusRequester.requestFocus()
+                                }
                                 .padding(horizontal = 4.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

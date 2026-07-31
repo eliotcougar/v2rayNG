@@ -64,6 +64,7 @@ import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
+import com.v2ray.ang.ui.compose.dpadBackNavigation
 import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
@@ -200,6 +201,7 @@ fun GroupPagerPage(
     onMoreServer: (String, ProfileItem, FocusRequester) -> Unit,
     onRemoveServer: (String) -> Unit,
     onOpenDrawer: (FocusRequester) -> Unit,
+    onBackFromList: () -> Unit,
     onMoveUpFromFirstRow: (() -> Unit)?,
     contentPadding: PaddingValues
 ) {
@@ -227,6 +229,7 @@ fun GroupPagerPage(
             moveUpFromFirstRow = onMoveUpFromFirstRow
         ),
         onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
+        onBackFromList = onBackFromList,
         contentPadding = contentPadding
     )
 }
@@ -244,6 +247,7 @@ private fun ServerListPage(
     lazyGridStates: MutableMap<String, LazyGridState>,
     collectionActions: ServerCollectionActions,
     onLocateHandled: (LocateTarget) -> Unit,
+    onBackFromList: () -> Unit,
     contentPadding: PaddingValues
 ) {
     val isTelevision = isTelevisionDevice()
@@ -298,7 +302,10 @@ private fun ServerListPage(
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             state = gridState,
-            modifier = Modifier.fillMaxSize().verticalScrollbar(gridState),
+            modifier = Modifier
+                .fillMaxSize()
+                .dpadBackNavigation(enabled = !dpadReorderState.isMoving, onBack = onBackFromList)
+                .verticalScrollbar(gridState),
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
@@ -341,7 +348,10 @@ private fun ServerListPage(
 
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().verticalScrollbar(listState),
+            modifier = Modifier
+                .fillMaxSize()
+                .dpadBackNavigation(enabled = !dpadReorderState.isMoving, onBack = onBackFromList)
+                .verticalScrollbar(listState),
             contentPadding = contentPadding
         ) {
             itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->

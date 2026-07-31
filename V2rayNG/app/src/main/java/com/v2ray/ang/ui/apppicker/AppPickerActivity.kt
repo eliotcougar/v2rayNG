@@ -25,7 +25,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppSelectionMenuAction
 import com.v2ray.ang.ui.compose.AppSelectionTopBar
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.ui.base.BaseComponentActivity
@@ -112,6 +114,7 @@ fun AppPickerScreen(
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val packageNames = apps.map { it.packageName }
     val rowFocusRequesters = remember(packageNames) {
         packageNames.associateWith { FocusRequester() }
@@ -139,6 +142,7 @@ fun AppPickerScreen(
                 },
                 onSearchOpen = { showSearch = true },
                 onBackClick = onBackClick,
+                backFocusRequester = backFocusRequester,
                 onMoveDown = focusFirstApp,
                 menuActions = listOf(
                     AppSelectionMenuAction(stringResource(R.string.menu_item_select_all), onSelectAll),
@@ -153,6 +157,7 @@ fun AppPickerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .tvSafeAreaPadding()
+                .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                 .verticalScrollbar(listState),
             contentPadding = NavigationBarsBottomPadding()
         ) {
