@@ -44,6 +44,7 @@ import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.JsonUtil
@@ -334,7 +335,9 @@ abstract class BaseServerActivity : BaseComponentActivity() {
                         }
                     },
                     enabled = !state.isFetchingCert,
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier
+                        .padding(start = 16.dp)
+                        .dpadFocusOutline(cornerRadius = 20.dp)
                 ) {
                     Text(stringResource(R.string.pinned_ca256_action_fetch))
                 }

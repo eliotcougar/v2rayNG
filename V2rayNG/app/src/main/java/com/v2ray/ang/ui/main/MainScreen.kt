@@ -24,7 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -57,11 +57,11 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val confirmRemove = isTelevision || uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
 
-    val context = LocalContext.current
+    val resources = LocalResources.current
     val snackbar = LocalAppSnackbar.current
-    LaunchedEffect(mainViewModel, context) {
+    LaunchedEffect(mainViewModel, resources) {
         mainViewModel.serviceStatusMessages.collect { message ->
-            val text = context.getString(message.stringRes, *message.formatArgs.toTypedArray())
+            val text = resources.getString(message.stringRes, *message.formatArgs.toTypedArray())
             snackbar.show(text, if (message.isError) ToastType.ERROR else ToastType.SUCCESS)
         }
     }

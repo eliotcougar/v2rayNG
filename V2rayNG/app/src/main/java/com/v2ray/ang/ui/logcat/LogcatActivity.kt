@@ -47,6 +47,7 @@ import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.LocalAppSnackbar
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.ToastType
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.tvContentPadding
@@ -154,9 +155,11 @@ fun LogcatScreen(
     var showSearch by remember { mutableStateOf(false) }
 
     val snackbar = LocalAppSnackbar.current
+    val refreshHint = stringResource(R.string.pull_down_to_refresh)
+    val successMessage = stringResource(R.string.toast_success)
     LaunchedEffect(isTelevision) {
         if (!isTelevision) {
-            snackbar.show(context.getString(R.string.pull_down_to_refresh))
+            snackbar.show(refreshHint)
         }
     }
     val listState = rememberLazyListState()
@@ -208,7 +211,7 @@ fun LogcatScreen(
                         onClick = {
                             val all = viewModel.filteredLogs.value.joinToString("\n")
                             Utils.setClipboard(context, all)
-                            snackbar.show(context.getString(R.string.toast_success), ToastType.SUCCESS)
+                            snackbar.show(successMessage, ToastType.SUCCESS)
                         }
                     ))
                     add(AppTopBarAction(

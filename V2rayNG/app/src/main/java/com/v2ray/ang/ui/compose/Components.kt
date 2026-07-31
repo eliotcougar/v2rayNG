@@ -412,7 +412,6 @@ fun AppListItem(
 ) {
     val context = LocalContext.current
     val isTelevision = isTelevisionDevice()
-    val interactionSource = remember { MutableInteractionSource() }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -455,7 +454,7 @@ fun AppListItem(
         }
         Checkbox(
             checked = checked,
-            onCheckedChange = null,
+            onCheckedChange = if (isTelevision) null else onCheckedChange,
             colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
         )
     }

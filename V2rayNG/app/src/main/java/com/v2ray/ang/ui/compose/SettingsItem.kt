@@ -84,14 +84,15 @@ private fun SettingsItemRow(
     trailing: @Composable (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
-    val disabledAlpha = if (isTelevision) 0.38f else 1f
-    val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
+    val titleColor = when {
+        enabled -> MaterialTheme.colorScheme.onSurface
+        isTelevision -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+        else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
     }
-    val descriptionColor = if (enabled || !isTelevision) {
+    val descriptionColor = if (enabled) {
         MaterialTheme.colorScheme.onSurfaceVariant
     } else {
-        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
+        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
     }
     Row(
         modifier = modifier
@@ -316,7 +317,7 @@ fun SettingsSwitchItem(
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = null,
+                onCheckedChange = if (!isTelevision && enabled) onCheckedChange else null,
                 modifier = Modifier.scale(if (isTelevision) 0.75f else 0.8f),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,

@@ -205,10 +205,8 @@ fun ProxyChainScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
-    var members by rememberSaveable { mutableStateOf(initialMembers.toMutableList()) }
-    var memberIds by rememberSaveable {
-        mutableStateOf(initialMembers.indices.map(Int::toLong).toMutableList())
-    }
+    var members by rememberSaveable { mutableStateOf(initialMembers.toList()) }
+    var memberIds by rememberSaveable { mutableStateOf(initialMembers.indices.map(Int::toLong)) }
     var nextMemberId by rememberSaveable {
         mutableStateOf(initialMembers.size.toLong())
     }

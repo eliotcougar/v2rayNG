@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -458,3 +457,4 @@ private fun TvPerAppInfoPopup(message: String, onDismiss: () -> Unit) {
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     )
 }
+

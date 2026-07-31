@@ -21,8 +21,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -54,14 +52,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.AppTopBarAction
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.tvAwareImePadding
-import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.FormTextField
-import com.v2ray.ang.compose.horizontalScrollbar
-import com.v2ray.ang.compose.verticalScrollbar
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberTvTextFieldState
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.tvAwareTextFieldFocus
+import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvTextFieldEditorFocus
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toast
@@ -215,6 +214,8 @@ fun ServerCustomConfigScreen(
 ) {
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     val textFieldState = rememberTextFieldState(initialText = initialContent)
+    val isTelevision = isTelevisionDevice()
+    val editorTvState = if (isTelevision) rememberTvTextFieldState() else null
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
@@ -367,6 +368,13 @@ fun ServerCustomConfigScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .dpadFocusOutline(showFocus = editorTvState?.isEditing != true)
+                    .tvAwareTextFieldFocus(
+                        state = editorTvState,
+                        enabled = true,
+                        navigation = TvTextFieldNavigation(),
+                        onActivate = { editorTvState?.beginEditing() }
+                    )
             ) {
                 Row(
                     modifier = Modifier
@@ -429,7 +437,8 @@ fun ServerCustomConfigScreen(
                                 .weight(1f)
                                 .horizontalScroll(horizontalScroll)
                                 .padding(end = 24.dp)
-                                .padding(bottom = 36.dp),
+                                .padding(bottom = 36.dp)
+                                .then(editorTvState?.let { Modifier.tvTextFieldEditorFocus(it) } ?: Modifier),
                             textStyle = TextStyle(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = EditorConstants.FONT_SIZE,

@@ -852,7 +852,6 @@ class MainViewModel(
         filterJob?.cancel()
         cancelAllPing()
         dataSource.close()
-        super.onCleared()
     }
 
     // ---------- Factory ----------

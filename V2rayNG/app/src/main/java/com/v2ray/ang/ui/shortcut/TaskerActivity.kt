@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -33,13 +31,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.AppTopBarAction
-import com.v2ray.ang.compose.SettingsSwitchItem
-import com.v2ray.ang.compose.dpadClickable
-import com.v2ray.ang.compose.dpadFocusOutline
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.verticalScrollbar
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.dpadClickable
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.tvContentPadding
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -135,6 +131,7 @@ fun TaskerScreen(
     onBackClick: () -> Unit,
     onSave: () -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
     val listState = rememberLazyListState()
     val switchFocusRequester = remember { FocusRequester() }
     Scaffold(
@@ -184,7 +181,7 @@ fun TaskerScreen(
                     ) {
                         RadioButton(
                             selected = selectedPosition.value == index,
-                            onClick = null
+                            onClick = if (isTelevision) null else ({ selectedPosition.value = index })
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = remarks, style = MaterialTheme.typography.bodyLarge)

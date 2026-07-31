@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,19 +36,13 @@ import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
-import com.v2ray.ang.compose.AppTopBar
-import com.v2ray.ang.compose.AppTopBarAction
-import com.v2ray.ang.compose.tvContentPadding
-import com.v2ray.ang.compose.tvAwareImePadding
-import com.v2ray.ang.compose.DeleteConfirmDialog
-import com.v2ray.ang.compose.FormDropdownConfig
-import com.v2ray.ang.compose.FormDropdownField
-import com.v2ray.ang.compose.FormTextField
-import com.v2ray.ang.compose.SettingsSwitchItem
-import com.v2ray.ang.compose.TvTextFieldNavigation
-import com.v2ray.ang.compose.dpadFocusOutline
-import com.v2ray.ang.compose.isTelevisionDevice
-import com.v2ray.ang.compose.verticalScrollbar
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.tvContentPadding
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.FormDropdownConfig
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.extension.toast
@@ -170,6 +163,7 @@ fun RoutingEditScreen(
             processText = selectedPackages.joinToString(",")
         }
     }
+    val processSelectTitle = stringResource(R.string.routing_settings_process_select)
 
     fun buildRuleset(): RulesetItem {
         val rulesetItem = SettingsManager.getRoutingRuleset(position) ?: RulesetItem()
@@ -296,7 +290,7 @@ fun RoutingEditScreen(
                     },
                     modifier = Modifier
                         .padding(start = 16.dp)
-                        .dpadFocusOutline(focusRequester = processPickerFocusRequester)
+                        .dpadFocusOutline(focusRequester = processPickerFocusRequester, cornerRadius = 20.dp)
                         .focusProperties {
                             processFieldFocusRequester?.let { up = it }
                             portFocusRequester?.let { down = it }
