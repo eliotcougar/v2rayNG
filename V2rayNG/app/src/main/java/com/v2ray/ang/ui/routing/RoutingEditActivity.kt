@@ -64,11 +64,6 @@ import java.util.UUID
 
 private val ROUTING_NETWORK_OPTIONS = listOf("tcp", "udp", "tcp,udp")
 
-private fun normalizeRoutingNetwork(value: String?): String {
-    val normalized = value.orEmpty().lowercase().replace(" ", "")
-    return normalized.takeIf { it == "tcp" || it == "udp" } ?: "tcp,udp"
-}
-
 class RoutingEditActivity : BaseComponentActivity() {
     private val position by lazy { intent.getIntExtra("position", -1) }
 
@@ -146,9 +141,7 @@ fun RoutingEditScreen(
     var ip by rememberSaveable { mutableStateOf(initial?.ip?.joinToString(",") ?: "") }
     var processText by rememberSaveable { mutableStateOf(initial?.process?.joinToString(",") ?: "") }
     var protocol by rememberSaveable { mutableStateOf(initial?.protocol?.joinToString(",") ?: "") }
-    var network by rememberSaveable {
-        mutableStateOf(normalizeRoutingNetwork(initial?.network))
-    }
+    var network by rememberSaveable { mutableStateOf(initial?.network.orEmpty().ifBlank { ROUTING_NETWORK_OPTIONS.last() }) }
     var port by rememberSaveable { mutableStateOf(initial?.port ?: "") }
     var outboundTag by rememberSaveable {
         mutableStateOf(initial?.outboundTag ?: BUILTIN_OUTBOUND_TAGS.first())

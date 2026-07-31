@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.server
 
 import android.os.Bundle
+import android.view.View
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -36,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.core.text.BidiFormatter
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -152,7 +154,10 @@ class ServerProxyChainActivity : BaseComponentActivity() {
 
         config.remarks = remarks.trim()
         config.proxyChainProfiles = chainMembers.joinToString(",")
-        config.description = chainMembers.joinToString(" -> ")
+        val isRtl = resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL
+        val bidiFormatter = BidiFormatter.getInstance(isRtl)
+        val chainSeparator = if (isRtl) " ← " else " → "
+        config.description = chainMembers.joinToString(chainSeparator) { bidiFormatter.unicodeWrap(it) }
 
         if (
             config.subscriptionId.isEmpty() &&
