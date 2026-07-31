@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -21,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalResources
@@ -67,7 +65,13 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     }
 
     val isDarkTheme = LocalDarkTheme.current
-    val drawerCoordinator = rememberMainDrawerCoordinator(isTelevision)
+    val drawerCoordinator = rememberMainDrawerCoordinator()
+    val tvDrawerCoordinator = rememberMainTvDrawerCoordinator()
+    val openDrawer: (FocusRequester?) -> Unit = if (isTelevision) {
+        tvDrawerCoordinator::openFrom
+    } else {
+        drawerCoordinator::openFrom
+    }
     val dialogState = rememberMainDialogState()
     var dialogFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
     LaunchedEffect(dialogFocusToRestore, isTelevision) {
@@ -95,11 +99,9 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(drawerCoordinator.state.targetValue, resumeFocusGeneration, isTelevision) {
-        if (!isTelevision || drawerCoordinator.state.targetValue != DrawerValue.Closed) {
-            return@LaunchedEffect
-        }
-        val requester = drawerCoordinator.focusToRestore ?: topBarFocus.start
+    LaunchedEffect(tvDrawerCoordinator.isOpen, resumeFocusGeneration, isTelevision) {
+        if (!isTelevision || tvDrawerCoordinator.isOpen) return@LaunchedEffect
+        val requester = tvDrawerCoordinator.focusToRestore ?: topBarFocus.start
         requestFocusWhenReady(requester, topBarFocus.start)
     }
 
@@ -107,8 +109,8 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         onAction(MainAction.Search(""))
         showSearch = false
     }
-    BackHandler(enabled = isTelevision && drawerCoordinator.isOpen) {
-        drawerCoordinator.closeAndRestore()
+    BackHandler(enabled = isTelevision && tvDrawerCoordinator.isOpen) {
+        tvDrawerCoordinator.closeAndRestore()
     }
 
     val groupTabFocusRequesters = remember(groups.map { it.id }) { List(groups.size) { FocusRequester() } }
@@ -149,18 +151,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         QRCodeDialog(bitmap = shareQRCodeBitmap, onDismiss = { onAction(MainAction.DismissQRCodeDialog) })
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerCoordinator.state,
-        drawerContent = {
-            MainDrawerContent(
-                drawerState = drawerCoordinator.state,
-                isOpen = drawerCoordinator.isTargetOpen,
-                focusGeneration = resumeFocusGeneration,
-                onClose = drawerCoordinator::closeAndRestore,
-                onNavigate = onNavigate
-            )
-        }
-    ) {
+    val mainContent: @Composable () -> Unit = {
         Box(modifier = Modifier.fillMaxSize()) {
             Scaffold(
                 contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
@@ -179,7 +170,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                             showSearch = false
                         },
                         onSearchToggle = { showSearch = it },
-                        onOpenDrawer = drawerCoordinator::openFrom,
+                        onOpenDrawer = openDrawer,
                         onMoveDown = {
                             if (groups.size <= 1) false else {
                                 groupTabFocusRequesters.getOrNull(selectedGroupIndex)?.requestFocus() ?: false
@@ -213,7 +204,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                 groups = groups,
                                 selectedTabIndex = selectedGroupIndex.coerceIn(0, groups.lastIndex),
                                 tabFocusRequesters = groupTabFocusRequesters,
-                                onOpenDrawer = drawerCoordinator::openFrom,
+                                onOpenDrawer = openDrawer,
                                 onMoveUp = { topBarFocus.start.requestFocus() },
                                 onTabClick = { targetIndex ->
                                     groups.getOrNull(targetIndex)?.let { onAction(MainAction.SelectGroup(it.id)) }
@@ -268,7 +259,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                     )
                                 },
                                 onRemoveServer = requestRemoveServer,
-                                onOpenDrawer = drawerCoordinator::openFrom,
+                                onOpenDrawer = openDrawer,
                                 onMoveUpFromFirstRow = if (groups.size > 1) {
                                     { groupTabFocusRequesters.getOrNull(page)?.requestFocus() }
                                 } else null,
@@ -283,9 +274,28 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                     }
                 }
             }
-            if (isTelevision && !showSearch) {
-                TvDrawerEdgePeek(modifier = Modifier.align(Alignment.CenterStart))
-            }
         }
+    }
+
+    if (isTelevision) {
+        TvMainNavigationDrawer(
+            drawerState = tvDrawerCoordinator.state,
+            focusGeneration = resumeFocusGeneration,
+            onClose = tvDrawerCoordinator::closeAndRestore,
+            onNavigate = onNavigate,
+            content = mainContent
+        )
+    } else {
+        ModalNavigationDrawer(
+            drawerState = drawerCoordinator.state,
+            drawerContent = {
+                MainDrawerContent(
+                    drawerState = drawerCoordinator.state,
+                    onClose = drawerCoordinator::closeAndRestore,
+                    onNavigate = onNavigate
+                )
+            },
+            content = mainContent
+        )
     }
 }
