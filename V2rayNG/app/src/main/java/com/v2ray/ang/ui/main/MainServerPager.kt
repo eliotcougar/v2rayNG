@@ -108,6 +108,7 @@ private data class ServerRowActions(
     val share: () -> Unit,
     val remove: () -> Unit,
     val more: () -> Unit,
+    val back: () -> Unit,
     val movePrevious: ((FocusRequester) -> Unit)?,
     val moveUp: (() -> Unit)?,
     val reorderItem: DpadReorderItem?
@@ -120,6 +121,7 @@ private data class ServerCollectionActions(
     val more: (String, ProfileItem, FocusRequester) -> Unit,
     val remove: (String) -> Unit,
     val move: (Int, Int) -> Unit,
+    val back: () -> Unit,
     val movePrevious: (FocusRequester) -> Unit,
     val moveUpFromFirstRow: (() -> Unit)?
 )
@@ -159,6 +161,7 @@ private fun ServerCollectionItem(
                 share = { collectionActions.share(row.guid, row.profile, current.share) },
                 remove = { collectionActions.remove(row.guid) },
                 more = { collectionActions.more(row.guid, row.profile, current.row) },
+                back = collectionActions.back,
                 movePrevious = previousColumn?.let { target -> { _: FocusRequester -> target.more.requestFocus() } }
                     ?: collectionActions.movePrevious,
                 moveUp = if (index < stride) collectionActions.moveUpFromFirstRow else null,
@@ -225,6 +228,7 @@ fun GroupPagerPage(
             more = onMoreServer,
             remove = onRemoveServer,
             move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
+            back = onBackFromList,
             movePrevious = onOpenDrawer,
             moveUpFromFirstRow = onMoveUpFromFirstRow
         ),
@@ -304,7 +308,6 @@ private fun ServerListPage(
             state = gridState,
             modifier = Modifier
                 .fillMaxSize()
-                .dpadBackNavigation(enabled = !dpadReorderState.isMoving, onBack = onBackFromList)
                 .verticalScrollbar(gridState),
             contentPadding = contentPadding
         ) {
@@ -350,7 +353,6 @@ private fun ServerListPage(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .dpadBackNavigation(enabled = !dpadReorderState.isMoving, onBack = onBackFromList)
                 .verticalScrollbar(listState),
             contentPadding = contentPadding
         ) {
@@ -439,6 +441,7 @@ private fun ServerListItem(
                 focusRequester = currentFocus.row,
                 showFocus = !isMoving
             )
+            .dpadBackNavigation(enabled = !isMoving, onBack = actions.back)
             .drawBehind {
                 val stripWidth = if (isMoving) 8.dp.toPx() else 4.dp.toPx()
                 val verticalInset = if (isMoving) 6.dp.toPx() else 10.dp.toPx()
