@@ -32,10 +32,20 @@ internal fun AppSelectionTopBar(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val searchFocusRequester = remember { FocusRequester() }
+    val searchInputFocusRequester = remember { FocusRequester() }
+    val searchClearFocusRequester = remember { FocusRequester() }
     val moreFocusRequester = remember { FocusRequester() }
-    val topBarFocusOrder = remember(backFocusRequester, searchFocusRequester, moreFocusRequester, isSearchActive) {
-        if (isSearchActive) listOf(backFocusRequester, moreFocusRequester)
-        else listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
+    val hasSearchQuery = searchQuery.isNotEmpty()
+    val topBarFocusOrder = remember(
+        backFocusRequester, searchFocusRequester, searchInputFocusRequester,
+        searchClearFocusRequester, moreFocusRequester, isSearchActive, hasSearchQuery
+    ) {
+        if (isSearchActive) buildList {
+            add(backFocusRequester)
+            add(searchInputFocusRequester)
+            if (hasSearchQuery) add(searchClearFocusRequester)
+            add(moreFocusRequester)
+        } else listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
     }
 
     AppTopBar(
@@ -47,6 +57,8 @@ internal fun AppSelectionTopBar(
         onSearchQueryChange = onSearchQueryChange,
         onSearchClose = onSearchClose,
         searchPlaceholder = stringResource(R.string.menu_item_search),
+        searchInputFocusRequester = searchInputFocusRequester,
+        searchClearFocusRequester = searchClearFocusRequester,
         navigationFocusRequester = backFocusRequester,
         customActionFocusRequesters = if (isSearchActive) listOf(moreFocusRequester)
         else listOf(searchFocusRequester, moreFocusRequester),
@@ -75,7 +87,11 @@ internal fun AppSelectionTopBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
                         showMenu = false
-                        (if (isSearchActive) backFocusRequester else searchFocusRequester).requestFocus()
+                        when {
+                            !isSearchActive -> searchFocusRequester
+                            hasSearchQuery -> searchClearFocusRequester
+                            else -> searchInputFocusRequester
+                        }.requestFocus()
                     })
                 ) {
                     menuActions.forEach { action ->

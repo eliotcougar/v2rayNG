@@ -96,6 +96,8 @@ internal fun AppTopBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
+    searchInputFocusRequester: FocusRequester? = null,
+    searchClearFocusRequester: FocusRequester? = null,
     titleContent: (@Composable () -> Unit)? = null,
     navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
@@ -113,13 +115,25 @@ internal fun AppTopBar(
     val actionFocusRequesters = remember(actionItems.size) {
         List(actionItems.size) { FocusRequester() }
     }
-    val resolvedActionFocusRequesters = if (actionItems.isEmpty()) {
-        customActionFocusRequesters
-    } else {
-        actionFocusRequesters
-    }
-    val topBarFocusOrder = remember(resolvedNavigationFocusRequester, resolvedActionFocusRequesters) {
-        listOf(resolvedNavigationFocusRequester) + resolvedActionFocusRequesters
+    val defaultSearchInputFocusRequester = remember { FocusRequester() }
+    val defaultSearchClearFocusRequester = remember { FocusRequester() }
+    val resolvedSearchInputFocusRequester = searchInputFocusRequester ?: defaultSearchInputFocusRequester
+    val resolvedSearchClearFocusRequester = searchClearFocusRequester ?: defaultSearchClearFocusRequester
+    val resolvedActionFocusRequesters = if (actionItems.isEmpty()) customActionFocusRequesters else actionFocusRequesters
+    val hasSearchQuery = searchQuery.isNotEmpty()
+    val topBarFocusOrder = remember(
+        resolvedNavigationFocusRequester, resolvedSearchInputFocusRequester,
+        resolvedSearchClearFocusRequester, resolvedActionFocusRequesters,
+        isSearchActive, hasSearchQuery
+    ) {
+        buildList {
+            add(resolvedNavigationFocusRequester)
+            if (isSearchActive) {
+                add(resolvedSearchInputFocusRequester)
+                if (hasSearchQuery) add(resolvedSearchClearFocusRequester)
+            }
+            addAll(resolvedActionFocusRequesters)
+        }
     }
     val navigationModifier = Modifier.dpadTopBarFocusNavigation(
         resolvedNavigationFocusRequester,
@@ -132,10 +146,13 @@ internal fun AppTopBar(
             title = {
                 if (isSearchActive) {
                     SearchInputField(
-                        searchQuery,
-                        onSearchQueryChange,
-                        searchPlaceholder,
-                        onMovePrevious = { resolvedNavigationFocusRequester.requestFocus() }
+                        query = searchQuery,
+                        onQueryChange = onSearchQueryChange,
+                        placeholder = searchPlaceholder,
+                        focusRequester = resolvedSearchInputFocusRequester,
+                        clearFocusRequester = resolvedSearchClearFocusRequester,
+                        focusOrder = topBarFocusOrder,
+                        onMoveDown = { onMoveDown?.invoke() ?: false }
                     )
                 } else if (titleContent != null) {
                     titleContent()
@@ -357,39 +374,71 @@ private fun SearchInputField(
     query: String,
     onQueryChange: (String) -> Unit,
     placeholder: String?,
-    onMovePrevious: () -> Unit
+    focusRequester: FocusRequester,
+    clearFocusRequester: FocusRequester,
+    focusOrder: List<FocusRequester>,
+    onMoveDown: () -> Boolean
 ) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { requestFocusWhenReady(focusRequester) }
+    val tvFieldState = if (isTelevisionDevice()) rememberTvTextFieldState(focusRequester) else null
+    fun moveFocus(direction: DpadHorizontalDirection): Boolean {
+        return (adjacentDpadFocusTarget(focusRequester, focusOrder, direction) ?: focusRequester).requestFocus()
+    }
+    LaunchedEffect(tvFieldState, focusRequester) {
+        if (tvFieldState == null) requestFocusWhenReady(focusRequester) else tvFieldState.beginEditing()
+    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        MaterialOutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            singleLine = true,
-            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
-            placeholder = { if (placeholder != null) Text(placeholder, style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        Box(
             modifier = Modifier
                 .weight(1f)
-                .focusRequester(focusRequester)
-                .dpadMovePreviousNavigation(onMovePrevious = onMovePrevious)
-        )
+                .tvAwareTextFieldFocus(
+                    state = tvFieldState,
+                    enabled = true,
+                    navigation = TvTextFieldNavigation(
+                        focusRequester = focusRequester,
+                        onMoveUp = { true },
+                        onMoveDown = onMoveDown,
+                        onMovePrevious = { moveFocus(DpadHorizontalDirection.Previous) },
+                        onMoveNext = { moveFocus(DpadHorizontalDirection.Next) }
+                    ),
+                    onActivate = { tvFieldState?.beginEditing() }
+                )
+        ) {
+            MaterialOutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                readOnly = tvFieldState != null && !tvFieldState.isEditing,
+                singleLine = true,
+                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
+                placeholder = { if (placeholder != null) Text(placeholder, style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)) },
+                interactionSource = tvFieldState?.interactionSource,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.secondary,
+                    selectionColors = TextSelectionColors(
+                        handleColor = MaterialTheme.colorScheme.secondary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
+                    )
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(tvFieldState?.let { Modifier.tvTextFieldEditorFocus(it) }
+                        ?: Modifier.focusRequester(focusRequester))
+            )
+        }
         if (query.isNotEmpty()) {
             AppIconButton(
                 icon = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
                 label = stringResource(R.string.action_clear),
-                onClick = { onQueryChange("") }
+                focusRequester = clearFocusRequester,
+                modifier = Modifier.dpadTopBarFocusNavigation(clearFocusRequester, focusOrder, onMoveDown),
+                onClick = {
+                    onQueryChange("")
+                    focusRequester.requestFocus()
+                }
             )
         }
     }
