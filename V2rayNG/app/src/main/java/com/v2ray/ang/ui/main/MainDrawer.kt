@@ -54,7 +54,7 @@ import androidx.tv.material3.DrawerState as TvDrawerState
 import androidx.tv.material3.DrawerValue as TvDrawerValue
 import androidx.tv.material3.Icon as TvIcon
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
-import androidx.tv.material3.NavigationDrawer as TvNavigationDrawer
+import androidx.tv.material3.ModalNavigationDrawer as TvModalNavigationDrawer
 import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.NavigationDrawerScope
 import androidx.tv.material3.Text as TvText
@@ -193,7 +193,7 @@ fun TvMainNavigationDrawer(
     val mobileColors = MaterialTheme.colorScheme
     val tvColors = remember(mobileColors) { mobileColors.toTvColorScheme() }
     TvMaterialTheme(colorScheme = tvColors) {
-        TvNavigationDrawer(
+        TvModalNavigationDrawer(
             drawerState = drawerState,
             drawerContent = { drawerValue ->
                 TvMainDrawerContent(drawerValue, focusGeneration, onClose, onNavigate)
