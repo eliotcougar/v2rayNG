@@ -3,6 +3,10 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,12 +39,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -49,13 +56,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.DrawerState as TvDrawerState
 import androidx.tv.material3.DrawerValue as TvDrawerValue
-import androidx.tv.material3.Icon as TvIcon
+import androidx.tv.material3.ListItem as TvListItem
+import androidx.tv.material3.ListItemScale as TvListItemScale
 import androidx.tv.material3.MaterialTheme as TvMaterialTheme
 import androidx.tv.material3.ModalNavigationDrawer as TvModalNavigationDrawer
-import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.NavigationDrawerScope
 import androidx.tv.material3.Text as TvText
 import androidx.tv.material3.lightColorScheme as tvColorScheme
@@ -68,6 +76,9 @@ import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 private val V2rayNgFontFamily = FontFamily(Font(R.font.montserrat_thin))
+private val TvDrawerCollapsedWidth = 72.dp
+private val TvDrawerExpandedWidth = 272.dp
+private const val TV_DRAWER_WIDTH_ANIMATION_DURATION_MILLIS = 100
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
     Subscriptions(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting),
@@ -198,7 +209,9 @@ fun TvMainNavigationDrawer(
             drawerContent = { drawerValue ->
                 TvMainDrawerContent(drawerValue, focusGeneration, onClose, onNavigate)
             },
-            content = content
+            content = {
+                Box(modifier = Modifier.fillMaxSize().padding(start = TvDrawerCollapsedWidth)) { content() }
+            }
         )
     }
 }
@@ -220,8 +233,29 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
         }
     }
 
-    val drawerWidth = if (drawerValue == TvDrawerValue.Open) 272.dp else 72.dp
-    Surface(modifier = Modifier.fillMaxHeight().width(drawerWidth), color = MaterialTheme.colorScheme.surface) {
+    val drawerWidth by animateDpAsState(
+        targetValue = if (drawerValue == TvDrawerValue.Open) TvDrawerExpandedWidth else TvDrawerCollapsedWidth,
+        animationSpec = tween(TV_DRAWER_WIDTH_ANIMATION_DURATION_MILLIS),
+        label = "TV drawer width"
+    )
+    val labelAlpha by animateFloatAsState(
+        targetValue = if (drawerValue == TvDrawerValue.Open) 1f else 0f,
+        animationSpec = tween(TV_DRAWER_WIDTH_ANIMATION_DURATION_MILLIS),
+        label = "TV drawer labels"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(TvDrawerExpandedWidth)
+            .drawWithContent {
+                val visibleWidth = drawerWidth.toPx()
+                val left = if (layoutDirection == LayoutDirection.Ltr) 0f else size.width - visibleWidth
+                val right = if (layoutDirection == LayoutDirection.Ltr) visibleWidth else size.width
+                // Reveal the fixed drawer from its start edge so its icons never move with the animation.
+                clipRect(left = left, right = right) { this@drawWithContent.drawContent() }
+            }
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
         Column(
             modifier = Modifier
                 .navigationBarsPadding()
@@ -229,10 +263,15 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 .verticalScrollbar(drawerScrollState)
                 .padding(horizontal = 8.dp, vertical = 12.dp)
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
-                if (drawerValue == TvDrawerValue.Open) {
-                    AppBrandTitle(style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-                } else {
+            if (drawerValue == TvDrawerValue.Open) {
+                Box(modifier = Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+                    AppBrandTitle(
+                        style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Box(modifier = Modifier.width(64.dp).height(48.dp), contentAlignment = Alignment.Center) {
                     Icon(
                         painter = painterResource(R.drawable.ic_menu_24dp),
                         contentDescription = null,
@@ -246,12 +285,24 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 if (index == primaryDrawerItems.size) {
                     AppDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp))
                 }
-                NavigationDrawerItem(
+                TvListItem(
                     selected = false,
                     onClick = { onNavigate(item) },
-                    leadingContent = {
-                        TvIcon(painter = painterResource(item.iconRes), contentDescription = null)
+                    headlineContent = {
+                        TvText(stringResource(item.labelRes), modifier = Modifier.alpha(labelAlpha), maxLines = 1)
                     },
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(item.iconRes),
+                            contentDescription = null,
+                            tint = if (drawerValue == TvDrawerValue.Open && focusedIndex == index) {
+                                MaterialTheme.colorScheme.inverseOnSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    },
+                    scale = TvListItemScale.None,
                     modifier = Modifier
                         .focusRequester(focusRequesters[index])
                         .onFocusChanged { if (it.isFocused) focusedIndex = index }
@@ -266,9 +317,7 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                                 true
                             }
                         )
-                ) {
-                    TvText(stringResource(item.labelRes), maxLines = 1)
-                }
+                )
             }
         }
     }
