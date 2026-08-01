@@ -392,6 +392,7 @@
     <string name="connection_test_fail">Không thể truy cập Internet</string>
     <string name="connection_test_error_status_code">Mã lỗi: #%d</string>
     <string name="connection_connected">Đã kết nối.\nNhấn để kiểm tra kết nối.</string>
+    <string name="connection_connected_via">Đã kết nối qua %s</string>
     <string name="connection_not_connected">Chưa kết nối</string>
     <string name="connection_running_task_left">Số lượt kiểm tra đang chạy: %s</string>
 
@@ -546,4 +547,8 @@
     <string name="connection_test_empty_message">không có thông tin chi tiết</string>
     <string name="value_unknown">không xác định</string>
 
+    <string name="notification_core_recovery_failed">Không thể khôi phục kết nối. Lưu lượng vẫn bị chặn để tránh rò rỉ; hãy khởi động lại v2rayNG.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">Ghi nhớ tuyến khả dụng cho từng mạng Wi-Fi</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">Dùng tên mạng Wi-Fi đang kết nối để lưu lịch sử tuyến riêng. Cần quyền vị trí chính xác vì Android bảo vệ tên mạng Wi-Fi như thông tin vị trí.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">Cần quyền vị trí chính xác để đọc tên mạng Wi-Fi</string>
 </resources>

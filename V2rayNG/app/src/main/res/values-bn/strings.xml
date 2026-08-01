@@ -392,6 +392,7 @@
     <string name="connection_test_fail">ইন্টারনেট উপলব্ধ নয়</string>
     <string name="connection_test_error_status_code">ত্রুটি কোড: #%d</string>
     <string name="connection_connected">সংযুক্ত।\nসংযোগ পরীক্ষা করতে ট্যাপ করুন।</string>
+    <string name="connection_connected_via">সংযুক্ত: %s এর মাধ্যমে</string>
     <string name="connection_not_connected">সংযুক্ত নয়</string>
     <string name="connection_running_task_left">চলমান পরীক্ষা: %s</string>
 
@@ -546,4 +547,8 @@
     <string name="connection_test_empty_message">কোনো বিবরণ পাওয়া যায়নি</string>
     <string name="value_unknown">অজানা</string>
 
+    <string name="notification_core_recovery_failed">সংযোগ পুনরুদ্ধার ব্যর্থ হয়েছে। ট্রাফিক লিক রোধে অবরুদ্ধ থাকবে; v2rayNG পুনরায় চালু করুন।</string>
+    <string name="title_pref_remember_routes_per_wifi_network">প্রতিটি Wi-Fi নেটওয়ার্কের জন্য কার্যকর রুট মনে রাখুন</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">আলাদা রুটের ইতিহাস রাখতে সংযুক্ত Wi-Fi নেটওয়ার্কের নাম ব্যবহার করে। সুনির্দিষ্ট লোকেশন অনুমতি প্রয়োজন, কারণ Android Wi-Fi নেটওয়ার্কের নামকে লোকেশন তথ্য হিসেবে সুরক্ষিত রাখে।</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">Wi-Fi নেটওয়ার্কের নাম পড়তে সুনির্দিষ্ট লোকেশন অনুমতি প্রয়োজন</string>
 </resources>

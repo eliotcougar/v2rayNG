@@ -392,6 +392,7 @@
     <string name="connection_test_fail">الإنترنت غير متاح</string>
     <string name="connection_test_error_status_code">رمز الخطأ: #%d</string>
     <string name="connection_connected">متصل. اضغط للتحقق من الاتصال.</string>
+    <string name="connection_connected_via">متصل عبر %s</string>
     <string name="connection_not_connected">غير متصل</string>
     <string name="connection_running_task_left">الاختبارات قيد التشغيل: %s</string>
 
@@ -546,4 +547,8 @@
     <string name="connection_test_empty_message">لا تتوفر تفاصيل</string>
     <string name="value_unknown">غير معروف</string>
 
+    <string name="notification_core_recovery_failed">فشل استرداد الاتصال. ستظل حركة المرور محظورة لمنع التسرب؛ أعد تشغيل v2rayNG.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">تذكّر المسارات الصالحة لكل شبكة Wi-Fi</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">يستخدم اسم شبكة Wi-Fi المتصلة للاحتفاظ بسجل مسارات منفصل. يتطلب إذن الموقع الدقيق لأن Android يحمي أسماء شبكات Wi-Fi باعتبارها معلومات موقع.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">يلزم إذن الموقع الدقيق لقراءة اسم شبكة Wi-Fi</string>
 </resources>

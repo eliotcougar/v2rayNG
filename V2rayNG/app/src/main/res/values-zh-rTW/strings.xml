@@ -392,6 +392,7 @@
     <string name="connection_test_fail">"無法使用網際網路"</string>
     <string name="connection_test_error_status_code">錯誤碼：#%d</string>
     <string name="connection_connected">"已連線。輕觸以檢查連線。"</string>
+    <string name="connection_connected_via">已透過 %s 連線</string>
     <string name="connection_not_connected">"未連線"</string>
     <string name="connection_running_task_left">正在執行的測試：%s</string>
 
@@ -546,4 +547,8 @@
     <string name="connection_test_empty_message">沒有詳細資訊</string>
     <string name="value_unknown">未知</string>
 
+    <string name="notification_core_recovery_failed">連線復原失敗。流量將保持封鎖以防洩漏；請重新啟動 v2rayNG。</string>
+    <string name="title_pref_remember_routes_per_wifi_network">依 Wi-Fi 網路記住可用路由</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">使用目前連線的 Wi-Fi 名稱分別儲存路由記錄。由於 Android 將 Wi-Fi 名稱視為位置資訊加以保護，因此需要精確位置權限。</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">讀取 Wi-Fi 網路名稱需要精確位置權限</string>
 </resources>

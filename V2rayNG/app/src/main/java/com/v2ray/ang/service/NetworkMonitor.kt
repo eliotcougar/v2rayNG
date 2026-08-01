@@ -4,6 +4,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
+import androidx.annotation.RequiresApi
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
@@ -21,19 +23,29 @@ import kotlinx.coroutines.launch
  * connection. Deciding that a handover happened is what this class is for, acting on it is not.
  *
  * Only used from Android P and above, see CoreServiceManager.startNetworkMonitor().
- * [onHandover] is invoked on a background thread after the debounce window and may block.
+ * [onNetworkEvent] receives the initial/current network immediately, while real handovers are
+ * delivered on a background thread after the debounce window and may block.
  */
 class NetworkMonitor(
     private val connectivity: ConnectivityManager,
+    private val includeLocationInfo: Boolean,
     private val onUnderlyingNetworksChanged: (Array<Network>?) -> Unit,
-    private val onHandover: () -> Unit,
+    private val onNetworkEvent: (NetworkEvent) -> Unit,
 ) {
+    data class NetworkEvent(
+        val network: Network,
+        val capabilities: NetworkCapabilities?,
+        val isHandover: Boolean,
+    )
+
     private companion object {
         const val HANDOVER_DEBOUNCE_MS = 1000L
     }
 
     private var upstream: Network? = null
     private var handoverJob: Job? = null
+    @Volatile
+    private var currentCapabilities: NetworkCapabilities? = null
     private var registered = false
 
     /**
@@ -53,23 +65,11 @@ class NetworkMonitor(
             .build()
     }
 
-    private val callback = object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) {
-            val previous = upstream
-            upstream = network
-            onUnderlyingNetworksChanged(arrayOf(network))
-            if (previous != null && previous != network) {
-                scheduleHandover(network)
-            }
-        }
-
-        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
-            // it's a good idea to refresh capabilities
-            onUnderlyingNetworksChanged(arrayOf(network))
-        }
-
-        override fun onLost(network: Network) {
-            onUnderlyingNetworksChanged(null)
+    private val callback by lazy {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && includeLocationInfo) {
+            createLocationAwareCallback()
+        } else {
+            createNetworkCallback()
         }
     }
 
@@ -92,6 +92,7 @@ class NetworkMonitor(
     fun unregister() {
         handoverJob?.cancel()
         handoverJob = null
+        currentCapabilities = null
         upstream = null
         if (!registered) return
         registered = false
@@ -102,18 +103,81 @@ class NetworkMonitor(
         }
     }
 
+    private fun createNetworkCallback() = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = handleAvailable(network)
+
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) =
+            handleCapabilitiesChanged(network, capabilities)
+
+        override fun onLost(network: Network) = handleLost(network)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun createLocationAwareCallback() = object : ConnectivityManager.NetworkCallback(
+        ConnectivityManager.NetworkCallback.FLAG_INCLUDE_LOCATION_INFO
+    ) {
+        override fun onAvailable(network: Network) = handleAvailable(network)
+
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) =
+            handleCapabilitiesChanged(network, capabilities)
+
+        override fun onLost(network: Network) = handleLost(network)
+    }
+
+    private fun handleAvailable(network: Network) {
+        val previous = upstream
+        upstream = network
+        val capabilities = runCatching { connectivity.getNetworkCapabilities(network) }.getOrNull()
+        currentCapabilities = capabilities
+        onUnderlyingNetworksChanged(arrayOf(network))
+
+        if (previous != null && previous != network) {
+            scheduleHandover(network)
+        } else if (handoverJob?.isActive != true) {
+            notifyNetworkEvent(network, capabilities, isHandover = false)
+        }
+    }
+
+    private fun handleCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+        currentCapabilities = capabilities
+        onUnderlyingNetworksChanged(arrayOf(network))
+        // Keep the previous identity until the pending handover has cached its working route.
+        if (handoverJob?.isActive != true) {
+            notifyNetworkEvent(network, capabilities, isHandover = false)
+        }
+    }
+
+    private fun handleLost(@Suppress("UNUSED_PARAMETER") network: Network) {
+        currentCapabilities = null
+        onUnderlyingNetworksChanged(null)
+    }
+
     private fun scheduleHandover(network: Network) {
         LogUtil.i(AppConfig.TAG, "NetworkMonitor: Upstream is now $network")
         handoverJob?.cancel()
         handoverJob = CoroutineScope(Dispatchers.IO).launch {
             try {
                 delay(HANDOVER_DEBOUNCE_MS)
-                onHandover()
+                notifyNetworkEvent(network, currentCapabilities, isHandover = true)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.TAG, "NetworkMonitor: Failed to handle upstream change", e)
             }
         }
+    }
+
+    private fun notifyNetworkEvent(
+        network: Network,
+        capabilities: NetworkCapabilities?,
+        isHandover: Boolean,
+    ) {
+        onNetworkEvent(
+            NetworkEvent(
+                network = network,
+                capabilities = capabilities,
+                isHandover = isHandover,
+            )
+        )
     }
 }

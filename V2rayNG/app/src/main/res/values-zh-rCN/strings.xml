@@ -392,6 +392,7 @@
     <string name="connection_test_fail">无法访问互联网</string>
     <string name="connection_test_error_status_code">错误码：#%d</string>
     <string name="connection_connected">"已连接。点击检查连接。"</string>
+    <string name="connection_connected_via">已通过 %s 连接</string>
     <string name="connection_not_connected">"未连接"</string>
     <string name="connection_running_task_left">正在运行的测试：%s</string>
 
@@ -546,4 +547,8 @@
     <string name="connection_test_empty_message">无详细信息</string>
     <string name="value_unknown">未知</string>
 
+    <string name="notification_core_recovery_failed">连接恢复失败。流量将保持阻断以防泄漏；请重启 v2rayNG。</string>
+    <string name="title_pref_remember_routes_per_wifi_network">按 Wi-Fi 网络记住可用路由</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">使用当前连接的 Wi-Fi 名称分别保存路由历史。由于 Android 将 Wi-Fi 名称作为位置信息加以保护，因此需要精确位置权限。</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">读取 Wi-Fi 网络名称需要精确位置权限</string>
 </resources>
