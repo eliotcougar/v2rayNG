@@ -318,12 +318,6 @@
     <string name="title_outbound_domain_resolve_method">Phân giải tên miền cho kết nối đi (outbound)</string>
     <string name="title_mode">Chế độ kết nối</string>
     <string name="title_mode_help">Nhấn vào đây nếu bạn cần trợ giúp!</string>
-    <string name="title_mode_settings">Cài đặt chế độ</string>
-    <string name="title_root_mode_enabled">Bật chế độ root (người dùng root)</string>
-    <string name="summary_root_mode_enabled">Bật proxy trong suốt cấp thấp bằng quyền root. Chế độ này bỏ qua VPN hệ thống Android tiêu chuẩn để trực tiếp tiếp quản toàn bộ lưu lượng mạng bên dưới. Khi bật, chế độ thông thường, định tuyến theo ứng dụng và các cài đặt VPN liên quan sẽ hoàn toàn không còn hiệu lực.</string>
-    <string name="toast_root_required">Tính năng này yêu cầu quyền root</string>
-    <string name="title_root_lan_sharing">Chia sẻ LAN / tethering (người dùng root)</string>
-    <string name="summary_root_lan_sharing">Định tuyến các thiết bị điểm phát sóng Wi‑Fi và thiết bị chia sẻ kết nối USB qua VPN</string>
     <string name="title_language">Ngôn ngữ</string>
     <string name="title_ui_settings">Cài đặt UI</string>
     <string name="title_pref_ui_mode_night">Chủ đề giao diện</string>

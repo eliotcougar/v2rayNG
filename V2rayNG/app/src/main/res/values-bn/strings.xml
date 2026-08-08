@@ -318,12 +318,6 @@
     <string name="title_outbound_domain_resolve_method">বহির্গামী সংযোগের ডোমেইন রেজলভ পদ্ধতি (outbound)</string>
     <string name="title_mode">মোড</string>
     <string name="title_mode_help">আরো সাহায্যের জন্য ক্লিক করুন</string>
-    <string name="title_mode_settings">মোড সেটিংস</string>
-    <string name="title_root_mode_enabled">রুট মোড সক্রিয় (রুট ব্যবহারকারী)</string>
-    <string name="summary_root_mode_enabled">রুট সুবিধার মাধ্যমে নিম্ন-স্তরের স্বচ্ছ প্রক্সি সক্রিয় করুন। এই মোডটি Android-এর স্ট্যান্ডার্ড সিস্টেম VPN এড়িয়ে সমস্ত অন্তর্নিহিত নেটওয়ার্ক ট্র্যাফিক সরাসরি নিয়ন্ত্রণ করে। সক্রিয় করলে সাধারণ মোড, প্রতি-অ্যাপ রাউটিং এবং সংশ্লিষ্ট VPN সেটিংস সম্পূর্ণ অকার্যকর হবে।</string>
-    <string name="toast_root_required">এই বৈশিষ্ট্যের জন্য রুট অ্যাক্সেস প্রয়োজন</string>
-    <string name="title_root_lan_sharing">LAN / টেথারিং শেয়ারিং (রুট ব্যবহারকারী)</string>
-    <string name="summary_root_lan_sharing">Wi‑Fi হটস্পট এবং USB-টেথার করা ডিভাইসগুলো VPN-এর মাধ্যমে রুট করুন</string>
     <string name="title_language">ভাষা</string>
     <string name="title_ui_settings">ইউআই সেটিংস</string>
     <string name="title_pref_ui_mode_night">ইউআই থিম</string>
