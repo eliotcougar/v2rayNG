@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.server
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -14,6 +15,7 @@ class ServerWireguardActivity : BaseServerActivity() {
 
     @Composable
     override fun ScreenContent() {
+        val scope = rememberCoroutineScope()
         val uiState = rememberSaveable(saver = ServerUiState.Saver) {
             ServerUiState.from(
                 initialConfig = initialConfig
@@ -28,6 +30,7 @@ class ServerWireguardActivity : BaseServerActivity() {
         ) {
             CommonBasicFields(uiState)
             WireguardProtocolFields(uiState)
+
         }
     }
 

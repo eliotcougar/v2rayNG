@@ -45,10 +45,8 @@ import androidx.compose.ui.unit.dp
 private const val TvFocusAttachmentRetryFrames = 30
 
 @Composable
-fun isTelevisionDevice(): Boolean {
-    return LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK ==
-        Configuration.UI_MODE_TYPE_TELEVISION
-}
+internal fun isTelevisionDevice(): Boolean =
+    LocalConfiguration.current.uiMode and Configuration.UI_MODE_TYPE_MASK == Configuration.UI_MODE_TYPE_TELEVISION
 
 /**
  * Requests focus after the target has entered the composition. Android TV does not have a
@@ -56,7 +54,7 @@ fun isTelevisionDevice(): Boolean {
  * On phones and tablets this deliberately does nothing, preserving the existing touch UI.
  */
 @Composable
-fun rememberDpadFocusRequester(requestFocus: Boolean = true, requestKey: Any? = Unit): FocusRequester {
+internal fun rememberDpadFocusRequester(requestFocus: Boolean = true, requestKey: Any? = Unit): FocusRequester {
     val isTelevision = isTelevisionDevice()
     val requester = remember { FocusRequester() }
     if (isTelevision && requestFocus) {
@@ -77,7 +75,7 @@ fun rememberDpadFocusRequester(requestFocus: Boolean = true, requestKey: Any? = 
  * upper bound, not animation timing. Do not remove or shorten it without testing newly composed
  * lazy-list items and popup focus on a real/emulated TV.
  */
-suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
+internal suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
     repeat(TvFocusAttachmentRetryFrames) {
         if (requesters.any { it.requestFocus() }) return true
         withFrameNanos { }
@@ -94,7 +92,7 @@ suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
  * Apply this before clickable/focusable modifiers so it observes their focus state.
  */
 @Composable
-fun Modifier.dpadFocusOutline(
+internal fun Modifier.dpadFocusOutline(
     focusRequester: FocusRequester? = null,
     cornerRadius: Dp = 12.dp,
     focusContainerColor: Color? = null,
@@ -130,7 +128,7 @@ fun Modifier.dpadFocusOutline(
 
 /** Keeps TV popup-menu focus borders inside the popup's clipped bounds. */
 @Composable
-fun Modifier.tvMenuItemFocus(): Modifier {
+internal fun Modifier.tvMenuItemFocus(): Modifier {
     if (!isTelevisionDevice()) return this
     val shape = RoundedCornerShape(10.dp)
     return padding(horizontal = 8.dp, vertical = 2.dp)
@@ -140,7 +138,7 @@ fun Modifier.tvMenuItemFocus(): Modifier {
 
 /** Applies the fixed television safe-area inset without changing touch UIs. */
 @Composable
-fun Modifier.tvSafeAreaPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
+internal fun Modifier.tvSafeAreaPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Modifier {
     if (!isTelevisionDevice()) return this
     return padding(horizontal = horizontal, vertical = vertical)
 }
@@ -153,7 +151,7 @@ fun Modifier.tvSafeAreaPadding(horizontal: Dp = 48.dp, vertical: Dp = 0.dp): Mod
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
+internal fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
     val isTelevision = isTelevisionDevice()
     val density = LocalDensity.current
     val isImeVisible = WindowInsets.isImeVisible
@@ -176,7 +174,7 @@ fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Modifier {
  * This keeps the platform distinction in one place instead of duplicating clickable branches.
  */
 @Composable
-fun Modifier.dpadClickable(enabled: Boolean = true, role: Role? = null, onClick: () -> Unit): Modifier {
+internal fun Modifier.dpadClickable(enabled: Boolean = true, role: Role? = null, onClick: () -> Unit): Modifier {
     if (!isTelevisionDevice()) {
         return clickable(enabled = enabled, role = role, onClick = onClick)
     }
@@ -189,7 +187,7 @@ internal enum class DpadHorizontalDirection {
     Next
 }
 
-internal fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizontalDirection? = when (key) {
+private fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizontalDirection? = when (key) {
     Key.DirectionLeft -> if (isRtl) {
         DpadHorizontalDirection.Next
     } else {
@@ -205,7 +203,7 @@ internal fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizonta
     else -> null
 }
 
-internal fun adjacentDpadFocusIndex(currentIndex: Int, itemCount: Int, direction: DpadHorizontalDirection): Int? {
+private fun adjacentDpadFocusIndex(currentIndex: Int, itemCount: Int, direction: DpadHorizontalDirection): Int? {
     if (currentIndex !in 0 until itemCount) return null
     val targetIndex = when (direction) {
         DpadHorizontalDirection.Previous -> currentIndex - 1
@@ -228,7 +226,7 @@ internal fun adjacentDpadFocusTarget(
  * LTR and Right in RTL; Next is the opposite. Callers must never mirror these callbacks themselves.
  */
 @Composable
-fun Modifier.dpadLogicalHorizontalNavigation(onMovePrevious: () -> Unit, onMoveNext: () -> Unit): Modifier {
+internal fun Modifier.dpadLogicalHorizontalNavigation(onMovePrevious: () -> Unit, onMoveNext: () -> Unit): Modifier {
     if (!isTelevisionDevice()) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onKeyEvent { event ->
@@ -255,7 +253,7 @@ fun Modifier.dpadLogicalHorizontalNavigation(onMovePrevious: () -> Unit, onMoveN
  * RTL conversion stays exclusively in [dpadLogicalHorizontalNavigation].
  */
 @Composable
-fun Modifier.dpadOrderedFocusNavigation(
+internal fun Modifier.dpadOrderedFocusNavigation(
     current: FocusRequester,
     order: List<FocusRequester>,
     onBeforeFirst: (() -> Unit)? = null,
@@ -285,7 +283,7 @@ fun Modifier.dpadOrderedFocusNavigation(
  * events are required here because popup content otherwise consumes the physical D-pad event first.
  */
 @Composable
-fun Modifier.dpadPopupHorizontalNavigation(
+internal fun Modifier.dpadPopupHorizontalNavigation(
     onMovePrevious: () -> Unit, onMoveNext: (() -> Unit)? = null
 ): Modifier {
     if (!isTelevisionDevice()) return this
@@ -312,7 +310,7 @@ fun Modifier.dpadPopupHorizontalNavigation(
 
 /** Lets a focused subtree leave through its logical leading edge before a child consumes the key. */
 @Composable
-fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMovePrevious: () -> Unit): Modifier {
+internal fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMovePrevious: () -> Unit): Modifier {
     if (!isTelevisionDevice() || !enabled) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onPreviewKeyEvent { event ->
@@ -329,7 +327,7 @@ fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMovePrevious:
 
 /** Handles Back inside a focused TV subtree before the activity fallback closes the screen. */
 @Composable
-fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Modifier {
+internal fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Modifier {
     if (!isTelevisionDevice() || !enabled) return this
     return onPreviewKeyEvent { event ->
         if (event.type == KeyEventType.KeyDown && event.key == Key.Back) {
@@ -343,7 +341,7 @@ fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Mo
 
 /** Gives TV controls an explicit up/down focus chain while preserving spatial fallback. */
 @Composable
-fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: () -> Boolean): Modifier {
+internal fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: () -> Boolean): Modifier {
     if (!isTelevisionDevice()) return this
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -357,7 +355,7 @@ fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: ()
 
 /** Applies the shared logical and vertical navigation policy to one top-bar control. */
 @Composable
-fun Modifier.dpadTopBarFocusNavigation(
+internal fun Modifier.dpadTopBarFocusNavigation(
     current: FocusRequester,
     order: List<FocusRequester>,
     onMoveDown: () -> Boolean
@@ -369,7 +367,7 @@ fun Modifier.dpadTopBarFocusNavigation(
  * row so focus cannot escape beyond the list; Up may fall back to the surrounding screen.
  */
 @Composable
-fun Modifier.dpadRowActionNavigation(
+internal fun Modifier.dpadRowActionNavigation(
     current: FocusRequester,
     order: List<FocusRequester>,
     previousRow: FocusRequester?,
@@ -389,7 +387,7 @@ fun Modifier.dpadRowActionNavigation(
  * Compose text fields otherwise consume D-pad Up/Down as cursor movement, trapping TV focus.
  */
 @Composable
-fun Modifier.dpadTextFieldNavigation(
+internal fun Modifier.dpadTextFieldNavigation(
     onMoveUp: (() -> Boolean)? = null,
     onMoveDown: (() -> Boolean)? = null
 ): Modifier {

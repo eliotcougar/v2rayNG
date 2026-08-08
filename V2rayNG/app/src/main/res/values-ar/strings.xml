@@ -162,7 +162,7 @@
     <string name="menu_item_add_url">إضافة URL</string>
     <string name="menu_item_scan_qrcode">مسح رمز QR</string>
     <string name="title_url" translatable="false">URL</string>
-    <string name="menu_item_download_file">تنزيل ملفات Geo</string>
+    <string name="menu_item_download_file">تنزيل الملفات</string>
     <string name="menu_item_edit_asset">تحرير الأصل</string>
     <string name="menu_item_del_asset">حذف الأصل</string>
     <string name="title_user_asset_add_url">إضافة عنوان URL للأصل</string>
@@ -378,7 +378,6 @@
     <string name="title_update_subscription_no_subscription">لا توجد اشتراكات</string>
     <string name="toast_server_not_found_in_group">لم يُعثر على الخادم المحدد في المجموعة الحالية</string>
 
-    <string name="toast_fragment_not_available">Unable to locate current view</string>
     <string name="title_locate_selected_config">العثور على التكوين المحدد</string>
 
     <string name="tasker_start_service">بدء الخدمة</string>
@@ -536,7 +535,7 @@
     <string name="acc_add_subscription">إضافة اشتراك</string>
     <string name="toast_malformed_json_detail">تنسيق التكوين غير صالح: %1$s</string>
     <string name="acc_add_asset">إضافة مصدر موارد</string>
-    <string name="acc_download_file">تنزيل ملفات الموارد</string>
+    <string name="acc_download_file">تنزيل ملفات Geo</string>
     <string name="acc_qr_code">رمز QR</string>
     <string name="acc_copy_log">نسخ السجل</string>
     <string name="acc_clear_log">مسح السجل</string>

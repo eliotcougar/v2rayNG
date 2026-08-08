@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -75,7 +76,6 @@ import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
-import java.util.UUID
 
 private const val PROXY_CHAIN_LIST_HEADER_COUNT = 2
 
@@ -215,9 +215,7 @@ fun ProxyChainScreen(
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     var members by rememberSaveable { mutableStateOf(initialMembers.toList()) }
     var memberIds by rememberSaveable { mutableStateOf(initialMembers.indices.map(Int::toLong)) }
-    var nextMemberId by rememberSaveable {
-        mutableStateOf(initialMembers.size.toLong())
-    }
+    var nextMemberId by rememberSaveable { mutableLongStateOf(initialMembers.size.toLong()) }
     var showProfileDeleteConfirm by remember { mutableStateOf(false) }
     var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }

@@ -80,10 +80,10 @@ fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () ->
 @Composable
 internal fun AppDialogButton(
     text: String,
-    icon: Painter? = null,
     onClick: () -> Unit,
-    focusRequester: FocusRequester? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: Painter? = null,
+    focusRequester: FocusRequester? = null
 ) {
     if (!isTelevisionDevice()) {
         TextButton(

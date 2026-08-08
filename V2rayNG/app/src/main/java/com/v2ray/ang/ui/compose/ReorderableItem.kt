@@ -31,14 +31,14 @@ private fun reorderableElevation(isDragging: Boolean, isMoving: Boolean) = anima
 )
 
 @Composable
-fun ReorderableCollectionItemScope.reorderableDragHandle(): Modifier {
+private fun Modifier.reorderableDragHandle(scope: ReorderableCollectionItemScope): Modifier {
     val hapticFeedback = LocalHapticFeedback.current
-    return Modifier.longPressDraggableHandle(
-        onDragStarted = {
+    return with(scope) {
+        longPressDraggableHandle(onDragStarted = {
             // Platform haptics honor the user's touch-feedback setting.
             hapticFeedback.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-        }
-    )
+        })
+    }
 }
 
 @Composable
@@ -53,7 +53,7 @@ private fun ReorderableSurface(
     val shape = if (isMoving) RoundedCornerShape(moveModeCornerRadius) else RectangleShape
     Box(Modifier.fillMaxWidth()) {
         Surface(
-            modifier = Modifier.fillMaxWidth().then(with(scope) { reorderableDragHandle() }),
+            modifier = Modifier.fillMaxWidth().reorderableDragHandle(scope),
             shape = shape,
             color = if (isMoving) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
             shadowElevation = elevation,
@@ -64,7 +64,7 @@ private fun ReorderableSurface(
 }
 
 @Composable
-fun ReorderableListItem(
+internal fun ReorderableListItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
     isMoving: Boolean = false,
@@ -77,7 +77,7 @@ fun ReorderableListItem(
 }
 
 @Composable
-fun ReorderableGridItem(
+internal fun ReorderableGridItem(
     scope: ReorderableCollectionItemScope,
     isDragging: Boolean,
     isMoving: Boolean = false,

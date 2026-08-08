@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui
 
 import android.content.Intent
+import android.os.Bundle
 import android.webkit.WebView
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +41,10 @@ import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.util.Utils
 
 class AboutActivity : BaseComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+    }
 
     @Composable
     override fun ScreenContent() {

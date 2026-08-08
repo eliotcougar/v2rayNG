@@ -43,14 +43,14 @@ import kotlinx.coroutines.launch
  */
 private const val MIN_KEY_REPEAT_QUIET_PERIOD_MS = 500L
 
-enum class DpadReorderDirection { Up, Down, Left, Right }
+internal enum class DpadReorderDirection { Up, Down, Left, Right }
 
 internal enum class DpadReorderPhase { Idle, Pressed, MovingAwaitRelease, MovingReady }
 
 internal enum class DpadReorderActivation { None, Click, StartedMoving, Dropped }
 
 @Stable
-class DpadReorderState internal constructor() {
+internal class DpadReorderState {
     internal var phase by mutableStateOf(DpadReorderPhase.Idle)
         private set
 
@@ -218,7 +218,7 @@ class DpadReorderState internal constructor() {
     }
 }
 
-class DpadReorderItem(
+internal class DpadReorderItem(
     val state: DpadReorderState,
     val key: Any,
     val index: Int,
@@ -228,7 +228,7 @@ class DpadReorderItem(
 )
 
 @Composable
-fun rememberDpadReorderState(key: Any? = Unit): DpadReorderState =
+private fun rememberDpadReorderState(key: Any? = Unit): DpadReorderState =
     remember(key) { DpadReorderState() }
 
 @Composable
@@ -250,14 +250,14 @@ internal fun rememberSyncedDpadReorderState(
     return state
 }
 
-fun verticalDpadReorderTarget(index: Int, direction: DpadReorderDirection): Int = when (direction) {
+internal fun verticalDpadReorderTarget(index: Int, direction: DpadReorderDirection): Int = when (direction) {
     DpadReorderDirection.Up -> index - 1
     DpadReorderDirection.Down -> index + 1
     DpadReorderDirection.Left,
     DpadReorderDirection.Right -> index
 }
 
-fun twoColumnDpadReorderTarget(
+internal fun twoColumnDpadReorderTarget(
     index: Int,
     direction: DpadReorderDirection,
     isRtl: Boolean
@@ -308,7 +308,7 @@ internal fun dpadReorderScrollDelta(
     }
 }
 
-suspend fun LazyListState.keepDpadReorderItemVisible(key: Any, index: Int) {
+internal suspend fun LazyListState.keepDpadReorderItemVisible(key: Any, index: Int) {
     val layout = layoutInfo
     val item = layout.visibleItemsInfo.firstOrNull { it.key == key }
     if (item == null) {
@@ -324,7 +324,7 @@ suspend fun LazyListState.keepDpadReorderItemVisible(key: Any, index: Int) {
     if (delta != 0f) scrollBy(delta)
 }
 
-suspend fun LazyGridState.keepDpadReorderItemVisible(key: Any, index: Int) {
+internal suspend fun LazyGridState.keepDpadReorderItemVisible(key: Any, index: Int) {
     val layout = layoutInfo
     val item = layout.visibleItemsInfo.firstOrNull { it.key == key }
     if (item == null) {
@@ -343,7 +343,7 @@ suspend fun LazyGridState.keepDpadReorderItemVisible(key: Any, index: Int) {
 private class LongPressTimer(var job: Job? = null)
 
 @Composable
-fun Modifier.dpadLongPressToMove(
+internal fun Modifier.dpadLongPressToMove(
     enabled: Boolean,
     item: DpadReorderItem,
     onClick: () -> Unit,

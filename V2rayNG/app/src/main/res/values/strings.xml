@@ -162,7 +162,7 @@
     <string name="menu_item_add_url">Add URL</string>
     <string name="menu_item_scan_qrcode">Scan QR code</string>
     <string name="title_url" translatable="false">URL</string>
-    <string name="menu_item_download_file">Download geo files</string>
+    <string name="menu_item_download_file">Download files</string>
 
     <string name="menu_item_edit_asset">Edit asset</string>
 
@@ -536,7 +536,7 @@
     <string name="acc_add_subscription">Add subscription</string>
     <string name="toast_malformed_json_detail">Invalid configuration: %1$s</string>
     <string name="acc_add_asset">Add asset source</string>
-    <string name="acc_download_file">Download asset files</string>
+    <string name="acc_download_file">Download geo files</string>
     <string name="acc_qr_code">QR code</string>
     <string name="acc_copy_log">Copy log</string>
     <string name="acc_clear_log">Clear log</string>
