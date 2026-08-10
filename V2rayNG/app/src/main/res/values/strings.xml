@@ -11,7 +11,6 @@
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
     <string name="migration_fail">Data migration failed!</string>
-    <string name="pull_down_to_refresh">Please pull down to refresh!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">Stop</string>

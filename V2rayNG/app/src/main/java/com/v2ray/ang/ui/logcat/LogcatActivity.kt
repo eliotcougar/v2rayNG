@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -155,13 +154,7 @@ fun LogcatScreen(
     var showSearch by remember { mutableStateOf(false) }
 
     val snackbar = LocalAppSnackbar.current
-    val refreshHint = stringResource(R.string.pull_down_to_refresh)
     val successMessage = stringResource(R.string.toast_success)
-    LaunchedEffect(isTelevision) {
-        if (!isTelevision) {
-            snackbar.show(refreshHint)
-        }
-    }
     val listState = rememberLazyListState()
     val firstRowFocusRequester = remember { FocusRequester() }
 

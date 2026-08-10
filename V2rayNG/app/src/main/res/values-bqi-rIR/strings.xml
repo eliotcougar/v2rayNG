@@ -11,7 +11,6 @@
     <string name="action_ok">قوۊل</string>
     <string name="action_cancel">لغو</string>
     <string name="migration_fail">جاگورویی داڌه یل شکست خرد!</string>
-    <string name="pull_down_to_refresh">سی وانۊ کردن، بلگه ن بلم بکشین!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">واڌاشتن</string>
