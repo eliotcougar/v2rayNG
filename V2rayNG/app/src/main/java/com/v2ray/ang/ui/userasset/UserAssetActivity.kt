@@ -357,7 +357,7 @@ internal fun UserAssetScreen(
                     }
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_cloud_download_24dp),
-                        label = stringResource(R.string.acc_download_file),
+                        label = stringResource(R.string.acc_download_geo_files),
                         focusRequester = downloadFocusRequester,
                         modifier = Modifier.dpadTopBarFocusNavigation(
                             downloadFocusRequester,

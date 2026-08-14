@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_download_geo_files">تنزيل ملفات Geo</string>
+    <string name="action_add_member">إضافة عضو</string>
+    <string name="action_back">رجوع</string>
+    <string name="action_clear">مسح</string>
+    <string name="action_info">معلومات</string>
+    <string name="action_locked">مقفل</string>
+    <string name="action_menu">القائمة</string>
+    <string name="action_more">المزيد</string>
+    <string name="action_remove">إزالة</string>
+    <string name="action_select_image">اختيار صورة</string>
+    <string name="action_share">مشاركة</string>
+    <string name="action_start_scan">بدء المسح</string>
+    <string name="action_stop_scan">إيقاف المسح</string>
+    <string name="action_torch">مصباح</string>
+    <string name="connection_connected_tv">متصل</string>
+    <string name="logcat_update">تحديث</string>
+    <string name="menu_item_del_asset">حذف الأصل</string>
+    <string name="menu_item_edit_asset">تحرير الأصل</string>
+    <string name="per_app_routing_enable">التوجيه حسب التطبيق</string>
+    <string name="routing_settings_enable_rule">تمكين القاعدة</string>
+    <string name="server_proxy_chain_member">عضو</string>
+    <string name="sub_setting_no_proxy">بلا</string>
+    <string name="summary_pref_auto_connect_on_app_start">الاتصال تلقائيًا بالخادم المحدد عند فتح v2rayNG.</string>
+    <string name="summary_pref_per_app_routing">يحدد التوجيه حسب التطبيق التطبيقات التي تستخدم شبكة VPN.\n\nفي الوضع العام، تستخدم التطبيقات المحددة شبكة VPN وتتصل التطبيقات غير المحددة مباشرة. في وضع التجاوز، تتصل التطبيقات المحددة مباشرة وتستخدم التطبيقات غير المحددة شبكة VPN. يتوفر التحديد التلقائي للتطبيقات من قائمة «المزيد».</string>
+    <string name="summary_pref_start_on_boot">تشغيل v2rayNG في الخلفية والاتصال بالخادم المحدد بعد تشغيل الجهاز.</string>
+    <string name="title_pref_auto_connect_on_app_start">الاتصال تلقائيًا عند بدء التطبيق</string>
+    <string name="title_pref_start_on_boot">الاتصال تلقائيًا بعد تشغيل الجهاز</string>
+    <string name="title_pref_ui_theme">سمة واجهة المستخدم</string>
+    <string name="title_subscription_group_settings">إعداد مجموعة الاشتراك</string>
+    <string name="title_update_subscriptions">تحديث الاشتراكات</string>
+    <string name="toast_service_start_failed">تعذر بدء الخدمة</string>
+    <string name="toast_service_started">تم بدء الخدمة</string>
+    <string name="toast_service_stopped">تم إيقاف الخدمة</string>
+</resources>

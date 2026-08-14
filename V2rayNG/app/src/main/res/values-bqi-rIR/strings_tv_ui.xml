@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_download_geo_files">دانلود فایلای جوقرافیایی</string>
+    <string name="action_add_member">ٱووردن هموند</string>
+    <string name="action_back">بازگشت</string>
+    <string name="action_clear">پاک کردن</string>
+    <string name="action_info">دونستنی</string>
+    <string name="action_locked">قفل وابی</string>
+    <string name="action_menu">منو</string>
+    <string name="action_more">بیشتر</string>
+    <string name="action_remove">برداشتن</string>
+    <string name="action_select_image">انتخاب عکس</string>
+    <string name="action_share">همرسانی</string>
+    <string name="action_start_scan">شروع اسکن</string>
+    <string name="action_stop_scan">توقف اسکن</string>
+    <string name="action_torch">چراغ‌قوه</string>
+    <string name="connection_connected_tv">منپیز هڌ</string>
+    <string name="logcat_update">ورۊ کردن</string>
+    <string name="menu_item_del_asset">پاک کردن دارایی</string>
+    <string name="menu_item_edit_asset">آلشتکاری دارایی</string>
+    <string name="per_app_routing_enable">تور جوستن ب تفکیک برنومه</string>
+    <string name="routing_settings_enable_rule">فعال کردن قاعده</string>
+    <string name="server_proxy_chain_member">عوزو</string>
+    <string name="sub_setting_no_proxy">هیچ‌کدام</string>
+    <string name="summary_pref_auto_connect_on_app_start">مجال ره وندن v2rayNG، خوساخوس و سرور پسند بیڌه منپیز ابۊ.</string>
+    <string name="summary_pref_per_app_routing">تور جوستن ب تفکیک برنومه معین اکۊ ک کوم برنومه یل VPN ن ب کار بگرن.\n\nمن هالت پوی وولاتی، برنومه یل پسند وابیڌه VPN ن ب کار اگرن و برنومه یل پسند نوابیڌه موستقیمن منپیز ابۊن. من هالت دور زیڌن، برنومه یل پسند وابیڌه موستقیمن منپیز ابۊن و برنومه یل پسند نوابیڌه VPN ن ب کار اگرن. پسند خوتکار برنومه یل ز نومگه «بیشتر» امکووݩ پزیر هڌ.</string>
+    <string name="summary_pref_start_on_boot">پس از ره وندن دستگاه، v2rayNG نه پس‌زمین ره ابۊ و و سرور پسند بیڌه منپیز ابۊ.</string>
+    <string name="title_pref_auto_connect_on_app_start">منپیز خوتکار مجال ره ونی برنامه</string>
+    <string name="title_pref_start_on_boot">منپیز خوتکار پس از ره وندن دستگاه</string>
+    <string name="title_pref_ui_theme">پوسته رابت منتوری</string>
+    <string name="title_subscription_group_settings">اشتراکا</string>
+    <string name="title_update_subscriptions">ورۊ کردن اشتراکا</string>
+    <string name="toast_service_start_failed">ره وندن سرویس شکست خرد</string>
+    <string name="toast_service_started">سرویس وا مووفقیت ره ایفت</string>
+    <string name="toast_service_stopped">سرویس واڌاشته وابی</string>
+</resources>

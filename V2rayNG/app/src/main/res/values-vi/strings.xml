@@ -11,16 +11,17 @@
     <string name="action_ok">OK</string>
     <string name="action_cancel">Hủy</string>
     <string name="migration_fail">Không thể chuyển dữ liệu!</string>
+    <string name="pull_down_to_refresh">Kéo xuống để làm mới!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">Ngắt kết nối v2rayNG</string>
     <string name="toast_permission_denied">Vui lòng cấp các quyền cần thiết cho v2rayNG. Bạn có thể đã từ chối quyền truy cập máy ảnh hoặc bộ nhớ.</string>
     <string name="toast_permission_denied_notification">Không thể nhận quyền thông báo</string>
     <string name="notification_action_more">Nhấn để biết thêm…</string>
-    <string name="toast_services_start">Đang khởi động dịch vụ…</string>
-    <string name="toast_services_stop">Đã dừng dịch vụ</string>
-    <string name="toast_services_success">Đã khởi động dịch vụ</string>
-    <string name="toast_services_failure">Không thể khởi động dịch vụ</string>
+    <string name="toast_services_start">Đang khởi động v2rayNG…</string>
+    <string name="toast_services_stop">Đã dừng v2rayNG!</string>
+    <string name="toast_services_success">Đã khởi động v2rayNG!</string>
+    <string name="toast_services_failure">Không thể khởi động v2rayNG, kiểm tra lại cấu hình!</string>
 
     <!--ServerActivity-->
     <string name="title_server">v2rayNG</string>
@@ -28,22 +29,6 @@
     <string name="menu_item_save_config">Lưu cấu hình</string>
     <string name="menu_item_edit_config">Chỉnh sửa cấu hình</string>
     <string name="menu_item_del_config">Xoá cấu hình</string>
-    <string name="action_delete">Xoá</string>
-    <string name="action_close">Đóng</string>
-    <string name="action_back">Quay lại</string>
-    <string name="action_menu">Trình đơn</string>
-    <string name="action_more">Thêm</string>
-    <string name="action_clear">Xoá</string>
-    <string name="action_edit">Chỉnh sửa</string>
-    <string name="action_share">Chia sẻ</string>
-    <string name="action_info">Thông tin</string>
-    <string name="action_locked">Đã khoá</string>
-    <string name="action_remove">Gỡ bỏ</string>
-    <string name="action_add_member">Thêm thành viên</string>
-    <string name="action_start_scan">Bắt đầu quét</string>
-    <string name="action_stop_scan">Dừng quét</string>
-    <string name="action_torch">Đèn pin</string>
-    <string name="action_select_image">Chọn hình ảnh</string>
     <string name="menu_item_import_config_qrcode">Nhập cấu hình từ mã QR</string>
     <string name="menu_item_import_config_clipboard">Nhập cấu hình từ bảng tạm</string>
     <string name="menu_item_import_config_local">Nhập cấu hình từ thiết bị</string>
@@ -160,9 +145,6 @@
     <string name="menu_item_scan_qrcode">Quét mã QR</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">Tải xuống tệp tin</string>
-
-    <string name="menu_item_edit_asset">Sửa tài nguyên</string>
-    <string name="menu_item_del_asset">Xóa tài nguyên</string>
     <string name="title_user_asset_add_url">Thêm URL tài nguyên</string>
     <string name="msg_file_not_found">Không tìm thấy tập tin!</string>
     <string name="msg_remark_is_duplicate">Tên này đã tồn tại!</string>
@@ -180,7 +162,7 @@
     <string name="menu_item_export_proxy_app">Xuất và Sao chép</string>
     <string name="menu_item_import_proxy_app">Nhập từ bảng tạm</string>
     <string name="per_app_proxy_settings">Cài đặt theo ứng dụng</string>
-    <string name="per_app_proxy_settings_enable">Định tuyến theo ứng dụng</string>
+    <string name="per_app_proxy_settings_enable">Bật cài đặt theo ứng dụng</string>
     <string name="app_picker_unknown_app">Ứng dụng không xác định (không nhận dạng được UID)</string>
 
     <!-- Preferences -->
@@ -188,12 +170,10 @@
     <string name="title_advanced">Cài đặt nâng cao</string>
     <string name="title_core_settings">Cài đặt lõi</string>
     <string name="title_vpn_settings">Cài đặt VPN</string>
-    <string name="title_pref_per_app_proxy">Proxy theo Ứng dụng</string>
-    <string name="summary_pref_per_app_proxy">Định tuyến theo ứng dụng kiểm soát những ứng dụng nào sử dụng VPN.\n\nỞ chế độ Chung, các ứng dụng đã chọn sử dụng VPN và các ứng dụng chưa chọn kết nối trực tiếp. Ở chế độ Bỏ qua, các ứng dụng đã chọn kết nối trực tiếp và các ứng dụng chưa chọn sử dụng VPN. Có thể tự động chọn ứng dụng từ menu Thêm.</string>
-    <string name="title_pref_is_booted">Tự động kết nối khi mở ứng dụng</string>
-    <string name="summary_pref_is_booted">Tự động kết nối tới máy chủ đã chọn khi mở v2rayNG.</string>
-    <string name="title_pref_start_on_boot">Tự động kết nối sau khi thiết bị khởi động</string>
-    <string name="summary_pref_start_on_boot">Khởi chạy v2rayNG trong nền và kết nối tới máy chủ đã chọn sau khi thiết bị khởi động.</string>
+    <string name="title_pref_per_app_proxy">Proxy theo từng ứng dụng</string>
+    <string name="summary_pref_per_app_proxy">Thông thường: ứng dụng đã chọn dùng proxy, ứng dụng chưa chọn kết nối trực tiếp;\nChế độ bỏ qua: ứng dụng đã chọn kết nối trực tiếp, ứng dụng chưa chọn dùng proxy.\nTrong trình đơn có tùy chọn tự động chọn các ứng dụng sẽ dùng proxy.</string>
+    <string name="title_pref_is_booted">Tự động kết nối khi khởi động</string>
+    <string name="summary_pref_is_booted">Tự động kết nối với máy chủ đã chọn khi khởi động; thao tác này có thể không thành công</string>
 
 
     <string name="subscription_updater_job_tips">Tác vụ sẽ chạy trong nền và thông tin tiến độ sẽ hiển thị trong thông báo.</string>
@@ -318,7 +298,7 @@
     <string name="title_mode_help">Nhấn vào đây nếu bạn cần trợ giúp!</string>
     <string name="title_language">Ngôn ngữ</string>
     <string name="title_ui_settings">Cài đặt UI</string>
-    <string name="title_pref_ui_mode_night">Chủ đề giao diện</string>
+    <string name="title_pref_ui_mode_night">Cài đặt chế độ UI</string>
     <string name="title_pref_dynamic_color">Bật màu động</string>
     <string name="summary_pref_dynamic_color">Chỉ hoạt động trên Android 12+</string>
     <string name="title_pref_use_hev_tunnel">Dùng Hev TUN</string>
@@ -333,8 +313,6 @@
     <string name="summary_root_lan_sharing">Định tuyến lưu lượng từ thiết bị dùng điểm phát Wi-Fi và chia sẻ kết nối USB qua VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">Cập nhật</string>
     <string name="logcat_copy">Sao chép</string>
     <string name="logcat_clear">Xoá</string>
     <string name="logcat_share">Chia sẻ nhật ký</string>
@@ -354,9 +332,9 @@
     <string name="sub_allow_insecure_url">Cho phép địa chỉ HTTP không an toàn</string>
     <string name="sub_setting_pre_profile">Proxy đầu vào</string>
     <string name="sub_setting_next_profile">Proxy đầu ra</string>
-    <string name="sub_setting_pre_profile_tip">Được dùng trước mỗi cấu hình trong gói đăng ký này</string>
-    <string name="sub_setting_next_profile_tip">Được dùng sau mỗi cấu hình trong gói đăng ký này</string>
-    <string name="sub_setting_no_proxy">Không có</string>
+    <string name="sub_setting_pre_profile_tip">Tên ghi chú của cấu hình phải tồn tại và là duy nhất</string>
+    <string name="sub_setting_entry_proxy_tip">Proxy đã chọn được thêm trước mỗi cấu hình trong gói đăng ký, làm mắt xích đầu vào của chuỗi proxy cho cấu hình đó.</string>
+    <string name="sub_setting_exit_proxy_tip">Proxy đã chọn được thêm sau mỗi cấu hình trong gói đăng ký, làm mắt xích đầu ra của chuỗi proxy cho cấu hình đó.</string>
     <string name="toast_invalid_update_interval">Khoảng thời gian cập nhật không hợp lệ. Giá trị tối thiểu là 15 phút.</string>
     <string name="title_sub_update">Cập nhật gói đăng ký</string>
     <string name="title_ping_all_server">Kiểm tra độ trễ TCP (TCPing)</string>
@@ -375,7 +353,6 @@
     <string name="title_update_subscription_result">Đã cập nhật %1$d cấu hình (%2$d thành công, %3$d thất bại, %4$d bỏ qua)</string>
     <string name="title_update_subscription_no_subscription">Không có đăng ký</string>
     <string name="toast_server_not_found_in_group">Không tìm thấy máy chủ đã chọn trong nhóm hiện tại</string>
-
     <string name="title_locate_selected_config">Tìm cấu hình đã chọn</string>
 
     <string name="tasker_start_service">Khởi động v2rayNG</string>
@@ -388,7 +365,6 @@
     <string name="routing_settings_comma_tip">Phân cách nhiều mục bằng dấu phẩy (,).</string>
     <string name="routing_settings_save">Lưu lại</string>
     <string name="routing_settings_delete">Xoá</string>
-    <string name="routing_settings_enable_rule">Bật quy tắc</string>
     <string name="routing_settings_rule_title">Cài đặt quy tắc định tuyến</string>
     <string name="routing_settings_add_rule">Thêm quy tắc</string>
     <string name="routing_settings_import_predefined_rulesets">Nhập các bộ quy tắc được xác định trước</string>
@@ -417,7 +393,6 @@
     <string name="connection_test_fail">Không thể truy cập Internet</string>
     <string name="connection_test_error_status_code">Mã lỗi: #%d</string>
     <string name="connection_connected">Đã kết nối.\nNhấn để kiểm tra kết nối.</string>
-    <string name="connection_connected_tv">Đã kết nối</string>
     <string name="connection_not_connected">Chưa kết nối</string>
     <string name="connection_running_task_left">Số lượt kiểm tra đang chạy: %s</string>
 
@@ -452,8 +427,6 @@
     <string name="title_policy_group_fallback">Kết nối dự phòng (outbound, tùy chọn)</string>
 
     <string name="server_proxy_chain_members">Thành viên chuỗi proxy</string>
-
-    <string name="server_proxy_chain_member">Thành viên</string>
     <string name="server_proxy_chain_pick_members">Chạm vào đây để chọn thành viên</string>
     <string name="server_proxy_chain_member_unselected">Chọn một thành viên</string>
     <string name="server_proxy_chain_members_unselected">Vui lòng chọn thành viên cho từng hàng trong chuỗi</string>
@@ -480,6 +453,9 @@
     <string name="share_method_qrcode">Mã QR</string>
     <string name="share_method_clipboard">Sao chép liên kết cấu hình</string>
     <string name="share_method_full_content">Sao chép toàn bộ cấu hình</string>
+    <string name="action_edit">Chỉnh sửa</string>
+    <string name="action_delete">Xoá</string>
+    <string name="action_close">Đóng</string>
 
     <string name="share_subscription_qrcode">Xuất gói ra mã QR (Chụp màn hình để lưu)</string>
     <string name="share_subscription_clipboard">Xuất gói vào bảng tạm</string>
@@ -534,7 +510,7 @@
     <string name="acc_add_subscription">Thêm gói đăng ký</string>
     <string name="toast_malformed_json_detail">Cấu hình không hợp lệ: %1$s</string>
     <string name="acc_add_asset">Thêm nguồn tệp tài nguyên</string>
-    <string name="acc_download_file">Tải xuống tệp địa lý</string>
+    <string name="acc_download_file">Tải xuống tệp tài nguyên</string>
     <string name="acc_qr_code">Mã QR</string>
     <string name="acc_copy_log">Sao chép nhật ký</string>
     <string name="acc_clear_log">Xóa nhật ký</string>

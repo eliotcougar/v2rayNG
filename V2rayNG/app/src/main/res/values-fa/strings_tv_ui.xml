@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_download_geo_files">دانلود فایل‌های جغرافیایی</string>
+    <string name="action_add_member">افزودن عضو</string>
+    <string name="action_back">بازگشت</string>
+    <string name="action_clear">پاک کردن</string>
+    <string name="action_info">اطلاعات</string>
+    <string name="action_locked">قفل‌شده</string>
+    <string name="action_menu">منو</string>
+    <string name="action_more">بیشتر</string>
+    <string name="action_remove">برداشتن</string>
+    <string name="action_select_image">انتخاب تصویر</string>
+    <string name="action_share">اشتراک‌گذاری</string>
+    <string name="action_start_scan">شروع اسکن</string>
+    <string name="action_stop_scan">توقف اسکن</string>
+    <string name="action_torch">چراغ‌قوه</string>
+    <string name="connection_connected_tv">متصل است</string>
+    <string name="logcat_update">به‌روزرسانی</string>
+    <string name="menu_item_del_asset">حذف منبع</string>
+    <string name="menu_item_edit_asset">ویرایش منبع</string>
+    <string name="per_app_routing_enable">مسیریابی به تفکیک برنامه</string>
+    <string name="routing_settings_enable_rule">فعال کردن قانون</string>
+    <string name="server_proxy_chain_member">عضو</string>
+    <string name="sub_setting_no_proxy">هیچ‌کدام</string>
+    <string name="summary_pref_auto_connect_on_app_start">هنگام باز شدن v2rayNG به‌طور خودکار به سرور انتخاب‌شده متصل می‌شود.</string>
+    <string name="summary_pref_per_app_routing">مسیریابی به تفکیک برنامه مشخص می‌کند کدام برنامه‌ها از VPN استفاده کنند.\n\nدر حالت عمومی، برنامه‌های انتخاب‌شده از VPN استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند. در حالت دور زدن، برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از VPN استفاده می‌کنند. انتخاب خودکار برنامه‌ها از منوی «بیشتر» در دسترس است.</string>
+    <string name="summary_pref_start_on_boot">پس از روشن شدن دستگاه، v2rayNG را در پس‌زمینه اجرا می‌کند و به سرور انتخاب‌شده متصل می‌شود.</string>
+    <string name="title_pref_auto_connect_on_app_start">اتصال خودکار هنگام اجرای برنامه</string>
+    <string name="title_pref_start_on_boot">اتصال خودکار پس از روشن شدن دستگاه</string>
+    <string name="title_pref_ui_theme">پوسته رابط کاربری</string>
+    <string name="title_subscription_group_settings">اشتراک‌ها</string>
+    <string name="title_update_subscriptions">به‌روزرسانی اشتراک‌ها</string>
+    <string name="toast_service_start_failed">راه‌اندازی سرویس ناموفق بود</string>
+    <string name="toast_service_started">سرویس شروع شد</string>
+    <string name="toast_service_stopped">سرویس متوقف شد</string>
+</resources>

@@ -11,16 +11,17 @@
     <string name="action_ok">تأیید</string>
     <string name="action_cancel">لغو</string>
     <string name="migration_fail">انتقال داده‌ها با شکست مواجه شد!</string>
+    <string name="pull_down_to_refresh">برای بروزرسانی، صفحه را به پایین بکشید!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">توقف</string>
     <string name="toast_permission_denied">امکان دریافت مجوز وجود ندارد</string>
     <string name="toast_permission_denied_notification">امکان دریافت مجوز ارسال اعلان وجود ندارد</string>
     <string name="notification_action_more">برای اطلاعات بیشتر کلیک کنید</string>
-    <string name="toast_services_start">سرویس در حال شروع است…</string>
-    <string name="toast_services_stop">سرویس متوقف شد</string>
-    <string name="toast_services_success">سرویس شروع شد</string>
-    <string name="toast_services_failure">راه‌اندازی سرویس ناموفق بود</string>
+    <string name="toast_services_start">شروع خدمات</string>
+    <string name="toast_services_stop">توقف سرویس</string>
+    <string name="toast_services_success">سرویس با موفقیت شروع شد</string>
+    <string name="toast_services_failure">شروع سرویس با شکست مواجه شد</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -28,22 +29,6 @@
     <string name="menu_item_save_config">ذخیره کانفیگ</string>
     <string name="menu_item_edit_config">ویرایش کردن کانفیگ</string>
     <string name="menu_item_del_config">حذف کانفیگ</string>
-    <string name="action_delete">حذف</string>
-    <string name="action_close">بستن</string>
-    <string name="action_back">بازگشت</string>
-    <string name="action_menu">منو</string>
-    <string name="action_more">بیشتر</string>
-    <string name="action_clear">پاک کردن</string>
-    <string name="action_edit">ویرایش</string>
-    <string name="action_share">اشتراک‌گذاری</string>
-    <string name="action_info">اطلاعات</string>
-    <string name="action_locked">قفل‌شده</string>
-    <string name="action_remove">برداشتن</string>
-    <string name="action_add_member">افزودن عضو</string>
-    <string name="action_start_scan">شروع اسکن</string>
-    <string name="action_stop_scan">توقف اسکن</string>
-    <string name="action_torch">چراغ‌قوه</string>
-    <string name="action_select_image">انتخاب تصویر</string>
     <string name="menu_item_import_config_qrcode">کانفیگ را از کد QR وارد کنید</string>
     <string name="menu_item_import_config_clipboard">کانفیگ را از کلیپ ‌بورد وارد کنید</string>
     <string name="menu_item_import_config_local">کانفیگ را از محلی وارد کنید</string>
@@ -160,9 +145,6 @@
     <string name="menu_item_scan_qrcode">اسکن کد QR</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">دانلود فایل‌ ها</string>
-
-    <string name="menu_item_edit_asset">ویرایش منبع</string>
-    <string name="menu_item_del_asset">حذف منبع</string>
     <string name="title_user_asset_add_url">افزودن URL منبع</string>
     <string name="msg_file_not_found">فایل پیدا نشد</string>
     <string name="msg_remark_is_duplicate">این نام از قبل وجود دارد</string>
@@ -180,7 +162,7 @@
     <string name="menu_item_export_proxy_app">خروجی گرفتن در کلیپ‌ بورد</string>
     <string name="menu_item_import_proxy_app">وارد کردن از کلیپ‌ بورد</string>
     <string name="per_app_proxy_settings">تنظیمات به تفکیک برنامه</string>
-    <string name="per_app_proxy_settings_enable">مسیریابی به تفکیک برنامه</string>
+    <string name="per_app_proxy_settings_enable">فعال‌سازی به تفکیک برنامه</string>
     <string name="app_picker_unknown_app">برنامه ناشناس (UID شناسایی‌نشده)</string>
 
     <!-- Preferences -->
@@ -189,11 +171,9 @@
     <string name="title_core_settings">تنظیمات هسته</string>
     <string name="title_vpn_settings">تنظیمات VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی به تفکیک برنامه</string>
-    <string name="summary_pref_per_app_proxy">مسیریابی به تفکیک برنامه مشخص می‌کند کدام برنامه‌ها از VPN استفاده کنند.\n\nدر حالت عمومی، برنامه‌های انتخاب‌شده از VPN استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند. در حالت دور زدن، برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از VPN استفاده می‌کنند. انتخاب خودکار برنامه‌ها از منوی «بیشتر» در دسترس است.</string>
-    <string name="title_pref_is_booted">اتصال خودکار هنگام اجرای برنامه</string>
-    <string name="summary_pref_is_booted">هنگام باز شدن v2rayNG به‌طور خودکار به سرور انتخاب‌شده متصل می‌شود.</string>
-    <string name="title_pref_start_on_boot">اتصال خودکار پس از روشن شدن دستگاه</string>
-    <string name="summary_pref_start_on_boot">پس از روشن شدن دستگاه، v2rayNG را در پس‌زمینه اجرا می‌کند و به سرور انتخاب‌شده متصل می‌شود.</string>
+    <string name="summary_pref_per_app_proxy">حالت عادی: برنامه‌های انتخاب‌شده از پروکسی استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند؛\nحالت دور زدن: برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از پروکسی استفاده می‌کنند.\nگزینهٔ انتخاب خودکار برنامه‌هایی که باید از پروکسی استفاده کنند در منو قرار دارد.</string>
+    <string name="title_pref_is_booted">اتصال خودکار هنگام راه اندازی</string>
+    <string name="summary_pref_is_booted">هنگام راه اندازی به طور خودکار به سرور انتخابی متصل می شود که ممکن است ناموفق باشد.</string>
 
 
     <string name="subscription_updater_job_tips">این کار در پس‌زمینه اجرا می‌شود و پیشرفت آن در اعلان نمایش داده خواهد شد.</string>
@@ -318,7 +298,7 @@
     <string name="title_mode_help">برای اطلاعات و راهنمایی بیشتر، روی این متن کلیک کنید</string>
     <string name="title_language">زبان</string>
     <string name="title_ui_settings">تنظیمات رابط کاربری</string>
-    <string name="title_pref_ui_mode_night">پوسته رابط کاربری</string>
+    <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
     <string name="title_pref_use_hev_tunnel">استفاده از Hev TUN</string>
@@ -333,8 +313,6 @@
     <string name="summary_root_lan_sharing">ترافیک دستگاه‌های متصل به نقطهٔ اتصال Wi-Fi و USB را از VPN عبور می‌دهد.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">به‌روزرسانی</string>
     <string name="logcat_copy">کپی</string>
     <string name="logcat_clear">پاک کردن</string>
     <string name="logcat_share">اشتراک‌گذاری گزارش</string>
@@ -354,11 +332,11 @@
     <string name="sub_allow_insecure_url">مجاز کردن آدرس HTTP ناامن</string>
     <string name="sub_setting_pre_profile">پروکسی ورودی</string>
     <string name="sub_setting_next_profile">پروکسی خروجی</string>
-    <string name="sub_setting_pre_profile_tip">پیش از هر نمایه در این اشتراک استفاده می‌شود</string>
-    <string name="sub_setting_next_profile_tip">پس از هر نمایه در این اشتراک استفاده می‌شود</string>
-    <string name="sub_setting_no_proxy">هیچ‌کدام</string>
+    <string name="sub_setting_pre_profile_tip">لطفاً مطمئن شوید که نام مستعار وجود دارد و منحصر به فرد است</string>
+    <string name="sub_setting_entry_proxy_tip">پروکسی انتخاب‌شده پیش از هر پروفایل این اشتراک، به‌عنوان حلقهٔ ورودی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>
+    <string name="sub_setting_exit_proxy_tip">پروکسی انتخاب‌شده پس از هر پروفایل این اشتراک، به‌عنوان حلقهٔ خروجی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>
     <string name="toast_invalid_update_interval">بازه بروزرسانی نامعتبر است. حداقل مقدار 15 دقیقه است.</string>
-    <string name="title_sub_update">به‌روزرسانی اشتراک‌ها</string>
+    <string name="title_sub_update">به‌روزرسانی گروه فعلی اشتراک</string>
     <string name="title_ping_all_server">آزمایش تأخیر TCP (TCPing)</string>
     <string name="title_real_ping_all_server">آزمایش تأخیر واقعی</string>
     <string name="title_user_asset_setting">فایل های منبع جغرافیایی</string>
@@ -387,7 +365,6 @@
     <string name="routing_settings_comma_tip">چند ورودی را با کاما (,) جدا کنید.</string>
     <string name="routing_settings_save">ذخیره</string>
     <string name="routing_settings_delete">حذف</string>
-    <string name="routing_settings_enable_rule">فعال کردن قانون</string>
     <string name="routing_settings_rule_title">تنظیمات قانون مسیریابی</string>
     <string name="routing_settings_add_rule">اضافه کردن قانون</string>
     <string name="routing_settings_import_predefined_rulesets">وارد کردن مجموعه قوانین از پیش تعریف شده</string>
@@ -416,7 +393,6 @@
     <string name="connection_test_fail">اینترنت در دسترس نیست</string>
     <string name="connection_test_error_status_code">کد خطا: #%d</string>
     <string name="connection_connected">متصل است.\nبرای بررسی اتصال ضربه بزنید.</string>
-    <string name="connection_connected_tv">متصل است</string>
     <string name="connection_not_connected">متصل نیست</string>
     <string name="connection_running_task_left">آزمایش‌های در حال اجرا: %s</string>
 
@@ -451,7 +427,6 @@
     <string name="title_policy_group_fallback">خروجی پشتیبان (outbound، اختیاری)</string>
 
     <string name="server_proxy_chain_members">اعضای زنجیره پروکسی</string>
-    <string name="server_proxy_chain_member">عضو</string>
     <string name="server_proxy_chain_pick_members">برای انتخاب عضو اینجا بزنید</string>
     <string name="server_proxy_chain_member_unselected">یک عضو را انتخاب کنید</string>
     <string name="server_proxy_chain_members_unselected">لطفاً برای هر ردیف زنجیره یک عضو انتخاب کنید</string>
@@ -478,6 +453,9 @@
     <string name="share_method_qrcode">کد QR</string>
     <string name="share_method_clipboard">کپی لینک کانفیگ</string>
     <string name="share_method_full_content">کپی کانفیگ کامل</string>
+    <string name="action_edit">ویرایش</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_close">بستن</string>
 
     <string name="share_subscription_qrcode">کد QR</string>
     <string name="share_subscription_clipboard">خروجی گرفتن در کلیپ‌ بورد</string>
@@ -532,7 +510,7 @@
     <string name="acc_add_subscription">افزودن اشتراک</string>
     <string name="toast_malformed_json_detail">قالب پیکربندی نامعتبر است: %1$s</string>
     <string name="acc_add_asset">افزودن منبع فایل‌های جغرافیایی</string>
-    <string name="acc_download_file">دانلود فایل‌های جغرافیایی</string>
+    <string name="acc_download_file">دانلود فایل‌های منبع</string>
     <string name="acc_qr_code">کد QR</string>
     <string name="acc_copy_log">کپی گزارش</string>
     <string name="acc_clear_log">پاک کردن گزارش</string>

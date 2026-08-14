@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_download_geo_files">জিও ফাইল ডাউনলোড করুন</string>
+    <string name="action_add_member">সদস্য যোগ করুন</string>
+    <string name="action_back">ফিরে যান</string>
+    <string name="action_clear">সাফ করুন</string>
+    <string name="action_info">তথ্য</string>
+    <string name="action_locked">লক করা</string>
+    <string name="action_menu">মেনু</string>
+    <string name="action_more">আরও</string>
+    <string name="action_remove">সরান</string>
+    <string name="action_select_image">ছবি নির্বাচন করুন</string>
+    <string name="action_share">শেয়ার করুন</string>
+    <string name="action_start_scan">স্ক্যান শুরু করুন</string>
+    <string name="action_stop_scan">স্ক্যান বন্ধ করুন</string>
+    <string name="action_torch">ফ্ল্যাশলাইট</string>
+    <string name="connection_connected_tv">সংযুক্ত</string>
+    <string name="logcat_update">আপডেট করুন</string>
+    <string name="menu_item_del_asset">অ্যাসেট মুছুন</string>
+    <string name="menu_item_edit_asset">অ্যাসেট সম্পাদনা করুন</string>
+    <string name="per_app_routing_enable">প্রতি-অ্যাপ রাউটিং</string>
+    <string name="routing_settings_enable_rule">নিয়ম সক্রিয় করুন</string>
+    <string name="server_proxy_chain_member">সদস্য</string>
+    <string name="sub_setting_no_proxy">কোনোটিই নয়</string>
+    <string name="summary_pref_auto_connect_on_app_start">v2rayNG খুললে নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে।</string>
+    <string name="summary_pref_per_app_routing">প্রতি-অ্যাপ রাউটিং কোন অ্যাপ VPN ব্যবহার করবে তা নিয়ন্ত্রণ করে।\n\nসাধারণ মোডে নির্বাচিত অ্যাপগুলো VPN ব্যবহার করে এবং অনির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয়। বাইপাস মোডে নির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয় এবং অনির্বাচিত অ্যাপগুলো VPN ব্যবহার করে। আরও মেনু থেকে স্বয়ংক্রিয় অ্যাপ নির্বাচন করা যায়।</string>
+    <string name="summary_pref_start_on_boot">ডিভাইস চালু হওয়ার পর ব্যাকগ্রাউন্ডে v2rayNG চালু করে এবং নির্বাচিত সার্ভারে সংযোগ করে।</string>
+    <string name="title_pref_auto_connect_on_app_start">অ্যাপ চালু হলে স্বয়ংক্রিয় সংযোগ</string>
+    <string name="title_pref_start_on_boot">ডিভাইস চালুর পর স্বয়ংক্রিয় সংযোগ</string>
+    <string name="title_pref_ui_theme">ইউআই থিম</string>
+    <string name="title_subscription_group_settings">সাবস্ক্রিপশন</string>
+    <string name="title_update_subscriptions">সাবস্ক্রিপশন আপডেট করুন</string>
+    <string name="toast_service_start_failed">সার্ভিস শুরু করা যায়নি</string>
+    <string name="toast_service_started">সার্ভিস শুরু হয়েছে</string>
+    <string name="toast_service_stopped">সার্ভিস বন্ধ হয়েছে</string>
+</resources>

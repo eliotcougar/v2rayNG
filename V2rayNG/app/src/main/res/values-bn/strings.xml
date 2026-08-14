@@ -11,16 +11,17 @@
     <string name="action_ok">ঠিক আছে</string>
     <string name="action_cancel">বাতিল</string>
     <string name="migration_fail">ডেটা স্থানান্তর ব্যর্থ!</string>
+    <string name="pull_down_to_refresh">রিফ্রেশ করতে নিচে টানুন!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">বন্ধ করুন</string>
     <string name="toast_permission_denied">অনুমতি পাওয়া যাচ্ছে না</string>
     <string name="toast_permission_denied_notification">বিজ্ঞপ্তির অনুমতি পাওয়া যায়নি</string>
     <string name="notification_action_more">আরও দেখতে ক্লিক করুন</string>
-    <string name="toast_services_start">সার্ভিস শুরু হচ্ছে…</string>
-    <string name="toast_services_stop">সার্ভিস বন্ধ হয়েছে</string>
-    <string name="toast_services_success">সার্ভিস শুরু হয়েছে</string>
-    <string name="toast_services_failure">সার্ভিস শুরু করা যায়নি</string>
+    <string name="toast_services_start">সার্ভিস শুরু করুন</string>
+    <string name="toast_services_stop">সার্ভিস বন্ধ করুন</string>
+    <string name="toast_services_success">সার্ভিস সফলভাবে শুরু হয়েছে</string>
+    <string name="toast_services_failure">সার্ভিস শুরু হতে ব্যর্থ হয়েছে</string>
 
     <!--ServerActivity-->
     <string name="title_server">কনফিগারেশন ফাইল</string>
@@ -28,22 +29,6 @@
     <string name="menu_item_save_config">কনফিগারেশন সংরক্ষণ করুন</string>
     <string name="menu_item_edit_config">কনফিগারেশন সম্পাদনা করুন</string>
     <string name="menu_item_del_config">কনফিগারেশন মুছুন</string>
-    <string name="action_delete">মুছুন</string>
-    <string name="action_close">বন্ধ করুন</string>
-    <string name="action_back">ফিরে যান</string>
-    <string name="action_menu">মেনু</string>
-    <string name="action_more">আরও</string>
-    <string name="action_clear">সাফ করুন</string>
-    <string name="action_edit">সম্পাদনা</string>
-    <string name="action_share">শেয়ার করুন</string>
-    <string name="action_info">তথ্য</string>
-    <string name="action_locked">লক করা</string>
-    <string name="action_remove">সরান</string>
-    <string name="action_add_member">সদস্য যোগ করুন</string>
-    <string name="action_start_scan">স্ক্যান শুরু করুন</string>
-    <string name="action_stop_scan">স্ক্যান বন্ধ করুন</string>
-    <string name="action_torch">ফ্ল্যাশলাইট</string>
-    <string name="action_select_image">ছবি নির্বাচন করুন</string>
     <string name="menu_item_import_config_qrcode">QR কোড থেকে কনফিগারেশন আমদানি করুন</string>
     <string name="menu_item_import_config_clipboard">ক্লিপবোর্ড থেকে কনফিগারেশন আমদানি করুন</string>
     <string name="menu_item_import_config_local">ডিভাইস থেকে কনফিগ আমদানি করুন</string>
@@ -160,8 +145,6 @@
     <string name="menu_item_scan_qrcode">QR কোড স্ক্যান করুন</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">ফাইল ডাউনলোড করুন</string>
-    <string name="menu_item_edit_asset">অ্যাসেট সম্পাদনা করুন</string>
-    <string name="menu_item_del_asset">অ্যাসেট মুছুন</string>
     <string name="title_user_asset_add_url">অ্যাসেট URL যোগ করুন</string>
     <string name="msg_file_not_found">ফাইল খুঁজে পাওয়া যায়নি</string>
     <string name="msg_remark_is_duplicate">মন্তব্য ইতিমধ্যে বিদ্যমান</string>
@@ -179,7 +162,7 @@
     <string name="menu_item_export_proxy_app">ক্লিপবোর্ডে রপ্তানি করুন</string>
     <string name="menu_item_import_proxy_app">ক্লিপবোর্ড থেকে আমদানি করুন</string>
     <string name="per_app_proxy_settings">অ্যাপভিত্তিক সেটিংস</string>
-    <string name="per_app_proxy_settings_enable">প্রতি-অ্যাপ রাউটিং</string>
+    <string name="per_app_proxy_settings_enable">অ্যাপভিত্তিক সেটিংস চালু করুন</string>
     <string name="app_picker_unknown_app">অজানা অ্যাপ (UID শনাক্ত করা যায়নি)</string>
 
     <!-- Preferences -->
@@ -188,11 +171,9 @@
     <string name="title_core_settings">কোর সেটিংস</string>
     <string name="title_vpn_settings">VPN সেটিংস</string>
     <string name="title_pref_per_app_proxy">প্রতি-অ্যাপ প্রক্সি</string>
-    <string name="summary_pref_per_app_proxy">প্রতি-অ্যাপ রাউটিং কোন অ্যাপ VPN ব্যবহার করবে তা নিয়ন্ত্রণ করে।\n\nসাধারণ মোডে নির্বাচিত অ্যাপগুলো VPN ব্যবহার করে এবং অনির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয়। বাইপাস মোডে নির্বাচিত অ্যাপগুলো সরাসরি সংযুক্ত হয় এবং অনির্বাচিত অ্যাপগুলো VPN ব্যবহার করে। আরও মেনু থেকে স্বয়ংক্রিয় অ্যাপ নির্বাচন করা যায়।</string>
-    <string name="title_pref_is_booted">অ্যাপ চালু হলে স্বয়ংক্রিয় সংযোগ</string>
-    <string name="summary_pref_is_booted">v2rayNG খুললে নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে।</string>
-    <string name="title_pref_start_on_boot">ডিভাইস চালুর পর স্বয়ংক্রিয় সংযোগ</string>
-    <string name="summary_pref_start_on_boot">ডিভাইস চালু হওয়ার পর ব্যাকগ্রাউন্ডে v2rayNG চালু করে এবং নির্বাচিত সার্ভারে সংযোগ করে।</string>
+    <string name="summary_pref_per_app_proxy">সাধারণ: নির্বাচিত অ্যাপ প্রক্সি ব্যবহার করে, অনির্বাচিত অ্যাপ সরাসরি সংযুক্ত হয়;\nবাইপাস মোড: নির্বাচিত অ্যাপ সরাসরি সংযুক্ত হয়, অনির্বাচিত অ্যাপ প্রক্সি ব্যবহার করে।\nযেসব অ্যাপ প্রক্সি ব্যবহার করবে, সেগুলি স্বয়ংক্রিয়ভাবে নির্বাচনের বিকল্পটি মেনুতে আছে।</string>
+    <string name="title_pref_is_booted">চালুর সময় স্বয়ংক্রিয় সংযোগ</string>
+    <string name="summary_pref_is_booted">চালুর সময় নির্বাচিত সার্ভারে স্বয়ংক্রিয়ভাবে সংযোগ করে; সংযোগ ব্যর্থ হতে পারে</string>
 
 
     <string name="subscription_updater_job_tips">কাজটি ব্যাকগ্রাউন্ডে চলবে এবং অগ্রগতির তথ্য বিজ্ঞপ্তিতে দেখানো হবে।</string>
@@ -317,7 +298,7 @@
     <string name="title_mode_help">আরো সাহায্যের জন্য ক্লিক করুন</string>
     <string name="title_language">ভাষা</string>
     <string name="title_ui_settings">ইউআই সেটিংস</string>
-    <string name="title_pref_ui_mode_night">ইউআই থিম</string>
+    <string name="title_pref_ui_mode_night">ইউআই মোড সেটিংস</string>
     <string name="title_pref_dynamic_color">ডায়নামিক রঙ চালু করুন</string>
     <string name="summary_pref_dynamic_color">শুধুমাত্র Android 12+ ডিভাইসে কাজ করে</string>
     <string name="title_pref_use_hev_tunnel">Hev TUN সুবিধা চালু করুন</string>
@@ -332,8 +313,6 @@
     <string name="summary_root_lan_sharing">Wi-Fi হটস্পট ও USB-টেদার করা ডিভাইসের ট্রাফিক VPN-এর মাধ্যমে রাউট করুন।</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">আপডেট করুন</string>
     <string name="logcat_copy">কপি করুন</string>
     <string name="logcat_clear">পরিষ্কার করুন</string>
     <string name="logcat_share">লগ শেয়ার করুন</string>
@@ -353,11 +332,11 @@
     <string name="sub_allow_insecure_url">অনিরাপদ HTTP ঠিকানা অনুমোদন করুন</string>
     <string name="sub_setting_pre_profile">প্রবেশ প্রক্সি</string>
     <string name="sub_setting_next_profile">প্রস্থান প্রক্সি</string>
-    <string name="sub_setting_pre_profile_tip">এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের আগে ব্যবহৃত হয়</string>
-    <string name="sub_setting_next_profile_tip">এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের পরে ব্যবহৃত হয়</string>
-    <string name="sub_setting_no_proxy">কোনোটিই নয়</string>
+    <string name="sub_setting_pre_profile_tip">কনফিগারেশনের মন্তব্যটি বিদ্যমান ও অনন্য হতে হবে</string>
+    <string name="sub_setting_entry_proxy_tip">নির্বাচিত প্রক্সিটি এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের আগে সেই প্রোফাইলের প্রক্সি চেইনের প্রবেশ লিঙ্ক হিসেবে যোগ করা হবে।</string>
+    <string name="sub_setting_exit_proxy_tip">নির্বাচিত প্রক্সিটি এই সাবস্ক্রিপশনের প্রতিটি প্রোফাইলের পরে সেই প্রোফাইলের প্রক্সি চেইনের প্রস্থান লিঙ্ক হিসেবে যোগ করা হবে।</string>
     <string name="toast_invalid_update_interval">আপডেটের বিরতি সঠিক নয়। সর্বনিম্ন ১৫ মিনিট।</string>
-    <string name="title_sub_update">সাবস্ক্রিপশন আপডেট করুন</string>
+    <string name="title_sub_update">সাবস্ক্রিপশন আপডেট</string>
     <string name="title_ping_all_server">TCP বিলম্ব পরীক্ষা করুন (TCPing)</string>
     <string name="title_real_ping_all_server">প্রকৃত বিলম্ব পরীক্ষা করুন</string>
     <string name="title_user_asset_setting">অ্যাসেট ফাইল</string>
@@ -376,7 +355,6 @@
     <string name="toast_server_not_found_in_group">বর্তমান গ্রুপে নির্বাচিত সার্ভারটি পাওয়া যায়নি</string>
     <string name="title_locate_selected_config">নির্বাচিত কনফিগটি খুঁজুন</string>
 
-
     <string name="tasker_start_service">সার্ভিস শুরু করুন</string>
     <string name="tasker_setting_confirm">নিশ্চিত করুন</string>
 
@@ -387,7 +365,6 @@
     <string name="routing_settings_comma_tip">একাধিক এন্ট্রি কমা (,) দিয়ে আলাদা করুন।</string>
     <string name="routing_settings_save">সেভ করুন</string>
     <string name="routing_settings_delete">মুছে ফেলুন</string>
-    <string name="routing_settings_enable_rule">নিয়ম সক্রিয় করুন</string>
     <string name="routing_settings_rule_title">রাউটিং নিয়মের সেটিংস</string>
     <string name="routing_settings_add_rule">নিয়ম যোগ করুন</string>
     <string name="routing_settings_import_predefined_rulesets">পূর্বনির্ধারিত নিয়মাবলী আমদানি করুন</string>
@@ -416,7 +393,6 @@
     <string name="connection_test_fail">ইন্টারনেট উপলব্ধ নয়</string>
     <string name="connection_test_error_status_code">ত্রুটি কোড: #%d</string>
     <string name="connection_connected">সংযুক্ত।\nসংযোগ পরীক্ষা করতে ট্যাপ করুন।</string>
-    <string name="connection_connected_tv">সংযুক্ত</string>
     <string name="connection_not_connected">সংযুক্ত নয়</string>
     <string name="connection_running_task_left">চলমান পরীক্ষা: %s</string>
 
@@ -451,8 +427,6 @@
     <string name="title_policy_group_fallback">বিকল্প বহির্গামী সংযোগ (outbound, ঐচ্ছিক)</string>
 
     <string name="server_proxy_chain_members">প্রক্সি চেইনের সদস্য</string>
-
-    <string name="server_proxy_chain_member">সদস্য</string>
     <string name="server_proxy_chain_pick_members">সদস্য বাছতে এখানে ট্যাপ করুন</string>
     <string name="server_proxy_chain_member_unselected">চেইনের সদস্য নির্বাচন করুন</string>
     <string name="server_proxy_chain_members_unselected">চেইনের প্রতিটি সারির জন্য সদস্য নির্বাচন করুন</string>
@@ -479,6 +453,9 @@
     <string name="share_method_qrcode">QR কোড</string>
     <string name="share_method_clipboard">প্রোফাইল লিংক কপি করুন</string>
     <string name="share_method_full_content">পূর্ণ কনফিগারেশন কপি করুন</string>
+    <string name="action_edit">সম্পাদনা</string>
+    <string name="action_delete">মুছুন</string>
+    <string name="action_close">বন্ধ করুন</string>
 
     <string name="share_subscription_qrcode">QR কোড</string>
     <string name="share_subscription_clipboard">ক্লিপবোর্ডে রপ্তানি করুন</string>
@@ -533,7 +510,7 @@
     <string name="acc_add_subscription">সাবস্ক্রিপশন যোগ করুন</string>
     <string name="toast_malformed_json_detail">কনফিগারেশন ফরম্যাট সঠিক নয়: %1$s</string>
     <string name="acc_add_asset">অ্যাসেট উৎস যোগ করুন</string>
-    <string name="acc_download_file">জিও ফাইল ডাউনলোড করুন</string>
+    <string name="acc_download_file">অ্যাসেট ফাইল ডাউনলোড করুন</string>
     <string name="acc_qr_code">QR কোড</string>
     <string name="acc_copy_log">লগ কপি করুন</string>
     <string name="acc_clear_log">লগ মুছুন</string>

@@ -113,7 +113,7 @@ class MainViewModel(
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
             MainServiceEvent.StateStartSuccess -> {
                 _serviceStatusMessages.tryEmit(
-                    ServiceStatusMessage(R.string.toast_services_success)
+                    ServiceStatusMessage(R.string.toast_service_started)
                 )
                 updateRunningState(true)
             }
@@ -121,7 +121,7 @@ class MainViewModel(
             MainServiceEvent.StateStartFailure -> {
                 _serviceStatusMessages.tryEmit(
                     ServiceStatusMessage(
-                        stringRes = R.string.toast_services_failure,
+                        stringRes = R.string.toast_service_start_failed,
                         isError = true
                     )
                 )
@@ -130,7 +130,7 @@ class MainViewModel(
 
             MainServiceEvent.StateStopSuccess -> {
                 _serviceStatusMessages.tryEmit(
-                    ServiceStatusMessage(R.string.toast_services_stop)
+                    ServiceStatusMessage(R.string.toast_service_stopped)
                 )
                 updateRunningState(false)
             }

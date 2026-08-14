@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_download_geo_files">Tải xuống tệp địa lý</string>
+    <string name="action_add_member">Thêm thành viên</string>
+    <string name="action_back">Quay lại</string>
+    <string name="action_clear">Xoá</string>
+    <string name="action_info">Thông tin</string>
+    <string name="action_locked">Đã khoá</string>
+    <string name="action_menu">Trình đơn</string>
+    <string name="action_more">Thêm</string>
+    <string name="action_remove">Gỡ bỏ</string>
+    <string name="action_select_image">Chọn hình ảnh</string>
+    <string name="action_share">Chia sẻ</string>
+    <string name="action_start_scan">Bắt đầu quét</string>
+    <string name="action_stop_scan">Dừng quét</string>
+    <string name="action_torch">Đèn pin</string>
+    <string name="connection_connected_tv">Đã kết nối</string>
+    <string name="logcat_update">Cập nhật</string>
+    <string name="menu_item_del_asset">Xóa tài nguyên</string>
+    <string name="menu_item_edit_asset">Sửa tài nguyên</string>
+    <string name="per_app_routing_enable">Định tuyến theo ứng dụng</string>
+    <string name="routing_settings_enable_rule">Bật quy tắc</string>
+    <string name="server_proxy_chain_member">Thành viên</string>
+    <string name="sub_setting_no_proxy">Không có</string>
+    <string name="summary_pref_auto_connect_on_app_start">Tự động kết nối tới máy chủ đã chọn khi mở v2rayNG.</string>
+    <string name="summary_pref_per_app_routing">Định tuyến theo ứng dụng kiểm soát những ứng dụng nào sử dụng VPN.\n\nỞ chế độ Chung, các ứng dụng đã chọn sử dụng VPN và các ứng dụng chưa chọn kết nối trực tiếp. Ở chế độ Bỏ qua, các ứng dụng đã chọn kết nối trực tiếp và các ứng dụng chưa chọn sử dụng VPN. Có thể tự động chọn ứng dụng từ menu Thêm.</string>
+    <string name="summary_pref_start_on_boot">Khởi chạy v2rayNG trong nền và kết nối tới máy chủ đã chọn sau khi thiết bị khởi động.</string>
+    <string name="title_pref_auto_connect_on_app_start">Tự động kết nối khi mở ứng dụng</string>
+    <string name="title_pref_start_on_boot">Tự động kết nối sau khi thiết bị khởi động</string>
+    <string name="title_pref_ui_theme">Chủ đề giao diện</string>
+    <string name="title_subscription_group_settings">Gói đăng ký</string>
+    <string name="title_update_subscriptions">Cập nhật gói đăng ký</string>
+    <string name="toast_service_start_failed">Không thể khởi động dịch vụ</string>
+    <string name="toast_service_started">Đã khởi động dịch vụ</string>
+    <string name="toast_service_stopped">Đã dừng dịch vụ</string>
+</resources>

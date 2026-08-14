@@ -11,16 +11,17 @@
     <string name="action_ok">موافق</string>
     <string name="action_cancel">إلغاء</string>
     <string name="migration_fail">فشلت عملية ترحيل البيانات!</string>
+    <string name="pull_down_to_refresh">اسحب لأسفل للتحديث!</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">إيقاف</string>
     <string name="toast_permission_denied">تعذر الحصول على الإذن</string>
     <string name="toast_permission_denied_notification">تعذر الحصول على إذن الإشعارات</string>
     <string name="notification_action_more">انقر للمزيد</string>
-    <string name="toast_services_start">جارٍ بدء الخدمة…</string>
-    <string name="toast_services_stop">تم إيقاف الخدمة</string>
-    <string name="toast_services_success">تم بدء الخدمة</string>
-    <string name="toast_services_failure">تعذر بدء الخدمة</string>
+    <string name="toast_services_start">بدء الخدمات</string>
+    <string name="toast_services_stop">إيقاف الخدمات</string>
+    <string name="toast_services_success">نجاح بدء الخدمات</string>
+    <string name="toast_services_failure">فشل بدء الخدمات</string>
 
     <!--ServerActivity-->
     <string name="title_server">ملف التكوين</string>
@@ -28,22 +29,6 @@
     <string name="menu_item_save_config">حفظ التكوين</string>
     <string name="menu_item_edit_config">تعديل التكوين</string>
     <string name="menu_item_del_config">حذف التكوين</string>
-    <string name="action_delete">حذف</string>
-    <string name="action_close">إغلاق</string>
-    <string name="action_back">رجوع</string>
-    <string name="action_menu">القائمة</string>
-    <string name="action_more">المزيد</string>
-    <string name="action_clear">مسح</string>
-    <string name="action_edit">تعديل</string>
-    <string name="action_share">مشاركة</string>
-    <string name="action_info">معلومات</string>
-    <string name="action_locked">مقفل</string>
-    <string name="action_remove">إزالة</string>
-    <string name="action_add_member">إضافة عضو</string>
-    <string name="action_start_scan">بدء المسح</string>
-    <string name="action_stop_scan">إيقاف المسح</string>
-    <string name="action_torch">مصباح</string>
-    <string name="action_select_image">اختيار صورة</string>
     <string name="menu_item_import_config_qrcode">استيراد التكوين من رمز QR</string>
     <string name="menu_item_import_config_clipboard">استيراد التكوين من الحافظة</string>
     <string name="menu_item_import_config_local">استيراد التكوين من الجهاز</string>
@@ -160,8 +145,6 @@
     <string name="menu_item_scan_qrcode">مسح رمز QR</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">تنزيل الملفات</string>
-    <string name="menu_item_edit_asset">تحرير الأصل</string>
-    <string name="menu_item_del_asset">حذف الأصل</string>
     <string name="title_user_asset_add_url">إضافة عنوان URL للأصل</string>
     <string name="msg_file_not_found">الملف غير موجود</string>
     <string name="msg_remark_is_duplicate">الملاحظات موجودة بالفعل</string>
@@ -179,7 +162,7 @@
     <string name="menu_item_export_proxy_app">تصدير إلى الحافظة</string>
     <string name="menu_item_import_proxy_app">استيراد من الحافظة</string>
     <string name="per_app_proxy_settings">إعدادات كل تطبيق</string>
-    <string name="per_app_proxy_settings_enable">التوجيه حسب التطبيق</string>
+    <string name="per_app_proxy_settings_enable">تمكين الإعدادات لكل تطبيق</string>
     <string name="app_picker_unknown_app">تطبيق غير معروف (UID غير محدد)</string>
 
     <!-- Preferences -->
@@ -188,11 +171,9 @@
     <string name="title_core_settings">إعدادات النواة</string>
     <string name="title_vpn_settings">إعدادات VPN</string>
     <string name="title_pref_per_app_proxy">الوكيل لكل تطبيق</string>
-    <string name="summary_pref_per_app_proxy">يحدد التوجيه حسب التطبيق التطبيقات التي تستخدم شبكة VPN.\n\nفي الوضع العام، تستخدم التطبيقات المحددة شبكة VPN وتتصل التطبيقات غير المحددة مباشرة. في وضع التجاوز، تتصل التطبيقات المحددة مباشرة وتستخدم التطبيقات غير المحددة شبكة VPN. يتوفر التحديد التلقائي للتطبيقات من قائمة «المزيد».</string>
-    <string name="title_pref_is_booted">الاتصال تلقائيًا عند بدء التطبيق</string>
-    <string name="summary_pref_is_booted">الاتصال تلقائيًا بالخادم المحدد عند فتح v2rayNG.</string>
-    <string name="title_pref_start_on_boot">الاتصال تلقائيًا بعد تشغيل الجهاز</string>
-    <string name="summary_pref_start_on_boot">تشغيل v2rayNG في الخلفية والاتصال بالخادم المحدد بعد تشغيل الجهاز.</string>
+    <string name="summary_pref_per_app_proxy">عام: تستخدم التطبيقات المحددة الوكيل، وتتصل التطبيقات غير المحددة مباشرة؛\nوضع التجاوز: تتصل التطبيقات المحددة مباشرة، وتستخدم التطبيقات غير المحددة الوكيل.\nيتوفر في القائمة خيار لتحديد التطبيقات التي ستستخدم الوكيل تلقائيًا.</string>
+    <string name="title_pref_is_booted">الاتصال تلقائياً عند بدء التشغيل</string>
+    <string name="summary_pref_is_booted">الاتصال تلقائياً بالخادم المحدد عند بدء التشغيل؛ قد لا تنجح المحاولة</string>
 
 
     <string name="subscription_updater_job_tips">ستعمل المهمة في الخلفية، وسيُعرض تقدمها في الإشعار.</string>
@@ -317,7 +298,7 @@
     <string name="title_mode_help">انقر هنا للحصول على مزيد من المساعدة</string>
     <string name="title_language">اللغة</string>
     <string name="title_ui_settings">إعدادات واجهة المستخدم</string>
-    <string name="title_pref_ui_mode_night">سمة واجهة المستخدم</string>
+    <string name="title_pref_ui_mode_night">إعدادات وضع واجهة المستخدم ليلاً</string>
     <string name="title_pref_dynamic_color">تفعيل الألوان الديناميكية</string>
     <string name="summary_pref_dynamic_color">يعمل فقط على أندرويد 12+</string>
     <string name="title_pref_use_hev_tunnel">تمكين ميزة Hev TUN</string>
@@ -332,8 +313,6 @@
     <string name="summary_root_lan_sharing">توجيه حركة مرور أجهزة نقطة اتصال Wi-Fi والأجهزة المربوطة عبر USB من خلال VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">تحديث</string>
     <string name="logcat_copy">نسخ</string>
     <string name="logcat_clear">مسح</string>
     <string name="logcat_share">مشاركة السجل</string>
@@ -341,8 +320,8 @@
     <string name="title_del_all_config">حذف جميع الإعدادات</string>
     <string name="title_del_duplicate_config">حذف الإعدادات المكررة</string>
     <string name="title_del_invalid_config">حذف الإعدادات غير الصالحة</string>
-    <string name="title_export_all">تصدير الإعدادات غير المخصصة إلى الحافظة</string>
-    <string name="title_sub_setting">إعداد مجموعة الاشتراك</string>
+    <string name="title_export_all">تصدير التكوينات إلى الحافظة</string>
+    <string name="title_sub_setting">الاشتراكات</string>
     <string name="sub_setting_remarks">ملاحظات</string>
     <string name="sub_setting_url">عنوان URL اختياري</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
@@ -353,11 +332,11 @@
     <string name="sub_allow_insecure_url">السماح بعنوان HTTP غير آمن</string>
     <string name="sub_setting_pre_profile">وكيل الدخول</string>
     <string name="sub_setting_next_profile">وكيل الخروج</string>
-    <string name="sub_setting_pre_profile_tip">يُستخدم قبل كل ملف تعريف في هذا الاشتراك</string>
-    <string name="sub_setting_next_profile_tip">يُستخدم بعد كل ملف تعريف في هذا الاشتراك</string>
-    <string name="sub_setting_no_proxy">بلا</string>
+    <string name="sub_setting_pre_profile_tip">يجب أن تكون ملاحظات التكوين موجودة وفريدة</string>
+    <string name="sub_setting_entry_proxy_tip">يُضاف الوكيل المحدد قبل كل ملف تعريف في هذا الاشتراك كحلقة الدخول في سلسلة الوكلاء لذلك الملف.</string>
+    <string name="sub_setting_exit_proxy_tip">يُضاف الوكيل المحدد بعد كل ملف تعريف في هذا الاشتراك كحلقة الخروج في سلسلة الوكلاء لذلك الملف.</string>
     <string name="toast_invalid_update_interval">فاصل التحديث غير صالح. الحد الأدنى هو 15 دقيقة.</string>
-    <string name="title_sub_update">تحديث الاشتراكات</string>
+    <string name="title_sub_update">تحديث الاشتراك</string>
     <string name="title_ping_all_server">اختبار تأخير TCP (TCPing)</string>
     <string name="title_real_ping_all_server">اختبار زمن الاستجابة الفعلي</string>
     <string name="title_user_asset_setting">ملفات الأصول</string>
@@ -374,7 +353,6 @@
     <string name="title_update_subscription_result">تم تحديث %1$d إعدادات (%2$d ناجحة، %3$d فاشلة، %4$d متخطاة)</string>
     <string name="title_update_subscription_no_subscription">لا توجد اشتراكات</string>
     <string name="toast_server_not_found_in_group">لم يُعثر على الخادم المحدد في المجموعة الحالية</string>
-
     <string name="title_locate_selected_config">العثور على التكوين المحدد</string>
 
     <string name="tasker_start_service">بدء الخدمة</string>
@@ -387,7 +365,6 @@
     <string name="routing_settings_comma_tip">افصل بين الإدخالات المتعددة بفواصل (,).</string>
     <string name="routing_settings_save">حفظ</string>
     <string name="routing_settings_delete">مسح</string>
-    <string name="routing_settings_enable_rule">تمكين القاعدة</string>
     <string name="routing_settings_rule_title">إعدادات قاعدة التوجيه</string>
     <string name="routing_settings_add_rule">إضافة قاعدة</string>
     <string name="routing_settings_import_predefined_rulesets">استيراد مجموعات قواعد محددة مسبقاً</string>
@@ -416,7 +393,6 @@
     <string name="connection_test_fail">الإنترنت غير متاح</string>
     <string name="connection_test_error_status_code">رمز الخطأ: #%d</string>
     <string name="connection_connected">متصل. اضغط للتحقق من الاتصال.</string>
-    <string name="connection_connected_tv">متصل</string>
     <string name="connection_not_connected">غير متصل</string>
     <string name="connection_running_task_left">الاختبارات قيد التشغيل: %s</string>
 
@@ -451,7 +427,6 @@
     <string name="title_policy_group_fallback">الاتصال الصادر الاحتياطي (outbound، اختياري)</string>
 
     <string name="server_proxy_chain_members">أعضاء سلسلة الوكيل</string>
-    <string name="server_proxy_chain_member">عضو</string>
     <string name="server_proxy_chain_pick_members">اضغط هنا لاختيار عضو</string>
     <string name="server_proxy_chain_member_unselected">اختر عضوًا</string>
     <string name="server_proxy_chain_members_unselected">يرجى اختيار عضو لكل صف في السلسلة</string>
@@ -478,6 +453,9 @@
     <string name="share_method_qrcode">رمز QR</string>
     <string name="share_method_clipboard">نسخ رابط التكوين</string>
     <string name="share_method_full_content">نسخ التكوين الكامل</string>
+    <string name="action_edit">تعديل</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_close">إغلاق</string>
 
     <string name="share_subscription_qrcode">رمز QR</string>
     <string name="share_subscription_clipboard">تصدير إلى الحافظة</string>
@@ -532,7 +510,7 @@
     <string name="acc_add_subscription">إضافة اشتراك</string>
     <string name="toast_malformed_json_detail">تنسيق التكوين غير صالح: %1$s</string>
     <string name="acc_add_asset">إضافة مصدر موارد</string>
-    <string name="acc_download_file">تنزيل ملفات Geo</string>
+    <string name="acc_download_file">تنزيل ملفات الموارد</string>
     <string name="acc_qr_code">رمز QR</string>
     <string name="acc_copy_log">نسخ السجل</string>
     <string name="acc_clear_log">مسح السجل</string>

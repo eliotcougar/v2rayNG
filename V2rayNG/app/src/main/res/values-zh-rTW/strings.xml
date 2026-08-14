@@ -11,16 +11,17 @@
     <string name="action_ok">確定</string>
     <string name="action_cancel">取消</string>
     <string name="migration_fail">資料遷移失敗！</string>
+    <string name="pull_down_to_refresh">請下拉重新整理！</string>
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">停止</string>
     <string name="toast_permission_denied">無法取得此權限</string>
     <string name="toast_permission_denied_notification">無法取得此通知權限</string>
     <string name="notification_action_more">瞭解更多</string>
-    <string name="toast_services_start">正在啟動服務…</string>
-    <string name="toast_services_stop">服務已停止</string>
-    <string name="toast_services_success">服務已啟動</string>
-    <string name="toast_services_failure">無法啟動服務</string>
+    <string name="toast_services_start">啟動服務</string>
+    <string name="toast_services_stop">停止服務</string>
+    <string name="toast_services_success">啟動服務成功</string>
+    <string name="toast_services_failure">啟動服務失敗</string>
 
     <!--ServerActivity-->
     <string name="title_server">設定檔</string>
@@ -28,22 +29,6 @@
     <string name="menu_item_save_config">儲存設定</string>
     <string name="menu_item_edit_config">編輯設定檔</string>
     <string name="menu_item_del_config">刪除設定</string>
-    <string name="action_delete">刪除</string>
-    <string name="action_close">關閉</string>
-    <string name="action_back">返回</string>
-    <string name="action_menu">選單</string>
-    <string name="action_more">更多</string>
-    <string name="action_clear">清除</string>
-    <string name="action_edit">編輯</string>
-    <string name="action_share">分享</string>
-    <string name="action_info">資訊</string>
-    <string name="action_locked">已鎖定</string>
-    <string name="action_remove">移除</string>
-    <string name="action_add_member">新增成員</string>
-    <string name="action_start_scan">開始掃描</string>
-    <string name="action_stop_scan">停止掃描</string>
-    <string name="action_torch">手電筒</string>
-    <string name="action_select_image">選擇圖片</string>
     <string name="menu_item_import_config_qrcode">從 QR Code 匯入設定</string>
     <string name="menu_item_import_config_clipboard">從剪貼簿匯入設定</string>
     <string name="menu_item_import_config_local">從本機匯入</string>
@@ -160,9 +145,6 @@
     <string name="menu_item_scan_qrcode">掃描 QR Code</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">下載檔案</string>
-
-    <string name="menu_item_edit_asset">編輯資源</string>
-    <string name="menu_item_del_asset">刪除資源</string>
     <string name="title_user_asset_add_url">新增資源 URL</string>
     <string name="msg_file_not_found">找不到檔案</string>
     <string name="msg_remark_is_duplicate">名稱已存在</string>
@@ -179,8 +161,8 @@
     <string name="msg_downloading_content">正在下載內容</string>
     <string name="menu_item_export_proxy_app">匯出至剪貼簿</string>
     <string name="menu_item_import_proxy_app">從剪貼簿匯入</string>
-    <string name="per_app_proxy_settings">分應用設置</string>
-    <string name="per_app_proxy_settings_enable">分應用路由</string>
+    <string name="per_app_proxy_settings">個別應用程式設定</string>
+    <string name="per_app_proxy_settings_enable">啟用個別應用程式代理</string>
     <string name="app_picker_unknown_app">未知應用程式（無法識別 UID）</string>
 
     <!-- Preferences -->
@@ -188,12 +170,10 @@
     <string name="title_advanced">進階</string>
     <string name="title_core_settings">核心設定</string>
     <string name="title_vpn_settings">VPN 設定</string>
-    <string name="title_pref_per_app_proxy">Proxy 個別應用程式</string>
-    <string name="summary_pref_per_app_proxy">分應用路由控制哪些應用程式使用 VPN。\n\n在一般模式下，已選取的應用程式使用 VPN，未選取的應用程式直接連線。在繞行模式下，已選取的應用程式直接連線，未選取的應用程式使用 VPN。可從「更多」選單自動選取應用程式。</string>
-    <string name="title_pref_is_booted">應用程式啟動時自動連線</string>
-    <string name="summary_pref_is_booted">開啟 v2rayNG 時自動連線至所選伺服器。</string>
-    <string name="title_pref_start_on_boot">裝置開機後自動連線</string>
-    <string name="summary_pref_start_on_boot">裝置開機後在背景啟動 v2rayNG 並連線至所選伺服器。</string>
+    <string name="title_pref_per_app_proxy">個別應用程式代理</string>
+    <string name="summary_pref_per_app_proxy">一般：已勾選的應用程式使用代理，未勾選的應用程式直接連線；\n繞行模式：已勾選的應用程式直接連線，未勾選的應用程式使用代理。\n選單中可自動選取需要使用代理的應用程式。</string>
+    <string name="title_pref_is_booted">開機時自動連線</string>
+    <string name="summary_pref_is_booted">開機時自動連線選擇的伺服器，可能會不成功</string>
 
 
     <string name="subscription_updater_job_tips">任務將在背景執行，通知中會顯示進度資訊。</string>
@@ -318,7 +298,7 @@
     <string name="title_mode_help">輕觸以檢視說明</string>
     <string name="title_language">語言</string>
     <string name="title_ui_settings">介面顯示設定</string>
-    <string name="title_pref_ui_mode_night">介面主題</string>
+    <string name="title_pref_ui_mode_night">深色模式</string>
     <string name="title_pref_dynamic_color">開啟莫奈取色</string>
     <string name="summary_pref_dynamic_color">僅在 Android 12+ 裝置上工作</string>
     <string name="title_pref_use_hev_tunnel">啟用 Hev TUN 功能</string>
@@ -333,8 +313,6 @@
     <string name="summary_root_lan_sharing">將 Wi-Fi 熱點和 USB 網路共享裝置的流量透過 VPN 轉送。</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">更新</string>
     <string name="logcat_copy">複製</string>
     <string name="logcat_clear">清除</string>
     <string name="logcat_share">分享日誌</string>
@@ -352,11 +330,11 @@
     <string name="sub_setting_enable">啟用更新</string>
     <string name="sub_auto_update">啟用自動更新</string>
     <string name="sub_allow_insecure_url">允許不安全的 HTTP 位址</string>
-    <string name="sub_setting_pre_profile">前置代理</string>
-    <string name="sub_setting_next_profile">落地代理</string>
-    <string name="sub_setting_pre_profile_tip">用於此訂閱中每個設定檔之前</string>
-    <string name="sub_setting_next_profile_tip">用於此訂閱中每個設定檔之後</string>
-    <string name="sub_setting_no_proxy">無</string>
+    <string name="sub_setting_pre_profile">前置代理設定檔别名</string>
+    <string name="sub_setting_next_profile">落地代理設定檔別名</string>
+    <string name="sub_setting_pre_profile_tip">請確保設定檔別名存在且唯一</string>
+    <string name="sub_setting_entry_proxy_tip">所選代理會加在此訂閱中每個設定檔之前，作為該設定檔代理鏈的入口節點。</string>
+    <string name="sub_setting_exit_proxy_tip">所選代理會加在此訂閱中每個設定檔之後，作為該設定檔代理鏈的出口節點。</string>
     <string name="toast_invalid_update_interval">更新間隔無效，最小值為 15 分鐘。</string>
     <string name="title_sub_update">更新訂閱</string>
     <string name="title_ping_all_server">測試 TCP 延遲（TCPing）</string>
@@ -387,7 +365,6 @@
     <string name="routing_settings_comma_tip">多個項目請用逗號（,）分隔。</string>
     <string name="routing_settings_save">儲存</string>
     <string name="routing_settings_delete">清除</string>
-    <string name="routing_settings_enable_rule">啟用規則</string>
     <string name="routing_settings_rule_title">路由規則設定</string>
     <string name="routing_settings_add_rule">新增規則</string>
     <string name="routing_settings_import_predefined_rulesets">匯入預先定義的規則集</string>
@@ -416,7 +393,6 @@
     <string name="connection_test_fail">"無法使用網際網路"</string>
     <string name="connection_test_error_status_code">錯誤碼：#%d</string>
     <string name="connection_connected">"已連線。輕觸以檢查連線。"</string>
-    <string name="connection_connected_tv">已連線</string>
     <string name="connection_not_connected">"未連線"</string>
     <string name="connection_running_task_left">正在執行的測試：%s</string>
 
@@ -451,7 +427,6 @@
     <string name="title_policy_group_fallback">備用出站 (outbound，選填)</string>
 
     <string name="server_proxy_chain_members">代理鏈成員</string>
-    <string name="server_proxy_chain_member">成員</string>
     <string name="server_proxy_chain_pick_members">點此選擇成員</string>
     <string name="server_proxy_chain_member_unselected">請選擇成員</string>
     <string name="server_proxy_chain_members_unselected">請為代理鏈中的每一列選擇成員</string>
@@ -478,6 +453,9 @@
     <string name="share_method_qrcode">QR Code</string>
     <string name="share_method_clipboard">複製設定連結</string>
     <string name="share_method_full_content">複製完整設定</string>
+    <string name="action_edit">編輯</string>
+    <string name="action_delete">刪除</string>
+    <string name="action_close">關閉</string>
 
     <string name="share_subscription_qrcode">QR Code</string>
     <string name="share_subscription_clipboard">匯出至剪貼簿</string>
@@ -532,7 +510,7 @@
     <string name="acc_add_subscription">新增訂閱</string>
     <string name="toast_malformed_json_detail">設定檔格式不正確：%1$s</string>
     <string name="acc_add_asset">新增資源來源</string>
-    <string name="acc_download_file">下載 Geo 檔案</string>
+    <string name="acc_download_file">下載資源檔案</string>
     <string name="acc_qr_code">QR Code</string>
     <string name="acc_copy_log">複製日誌</string>
     <string name="acc_clear_log">清除日誌</string>
