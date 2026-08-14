@@ -17,9 +17,9 @@
     <string name="toast_permission_denied">Permission denied</string>
     <string name="toast_permission_denied_notification">Notification permission denied</string>
     <string name="notification_action_more">Tap for more</string>
-    <string name="toast_services_start">Starting service…</string>
-    <string name="toast_services_stop">Service stopped</string>
-    <string name="toast_services_success">Service started</string>
+    <string name="toast_services_start">Starting service</string>
+    <string name="toast_services_stop">Stopping service</string>
+    <string name="toast_services_success">Service started successfully</string>
     <string name="toast_services_failure">Failed to start service</string>
 
     <!--ServerActivity-->
@@ -181,7 +181,7 @@
     <string name="menu_item_export_proxy_app">Export to Clipboard</string>
     <string name="menu_item_import_proxy_app">Import from Clipboard</string>
     <string name="per_app_proxy_settings">Per-app settings</string>
-    <string name="per_app_proxy_settings_enable">Per-app routing</string>
+    <string name="per_app_proxy_settings_enable">Enable per-app</string>
     <string name="app_picker_unknown_app">Unknown app (UID not recognized)</string>
 
     <!-- Preferences -->
@@ -190,9 +190,9 @@
     <string name="title_core_settings">Core Settings</string>
     <string name="title_vpn_settings">VPN Settings</string>
     <string name="title_pref_per_app_proxy">Per-app proxy</string>
-    <string name="summary_pref_per_app_proxy">Per-app routing controls which apps use the VPN.\n\nIn General mode, selected apps use the VPN and unselected apps connect directly. In Bypass mode, selected apps connect directly and unselected apps use the VPN. Automatic app selection is available from More.</string>
-    <string name="title_pref_is_booted">Auto-connect when app starts</string>
-    <string name="summary_pref_is_booted">Automatically connects to the selected server when v2rayNG opens.</string>
+    <string name="summary_pref_per_app_proxy">General: checked apps use the proxy, and unchecked apps connect directly;\nBypass mode: checked apps connect directly, and unchecked apps use the proxy.\nThe option to automatically select apps that should use the proxy is in the menu.</string>
+    <string name="title_pref_is_booted">Auto connect at startup</string>
+    <string name="summary_pref_is_booted">Automatically connects to the selected server at startup, which may be unsuccessful</string>
     <string name="title_pref_start_on_boot">Auto-connect after device boot</string>
     <string name="summary_pref_start_on_boot">Starts v2rayNG in the background and connects to the selected server after the device boots.</string>
 
@@ -203,7 +203,7 @@
     <string name="title_pref_auto_remove_invalid_after_test">Auto delete invalid config after testing</string>
     <string name="summary_pref_auto_remove_invalid_after_test">Test results may not be accurate; deleted config cannot be recovered.</string>
     <string name="title_pref_auto_sort_after_test">Auto sort after testing</string>
-    <string name="summary_pref_auto_sort_after_test">Test results may not be accurate.</string>
+    <string name="summary_pref_auto_sort_after_test">Test results may not be accurate;</string>
 
     <string name="title_mux_settings">Mux Settings</string>
     <string name="title_pref_mux_enabled">Enable Mux</string>
@@ -319,7 +319,7 @@
     <string name="title_mode_help">Click me for more help</string>
     <string name="title_language">Language</string>
     <string name="title_ui_settings">UI settings</string>
-    <string name="title_pref_ui_mode_night">UI Theme</string>
+    <string name="title_pref_ui_mode_night">UI mode settings</string>
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
     <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
@@ -345,7 +345,7 @@
     <string name="title_del_invalid_config">Delete invalid configs</string>
     <string name="title_export_all">Export configs to clipboard</string>
     <string name="sub_setting_remarks">Remarks</string>
-    <string name="title_sub_setting">Subscription group settings</string>
+    <string name="title_sub_setting">Subscriptions</string>
     <string name="sub_setting_url">Optional URL</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
     <string name="sub_setting_request_headers">Request Headers (JSON format)</string>
@@ -355,11 +355,12 @@
     <string name="sub_allow_insecure_url">Allow insecure HTTP address</string>
     <string name="sub_setting_pre_profile">Entry proxy</string>
     <string name="sub_setting_next_profile">Exit proxy</string>
-    <string name="sub_setting_pre_profile_tip">Used before every profile in this subscription</string>
-    <string name="sub_setting_next_profile_tip">Used after every profile in this subscription</string>
+    <string name="sub_setting_pre_profile_tip">Make sure the config remarks exist and are unique</string>
+    <string name="sub_setting_entry_proxy_tip">The selected proxy is added before every profile in this subscription as the entry link in the proxy chain for that profile.</string>
+    <string name="sub_setting_exit_proxy_tip">The selected proxy is added after every profile in this subscription as the exit link in the proxy chain for that profile.</string>
     <string name="sub_setting_no_proxy">None</string>
     <string name="toast_invalid_update_interval">Invalid update interval. Minimum is 15 minutes.</string>
-    <string name="title_sub_update">Update subscriptions</string>
+    <string name="title_sub_update">Update subscription</string>
     <string name="title_ping_all_server">Test TCP delays (TCPing)</string>
     <string name="title_real_ping_all_server">Test real delays</string>
     <string name="title_user_asset_setting">Asset files</string>
@@ -396,7 +397,7 @@
     <string name="routing_settings_import_rulesets_from_clipboard">Import ruleset from clipboard</string>
     <string name="routing_settings_import_rulesets_from_qrcode">Import ruleset from QR code</string>
     <string name="routing_settings_export_rulesets_to_clipboard">Export ruleset to clipboard</string>
-    <string name="routing_settings_locked">Locked, keep this rule when importing presets</string>
+    <string name="routing_settings_locked">Locked; keep this rule when importing presets</string>
     <string name="routing_settings_domain" translatable="false">domain</string>
     <string name="routing_settings_ip" translatable="false">ip</string>
     <string name="routing_settings_process">process (Package Name — only supported when using Xray TUN, routeOnly enabled, and Android 10+)</string>
@@ -533,7 +534,7 @@
     <string name="acc_add_subscription">Add subscription</string>
     <string name="toast_malformed_json_detail">Invalid configuration: %1$s</string>
     <string name="acc_add_asset">Add asset source</string>
-    <string name="acc_download_file">Download geo files</string>
+    <string name="acc_download_file">Download asset files</string>
     <string name="acc_qr_code">QR code</string>
     <string name="acc_copy_log">Copy log</string>
     <string name="acc_clear_log">Clear log</string>

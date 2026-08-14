@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">امکان دریافت مجوز وجود ندارد</string>
     <string name="toast_permission_denied_notification">امکان دریافت مجوز ارسال اعلان وجود ندارد</string>
     <string name="notification_action_more">برای اطلاعات بیشتر کلیک کنید</string>
-    <string name="toast_services_start">سرویس در حال شروع است…</string>
-    <string name="toast_services_stop">سرویس متوقف شد</string>
-    <string name="toast_services_success">سرویس شروع شد</string>
-    <string name="toast_services_failure">راه‌اندازی سرویس ناموفق بود</string>
+    <string name="toast_services_start">شروع خدمات</string>
+    <string name="toast_services_stop">توقف سرویس</string>
+    <string name="toast_services_success">سرویس با موفقیت شروع شد</string>
+    <string name="toast_services_failure">شروع سرویس با شکست مواجه شد</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -180,7 +180,7 @@
     <string name="menu_item_export_proxy_app">خروجی گرفتن در کلیپ‌ بورد</string>
     <string name="menu_item_import_proxy_app">وارد کردن از کلیپ‌ بورد</string>
     <string name="per_app_proxy_settings">تنظیمات به تفکیک برنامه</string>
-    <string name="per_app_proxy_settings_enable">مسیریابی به تفکیک برنامه</string>
+    <string name="per_app_proxy_settings_enable">فعال‌سازی به تفکیک برنامه</string>
     <string name="app_picker_unknown_app">برنامه ناشناس (UID شناسایی‌نشده)</string>
 
     <!-- Preferences -->
@@ -189,9 +189,9 @@
     <string name="title_core_settings">تنظیمات هسته</string>
     <string name="title_vpn_settings">تنظیمات VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی به تفکیک برنامه</string>
-    <string name="summary_pref_per_app_proxy">مسیریابی به تفکیک برنامه مشخص می‌کند کدام برنامه‌ها از VPN استفاده کنند.\n\nدر حالت عمومی، برنامه‌های انتخاب‌شده از VPN استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند. در حالت دور زدن، برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از VPN استفاده می‌کنند. انتخاب خودکار برنامه‌ها از منوی «بیشتر» در دسترس است.</string>
-    <string name="title_pref_is_booted">اتصال خودکار هنگام اجرای برنامه</string>
-    <string name="summary_pref_is_booted">هنگام باز شدن v2rayNG به‌طور خودکار به سرور انتخاب‌شده متصل می‌شود.</string>
+    <string name="summary_pref_per_app_proxy">حالت عادی: برنامه‌های انتخاب‌شده از پروکسی استفاده می‌کنند و برنامه‌های انتخاب‌نشده مستقیماً متصل می‌شوند؛\nحالت دور زدن: برنامه‌های انتخاب‌شده مستقیماً متصل می‌شوند و برنامه‌های انتخاب‌نشده از پروکسی استفاده می‌کنند.\nگزینهٔ انتخاب خودکار برنامه‌هایی که باید از پروکسی استفاده کنند در منو قرار دارد.</string>
+    <string name="title_pref_is_booted">اتصال خودکار هنگام راه اندازی</string>
+    <string name="summary_pref_is_booted">هنگام راه اندازی به طور خودکار به سرور انتخابی متصل می شود که ممکن است ناموفق باشد.</string>
     <string name="title_pref_start_on_boot">اتصال خودکار پس از روشن شدن دستگاه</string>
     <string name="summary_pref_start_on_boot">پس از روشن شدن دستگاه، v2rayNG را در پس‌زمینه اجرا می‌کند و به سرور انتخاب‌شده متصل می‌شود.</string>
 
@@ -318,7 +318,7 @@
     <string name="title_mode_help">برای اطلاعات و راهنمایی بیشتر، روی این متن کلیک کنید</string>
     <string name="title_language">زبان</string>
     <string name="title_ui_settings">تنظیمات رابط کاربری</string>
-    <string name="title_pref_ui_mode_night">پوسته رابط کاربری</string>
+    <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
     <string name="title_pref_use_hev_tunnel">استفاده از Hev TUN</string>
@@ -354,11 +354,12 @@
     <string name="sub_allow_insecure_url">مجاز کردن آدرس HTTP ناامن</string>
     <string name="sub_setting_pre_profile">پروکسی ورودی</string>
     <string name="sub_setting_next_profile">پروکسی خروجی</string>
-    <string name="sub_setting_pre_profile_tip">پیش از هر نمایه در این اشتراک استفاده می‌شود</string>
-    <string name="sub_setting_next_profile_tip">پس از هر نمایه در این اشتراک استفاده می‌شود</string>
+    <string name="sub_setting_pre_profile_tip">لطفاً مطمئن شوید که نام مستعار وجود دارد و منحصر به فرد است</string>
+    <string name="sub_setting_entry_proxy_tip">پروکسی انتخاب‌شده پیش از هر پروفایل این اشتراک، به‌عنوان حلقهٔ ورودی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>
+    <string name="sub_setting_exit_proxy_tip">پروکسی انتخاب‌شده پس از هر پروفایل این اشتراک، به‌عنوان حلقهٔ خروجی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>
     <string name="sub_setting_no_proxy">هیچ‌کدام</string>
     <string name="toast_invalid_update_interval">بازه بروزرسانی نامعتبر است. حداقل مقدار 15 دقیقه است.</string>
-    <string name="title_sub_update">به‌روزرسانی اشتراک‌ها</string>
+    <string name="title_sub_update">به‌روزرسانی گروه فعلی اشتراک</string>
     <string name="title_ping_all_server">آزمایش تأخیر TCP (TCPing)</string>
     <string name="title_real_ping_all_server">آزمایش تأخیر واقعی</string>
     <string name="title_user_asset_setting">فایل های منبع جغرافیایی</string>
@@ -532,7 +533,7 @@
     <string name="acc_add_subscription">افزودن اشتراک</string>
     <string name="toast_malformed_json_detail">قالب پیکربندی نامعتبر است: %1$s</string>
     <string name="acc_add_asset">افزودن منبع فایل‌های جغرافیایی</string>
-    <string name="acc_download_file">دانلود فایل‌های جغرافیایی</string>
+    <string name="acc_download_file">دانلود فایل‌های منبع</string>
     <string name="acc_qr_code">کد QR</string>
     <string name="acc_copy_log">کپی گزارش</string>
     <string name="acc_clear_log">پاک کردن گزارش</string>

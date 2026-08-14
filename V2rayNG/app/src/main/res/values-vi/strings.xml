@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">Vui lòng cấp các quyền cần thiết cho v2rayNG. Bạn có thể đã từ chối quyền truy cập máy ảnh hoặc bộ nhớ.</string>
     <string name="toast_permission_denied_notification">Không thể nhận quyền thông báo</string>
     <string name="notification_action_more">Nhấn để biết thêm…</string>
-    <string name="toast_services_start">Đang khởi động dịch vụ…</string>
-    <string name="toast_services_stop">Đã dừng dịch vụ</string>
-    <string name="toast_services_success">Đã khởi động dịch vụ</string>
-    <string name="toast_services_failure">Không thể khởi động dịch vụ</string>
+    <string name="toast_services_start">Đang khởi động v2rayNG…</string>
+    <string name="toast_services_stop">Đã dừng v2rayNG!</string>
+    <string name="toast_services_success">Đã khởi động v2rayNG!</string>
+    <string name="toast_services_failure">Không thể khởi động v2rayNG, kiểm tra lại cấu hình!</string>
 
     <!--ServerActivity-->
     <string name="title_server">v2rayNG</string>
@@ -180,7 +180,7 @@
     <string name="menu_item_export_proxy_app">Xuất và Sao chép</string>
     <string name="menu_item_import_proxy_app">Nhập từ bảng tạm</string>
     <string name="per_app_proxy_settings">Cài đặt theo ứng dụng</string>
-    <string name="per_app_proxy_settings_enable">Định tuyến theo ứng dụng</string>
+    <string name="per_app_proxy_settings_enable">Bật cài đặt theo ứng dụng</string>
     <string name="app_picker_unknown_app">Ứng dụng không xác định (không nhận dạng được UID)</string>
 
     <!-- Preferences -->
@@ -188,10 +188,10 @@
     <string name="title_advanced">Cài đặt nâng cao</string>
     <string name="title_core_settings">Cài đặt lõi</string>
     <string name="title_vpn_settings">Cài đặt VPN</string>
-    <string name="title_pref_per_app_proxy">Proxy theo Ứng dụng</string>
-    <string name="summary_pref_per_app_proxy">Định tuyến theo ứng dụng kiểm soát những ứng dụng nào sử dụng VPN.\n\nỞ chế độ Chung, các ứng dụng đã chọn sử dụng VPN và các ứng dụng chưa chọn kết nối trực tiếp. Ở chế độ Bỏ qua, các ứng dụng đã chọn kết nối trực tiếp và các ứng dụng chưa chọn sử dụng VPN. Có thể tự động chọn ứng dụng từ menu Thêm.</string>
-    <string name="title_pref_is_booted">Tự động kết nối khi mở ứng dụng</string>
-    <string name="summary_pref_is_booted">Tự động kết nối tới máy chủ đã chọn khi mở v2rayNG.</string>
+    <string name="title_pref_per_app_proxy">Proxy theo từng ứng dụng</string>
+    <string name="summary_pref_per_app_proxy">Thông thường: ứng dụng đã chọn dùng proxy, ứng dụng chưa chọn kết nối trực tiếp;\nChế độ bỏ qua: ứng dụng đã chọn kết nối trực tiếp, ứng dụng chưa chọn dùng proxy.\nTrong trình đơn có tùy chọn tự động chọn các ứng dụng sẽ dùng proxy.</string>
+    <string name="title_pref_is_booted">Tự động kết nối khi khởi động</string>
+    <string name="summary_pref_is_booted">Tự động kết nối với máy chủ đã chọn khi khởi động; thao tác này có thể không thành công</string>
     <string name="title_pref_start_on_boot">Tự động kết nối sau khi thiết bị khởi động</string>
     <string name="summary_pref_start_on_boot">Khởi chạy v2rayNG trong nền và kết nối tới máy chủ đã chọn sau khi thiết bị khởi động.</string>
 
@@ -318,7 +318,7 @@
     <string name="title_mode_help">Nhấn vào đây nếu bạn cần trợ giúp!</string>
     <string name="title_language">Ngôn ngữ</string>
     <string name="title_ui_settings">Cài đặt UI</string>
-    <string name="title_pref_ui_mode_night">Chủ đề giao diện</string>
+    <string name="title_pref_ui_mode_night">Cài đặt chế độ UI</string>
     <string name="title_pref_dynamic_color">Bật màu động</string>
     <string name="summary_pref_dynamic_color">Chỉ hoạt động trên Android 12+</string>
     <string name="title_pref_use_hev_tunnel">Dùng Hev TUN</string>
@@ -354,8 +354,9 @@
     <string name="sub_allow_insecure_url">Cho phép địa chỉ HTTP không an toàn</string>
     <string name="sub_setting_pre_profile">Proxy đầu vào</string>
     <string name="sub_setting_next_profile">Proxy đầu ra</string>
-    <string name="sub_setting_pre_profile_tip">Được dùng trước mỗi cấu hình trong gói đăng ký này</string>
-    <string name="sub_setting_next_profile_tip">Được dùng sau mỗi cấu hình trong gói đăng ký này</string>
+    <string name="sub_setting_pre_profile_tip">Tên ghi chú của cấu hình phải tồn tại và là duy nhất</string>
+    <string name="sub_setting_entry_proxy_tip">Proxy đã chọn được thêm trước mỗi cấu hình trong gói đăng ký, làm mắt xích đầu vào của chuỗi proxy cho cấu hình đó.</string>
+    <string name="sub_setting_exit_proxy_tip">Proxy đã chọn được thêm sau mỗi cấu hình trong gói đăng ký, làm mắt xích đầu ra của chuỗi proxy cho cấu hình đó.</string>
     <string name="sub_setting_no_proxy">Không có</string>
     <string name="toast_invalid_update_interval">Khoảng thời gian cập nhật không hợp lệ. Giá trị tối thiểu là 15 phút.</string>
     <string name="title_sub_update">Cập nhật gói đăng ký</string>
@@ -534,7 +535,7 @@
     <string name="acc_add_subscription">Thêm gói đăng ký</string>
     <string name="toast_malformed_json_detail">Cấu hình không hợp lệ: %1$s</string>
     <string name="acc_add_asset">Thêm nguồn tệp tài nguyên</string>
-    <string name="acc_download_file">Tải xuống tệp địa lý</string>
+    <string name="acc_download_file">Tải xuống tệp tài nguyên</string>
     <string name="acc_qr_code">Mã QR</string>
     <string name="acc_copy_log">Sao chép nhật ký</string>
     <string name="acc_clear_log">Xóa nhật ký</string>

@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">无法取得权限</string>
     <string name="toast_permission_denied_notification">无法取得通知权限</string>
     <string name="notification_action_more">点击了解更多</string>
-    <string name="toast_services_start">正在启动服务…</string>
-    <string name="toast_services_stop">服务已停止</string>
-    <string name="toast_services_success">服务已启动</string>
-    <string name="toast_services_failure">无法启动服务</string>
+    <string name="toast_services_start">启动服务</string>
+    <string name="toast_services_stop">关闭服务</string>
+    <string name="toast_services_success">启动服务成功</string>
+    <string name="toast_services_failure">启动服务失败</string>
 
     <!--ServerActivity-->
     <string name="title_server">配置项</string>
@@ -180,7 +180,7 @@
     <string name="menu_item_export_proxy_app">导出至剪贴板</string>
     <string name="menu_item_import_proxy_app">从剪贴板导入</string>
     <string name="per_app_proxy_settings">分应用设置</string>
-    <string name="per_app_proxy_settings_enable">分应用路由</string>
+    <string name="per_app_proxy_settings_enable">启用分应用</string>
     <string name="app_picker_unknown_app">未知应用（无法识别 UID）</string>
 
     <!-- Preferences -->
@@ -188,10 +188,10 @@
     <string name="title_advanced">进阶设置</string>
     <string name="title_core_settings">核心设置</string>
     <string name="title_vpn_settings">VPN 设置</string>
-    <string name="title_pref_per_app_proxy">分应用</string>
-    <string name="summary_pref_per_app_proxy">分应用路由控制哪些应用使用 VPN。\n\n在常规模式下，已选择的应用使用 VPN，未选择的应用直接连接。在绕行模式下，已选择的应用直接连接，未选择的应用使用 VPN。可从“更多”菜单自动选择应用。</string>
-    <string name="title_pref_is_booted">应用启动时自动连接</string>
-    <string name="summary_pref_is_booted">打开 v2rayNG 时自动连接到所选服务器。</string>
+    <string name="title_pref_per_app_proxy">分应用代理</string>
+    <string name="summary_pref_per_app_proxy">常规：勾选的应用使用代理，未勾选的应用直连；\n绕行模式：勾选的应用直连，未勾选的应用使用代理。\n菜单中可自动选择需要使用代理的应用。</string>
+    <string name="title_pref_is_booted">开机时自动连接</string>
+    <string name="summary_pref_is_booted">开机时自动连接选择的服务器，可能会不成功</string>
     <string name="title_pref_start_on_boot">设备开机后自动连接</string>
     <string name="summary_pref_start_on_boot">设备开机后在后台启动 v2rayNG 并连接到所选服务器。</string>
 
@@ -318,7 +318,7 @@
     <string name="title_mode_help">点此查看更多帮助</string>
     <string name="title_language">语言</string>
     <string name="title_ui_settings">用户界面设置</string>
-    <string name="title_pref_ui_mode_night">界面主题</string>
+    <string name="title_pref_ui_mode_night">深色模式</string>
     <string name="title_pref_dynamic_color">开启莫奈取色</string>
     <string name="summary_pref_dynamic_color">仅在 Android 12+ 设备上工作</string>
     <string name="title_pref_use_hev_tunnel">启用 Hev TUN 功能</string>
@@ -352,10 +352,11 @@
     <string name="sub_setting_enable">启用更新</string>
     <string name="sub_auto_update">启用自动更新</string>
     <string name="sub_allow_insecure_url">允许不安全的 HTTP 地址</string>
-    <string name="sub_setting_pre_profile">前置代理</string>
-    <string name="sub_setting_next_profile">落地代理</string>
-    <string name="sub_setting_pre_profile_tip">用于此订阅中每个配置之前</string>
-    <string name="sub_setting_next_profile_tip">用于此订阅中每个配置之后</string>
+    <string name="sub_setting_pre_profile">前置代理配置别名</string>
+    <string name="sub_setting_next_profile">落地代理配置別名</string>
+    <string name="sub_setting_pre_profile_tip">请确保配置别名存在并唯一</string>
+    <string name="sub_setting_entry_proxy_tip">所选代理会添加到该订阅中每个配置的前面，作为该配置代理链的入口节点。</string>
+    <string name="sub_setting_exit_proxy_tip">所选代理会添加到该订阅中每个配置的后面，作为该配置代理链的出口节点。</string>
     <string name="sub_setting_no_proxy">无</string>
     <string name="toast_invalid_update_interval">更新间隔无效，最小值为 15 分钟。</string>
     <string name="title_sub_update">更新订阅</string>
@@ -532,7 +533,7 @@
     <string name="acc_add_subscription">添加订阅</string>
     <string name="toast_malformed_json_detail">配置格式无效：%1$s</string>
     <string name="acc_add_asset">添加资源来源</string>
-    <string name="acc_download_file">下载 Geo 文件</string>
+    <string name="acc_download_file">下载资源文件</string>
     <string name="acc_qr_code">二维码</string>
     <string name="acc_copy_log">复制日志</string>
     <string name="acc_clear_log">清除日志</string>

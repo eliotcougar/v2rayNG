@@ -254,7 +254,7 @@ fun SubEditScreen(
                 config = FormDropdownConfig(
                     editable = !isTelevision,
                     placeholder = stringResource(R.string.sub_setting_no_proxy),
-                    supportingText = stringResource(R.string.sub_setting_pre_profile_tip),
+                    supportingText = stringResource(R.string.sub_setting_entry_proxy_tip),
                     emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
                 )
             )
@@ -266,7 +266,7 @@ fun SubEditScreen(
                 config = FormDropdownConfig(
                     editable = !isTelevision,
                     placeholder = stringResource(R.string.sub_setting_no_proxy),
-                    supportingText = stringResource(R.string.sub_setting_next_profile_tip),
+                    supportingText = stringResource(R.string.sub_setting_exit_proxy_tip),
                     emptyOptionLabel = stringResource(R.string.sub_setting_no_proxy)
                 )
             )

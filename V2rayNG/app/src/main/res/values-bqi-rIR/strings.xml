@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">گرؽڌن موجوز مومکن نؽڌ</string>
     <string name="toast_permission_denied_notification">گرؽڌن موجوز وارسۊوی مومکن نؽڌ</string>
     <string name="notification_action_more">سی دووسمندیا قلوه کیلیک کوݩ</string>
-    <string name="toast_services_start">سرویس ره ایفته…</string>
-    <string name="toast_services_stop">سرویس واڌاشته وابی</string>
-    <string name="toast_services_success">سرویس وا مووفقیت ره ایفت</string>
-    <string name="toast_services_failure">ره وندن سرویس شکست خرد</string>
+    <string name="toast_services_start">ره وستن سرویس</string>
+    <string name="toast_services_stop">واڌاشتن سرویس</string>
+    <string name="toast_services_success">ره وستن سرویس وا مووفقیت ٱنجوم وابی</string>
+    <string name="toast_services_failure">ره وستن سرویس وا مووفقیت ٱنجوم نوابی</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -164,7 +164,7 @@
     <string name="menu_item_edit_asset">آلشتکاری دارایی</string>
 
     <string name="menu_item_del_asset">پاک کردن دارایی</string>
-    <string name="title_user_asset_add_url">نشۊوی اینترنتی دارایی ن ازاف کۊنین</string>
+    <string name="title_user_asset_add_url">نشۊوی اینترنتی بونچک ن اضاف کۊنین</string>
     <string name="msg_file_not_found">فایلن نجوست</string>
     <string name="msg_remark_is_duplicate">ای نوم ز زیتر بیڌس</string>
     <string name="asset_geo_files_sources">بونچک فایلا جغرافیایی (اختیاری)</string>
@@ -181,7 +181,7 @@
     <string name="menu_item_export_proxy_app">و در کشیڌن من کلیپ بورد</string>
     <string name="menu_item_import_proxy_app">و من ٱووردن ز کلیپ بورد</string>
     <string name="per_app_proxy_settings">سامووا ب تفکیک برنومه</string>
-    <string name="per_app_proxy_settings_enable">تور جوستن ب تفکیک برنومه</string>
+    <string name="per_app_proxy_settings_enable">ره وندن ب تفکیک برنومه</string>
     <string name="app_picker_unknown_app">برنومه ناناس (UID ناساڌه)</string>
 
     <!-- Preferences -->
@@ -190,9 +190,9 @@
     <string name="title_core_settings">سامووا هسته</string>
     <string name="title_vpn_settings">سامووا VPN</string>
     <string name="title_pref_per_app_proxy">پروکسی و ری برنومه</string>
-    <string name="summary_pref_per_app_proxy">تور جوستن ب تفکیک برنومه معین اکۊ ک کوم برنومه یل VPN ن ب کار بگرن.\n\nمن هالت پوی وولاتی، برنومه یل پسند وابیڌه VPN ن ب کار اگرن و برنومه یل پسند نوابیڌه موستقیمن منپیز ابۊن. من هالت دور زیڌن، برنومه یل پسند وابیڌه موستقیمن منپیز ابۊن و برنومه یل پسند نوابیڌه VPN ن ب کار اگرن. پسند خوتکار برنومه یل ز نومگه «بیشتر» امکووݩ پزیر هڌ.</string>
-    <string name="title_pref_is_booted">منپیز خوتکار مجال ره ونی برنامه</string>
-    <string name="summary_pref_is_booted">مجال ره وندن v2rayNG، خوساخوس و سرور پسند بیڌه منپیز ابۊ.</string>
+    <string name="summary_pref_per_app_proxy">پوی وولاتی: برنومه پسند وابیڌه وا ی پروکسی منپیز ابۊ، برنومه پسند نوابیڌه موستقیمن منپیز ابۊ.\nحالت دور زیڌن: برنومه پسند وابیڌه موستقیمن منپیز ابۊ، برنومه پسند نوابیڌه وا ی پروکسی منپیز ابۊ.\nپسند خوتکار برنومه یلی ک وا ی پروکسی منپیز ابۊن من نومگه امکووݩ پذیر هڌ.</string>
+    <string name="title_pref_is_booted">منپیز خوتکار مجال ره ونی</string>
+    <string name="summary_pref_is_booted">مجال ره وندن، خوساخوس و سرور پسند بیڌه منپیز ابۊ که گاشڌ نا مووفق بۊ.</string>
     <string name="title_pref_start_on_boot">منپیز خوتکار پس از ره وندن دستگاه</string>
     <string name="summary_pref_start_on_boot">پس از ره وندن دستگاه، v2rayNG نه پس‌زمین ره ابۊ و و سرور پسند بیڌه منپیز ابۊ.</string>
 
@@ -319,7 +319,7 @@
     <string name="title_mode_help">سی دووسمندیا وو هیاری قلوه، ری ای هؽل بزݩ</string>
     <string name="title_language">زووݩ</string>
     <string name="title_ui_settings">سامووا رابط منتوری</string>
-    <string name="title_pref_ui_mode_night">پوسته رابت منتوری</string>
+    <string name="title_pref_ui_mode_night">سامووا حالت رابط منتوری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
     <string name="title_pref_use_hev_tunnel">و کار گرؽڌن ویژیی Hev TUN</string>
@@ -353,15 +353,16 @@
     <string name="sub_setting_enable">ره وندن ورۊ کردن</string>
     <string name="sub_auto_update">ره وندن ورۊ کردن خوتکار</string>
     <string name="sub_allow_insecure_url">موجاز کردن نشۊوی HTTP نا ٱمن</string>
-    <string name="sub_setting_pre_profile">پروکسی ورودی</string>
-    <string name="sub_setting_next_profile">پروکسی خروجی</string>
-    <string name="sub_setting_pre_profile_tip">پیش از هر نمایه در این اشتراک استفاده می‌شود</string>
+    <string name="sub_setting_pre_profile">پروکسی وۊرۊی</string>
+    <string name="sub_setting_next_profile">پروکسی دری</string>
+    <string name="sub_setting_pre_profile_tip">موطمئن بۊ ک نیشتنا هڌس وو جۊرس نی</string>
     <string name="toast_invalid_update_interval">فاصله ورۊ کردن نا موئتبر هڌ. حداقل مقدار 15 دؽقه هڌ.</string>
 
-    <string name="sub_setting_next_profile_tip">پس از هر نمایه در این اشتراک استفاده می‌شود</string>
+    <string name="sub_setting_entry_proxy_tip">ای پروکسی پؽش ز هر کانفیگ من ای اشتراک، وری ٱول عوزو زنجیره پروکسی اضاف ابۊ.</string>
+    <string name="sub_setting_exit_proxy_tip">ای پروکسی بئڌ ز هر کانفیگ من ای اشتراک، وری آخر عوزو زنجیره پروکسی اضاف ابۊ.</string>
 
     <string name="sub_setting_no_proxy">هیچ‌کدام</string>
-    <string name="title_sub_update">ورۊ کردن اشتراکا</string>
+    <string name="title_sub_update">ورۊ کردن اشتراک بونکۊ سکویی</string>
     <string name="title_ping_all_server">آزمایش تئخیر TCP (TCPing)</string>
     <string name="title_real_ping_all_server">آزمایش تئخیر واقعی</string>
     <string name="title_user_asset_setting">فایلا بونچک جغرافیایی</string>
@@ -535,7 +536,7 @@
     <string name="acc_add_subscription">ٱووردن اشتراک</string>
     <string name="toast_malformed_json_detail">کانفیگ نا موئتبر هڌ: %1$s</string>
     <string name="acc_add_asset">ٱووردن بونچک فایلا جغرافیایی</string>
-    <string name="acc_download_file">دانلود فایلای جوقرافیایی</string>
+    <string name="acc_download_file">دانلود فایلا بونچک جغرافیایی</string>
     <string name="acc_qr_code">کود QR</string>
     <string name="acc_copy_log">لف گیری گوزارش</string>
     <string name="acc_clear_log">روفتن گوزارش</string>

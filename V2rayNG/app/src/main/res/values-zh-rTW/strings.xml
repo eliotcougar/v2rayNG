@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">無法取得此權限</string>
     <string name="toast_permission_denied_notification">無法取得此通知權限</string>
     <string name="notification_action_more">瞭解更多</string>
-    <string name="toast_services_start">正在啟動服務…</string>
-    <string name="toast_services_stop">服務已停止</string>
-    <string name="toast_services_success">服務已啟動</string>
-    <string name="toast_services_failure">無法啟動服務</string>
+    <string name="toast_services_start">啟動服務</string>
+    <string name="toast_services_stop">停止服務</string>
+    <string name="toast_services_success">啟動服務成功</string>
+    <string name="toast_services_failure">啟動服務失敗</string>
 
     <!--ServerActivity-->
     <string name="title_server">設定檔</string>
@@ -179,8 +179,8 @@
     <string name="msg_downloading_content">正在下載內容</string>
     <string name="menu_item_export_proxy_app">匯出至剪貼簿</string>
     <string name="menu_item_import_proxy_app">從剪貼簿匯入</string>
-    <string name="per_app_proxy_settings">分應用設置</string>
-    <string name="per_app_proxy_settings_enable">分應用路由</string>
+    <string name="per_app_proxy_settings">個別應用程式設定</string>
+    <string name="per_app_proxy_settings_enable">啟用個別應用程式代理</string>
     <string name="app_picker_unknown_app">未知應用程式（無法識別 UID）</string>
 
     <!-- Preferences -->
@@ -188,10 +188,10 @@
     <string name="title_advanced">進階</string>
     <string name="title_core_settings">核心設定</string>
     <string name="title_vpn_settings">VPN 設定</string>
-    <string name="title_pref_per_app_proxy">Proxy 個別應用程式</string>
-    <string name="summary_pref_per_app_proxy">分應用路由控制哪些應用程式使用 VPN。\n\n在一般模式下，已選取的應用程式使用 VPN，未選取的應用程式直接連線。在繞行模式下，已選取的應用程式直接連線，未選取的應用程式使用 VPN。可從「更多」選單自動選取應用程式。</string>
-    <string name="title_pref_is_booted">應用程式啟動時自動連線</string>
-    <string name="summary_pref_is_booted">開啟 v2rayNG 時自動連線至所選伺服器。</string>
+    <string name="title_pref_per_app_proxy">個別應用程式代理</string>
+    <string name="summary_pref_per_app_proxy">一般：已勾選的應用程式使用代理，未勾選的應用程式直接連線；\n繞行模式：已勾選的應用程式直接連線，未勾選的應用程式使用代理。\n選單中可自動選取需要使用代理的應用程式。</string>
+    <string name="title_pref_is_booted">開機時自動連線</string>
+    <string name="summary_pref_is_booted">開機時自動連線選擇的伺服器，可能會不成功</string>
     <string name="title_pref_start_on_boot">裝置開機後自動連線</string>
     <string name="summary_pref_start_on_boot">裝置開機後在背景啟動 v2rayNG 並連線至所選伺服器。</string>
 
@@ -318,7 +318,7 @@
     <string name="title_mode_help">輕觸以檢視說明</string>
     <string name="title_language">語言</string>
     <string name="title_ui_settings">介面顯示設定</string>
-    <string name="title_pref_ui_mode_night">介面主題</string>
+    <string name="title_pref_ui_mode_night">深色模式</string>
     <string name="title_pref_dynamic_color">開啟莫奈取色</string>
     <string name="summary_pref_dynamic_color">僅在 Android 12+ 裝置上工作</string>
     <string name="title_pref_use_hev_tunnel">啟用 Hev TUN 功能</string>
@@ -352,10 +352,11 @@
     <string name="sub_setting_enable">啟用更新</string>
     <string name="sub_auto_update">啟用自動更新</string>
     <string name="sub_allow_insecure_url">允許不安全的 HTTP 位址</string>
-    <string name="sub_setting_pre_profile">前置代理</string>
-    <string name="sub_setting_next_profile">落地代理</string>
-    <string name="sub_setting_pre_profile_tip">用於此訂閱中每個設定檔之前</string>
-    <string name="sub_setting_next_profile_tip">用於此訂閱中每個設定檔之後</string>
+    <string name="sub_setting_pre_profile">前置代理設定檔别名</string>
+    <string name="sub_setting_next_profile">落地代理設定檔別名</string>
+    <string name="sub_setting_pre_profile_tip">請確保設定檔別名存在且唯一</string>
+    <string name="sub_setting_entry_proxy_tip">所選代理會加在此訂閱中每個設定檔之前，作為該設定檔代理鏈的入口節點。</string>
+    <string name="sub_setting_exit_proxy_tip">所選代理會加在此訂閱中每個設定檔之後，作為該設定檔代理鏈的出口節點。</string>
     <string name="sub_setting_no_proxy">無</string>
     <string name="toast_invalid_update_interval">更新間隔無效，最小值為 15 分鐘。</string>
     <string name="title_sub_update">更新訂閱</string>
@@ -532,7 +533,7 @@
     <string name="acc_add_subscription">新增訂閱</string>
     <string name="toast_malformed_json_detail">設定檔格式不正確：%1$s</string>
     <string name="acc_add_asset">新增資源來源</string>
-    <string name="acc_download_file">下載 Geo 檔案</string>
+    <string name="acc_download_file">下載資源檔案</string>
     <string name="acc_qr_code">QR Code</string>
     <string name="acc_copy_log">複製日誌</string>
     <string name="acc_clear_log">清除日誌</string>

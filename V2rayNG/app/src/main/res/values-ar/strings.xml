@@ -17,10 +17,10 @@
     <string name="toast_permission_denied">تعذر الحصول على الإذن</string>
     <string name="toast_permission_denied_notification">تعذر الحصول على إذن الإشعارات</string>
     <string name="notification_action_more">انقر للمزيد</string>
-    <string name="toast_services_start">جارٍ بدء الخدمة…</string>
-    <string name="toast_services_stop">تم إيقاف الخدمة</string>
-    <string name="toast_services_success">تم بدء الخدمة</string>
-    <string name="toast_services_failure">تعذر بدء الخدمة</string>
+    <string name="toast_services_start">بدء الخدمات</string>
+    <string name="toast_services_stop">إيقاف الخدمات</string>
+    <string name="toast_services_success">نجاح بدء الخدمات</string>
+    <string name="toast_services_failure">فشل بدء الخدمات</string>
 
     <!--ServerActivity-->
     <string name="title_server">ملف التكوين</string>
@@ -179,7 +179,7 @@
     <string name="menu_item_export_proxy_app">تصدير إلى الحافظة</string>
     <string name="menu_item_import_proxy_app">استيراد من الحافظة</string>
     <string name="per_app_proxy_settings">إعدادات كل تطبيق</string>
-    <string name="per_app_proxy_settings_enable">التوجيه حسب التطبيق</string>
+    <string name="per_app_proxy_settings_enable">تمكين الإعدادات لكل تطبيق</string>
     <string name="app_picker_unknown_app">تطبيق غير معروف (UID غير محدد)</string>
 
     <!-- Preferences -->
@@ -188,9 +188,9 @@
     <string name="title_core_settings">إعدادات النواة</string>
     <string name="title_vpn_settings">إعدادات VPN</string>
     <string name="title_pref_per_app_proxy">الوكيل لكل تطبيق</string>
-    <string name="summary_pref_per_app_proxy">يحدد التوجيه حسب التطبيق التطبيقات التي تستخدم شبكة VPN.\n\nفي الوضع العام، تستخدم التطبيقات المحددة شبكة VPN وتتصل التطبيقات غير المحددة مباشرة. في وضع التجاوز، تتصل التطبيقات المحددة مباشرة وتستخدم التطبيقات غير المحددة شبكة VPN. يتوفر التحديد التلقائي للتطبيقات من قائمة «المزيد».</string>
-    <string name="title_pref_is_booted">الاتصال تلقائيًا عند بدء التطبيق</string>
-    <string name="summary_pref_is_booted">الاتصال تلقائيًا بالخادم المحدد عند فتح v2rayNG.</string>
+    <string name="summary_pref_per_app_proxy">عام: تستخدم التطبيقات المحددة الوكيل، وتتصل التطبيقات غير المحددة مباشرة؛\nوضع التجاوز: تتصل التطبيقات المحددة مباشرة، وتستخدم التطبيقات غير المحددة الوكيل.\nيتوفر في القائمة خيار لتحديد التطبيقات التي ستستخدم الوكيل تلقائيًا.</string>
+    <string name="title_pref_is_booted">الاتصال تلقائياً عند بدء التشغيل</string>
+    <string name="summary_pref_is_booted">الاتصال تلقائياً بالخادم المحدد عند بدء التشغيل؛ قد لا تنجح المحاولة</string>
     <string name="title_pref_start_on_boot">الاتصال تلقائيًا بعد تشغيل الجهاز</string>
     <string name="summary_pref_start_on_boot">تشغيل v2rayNG في الخلفية والاتصال بالخادم المحدد بعد تشغيل الجهاز.</string>
 
@@ -317,7 +317,7 @@
     <string name="title_mode_help">انقر هنا للحصول على مزيد من المساعدة</string>
     <string name="title_language">اللغة</string>
     <string name="title_ui_settings">إعدادات واجهة المستخدم</string>
-    <string name="title_pref_ui_mode_night">سمة واجهة المستخدم</string>
+    <string name="title_pref_ui_mode_night">إعدادات وضع واجهة المستخدم ليلاً</string>
     <string name="title_pref_dynamic_color">تفعيل الألوان الديناميكية</string>
     <string name="summary_pref_dynamic_color">يعمل فقط على أندرويد 12+</string>
     <string name="title_pref_use_hev_tunnel">تمكين ميزة Hev TUN</string>
@@ -341,8 +341,8 @@
     <string name="title_del_all_config">حذف جميع الإعدادات</string>
     <string name="title_del_duplicate_config">حذف الإعدادات المكررة</string>
     <string name="title_del_invalid_config">حذف الإعدادات غير الصالحة</string>
-    <string name="title_export_all">تصدير الإعدادات غير المخصصة إلى الحافظة</string>
-    <string name="title_sub_setting">إعداد مجموعة الاشتراك</string>
+    <string name="title_export_all">تصدير التكوينات إلى الحافظة</string>
+    <string name="title_sub_setting">الاشتراكات</string>
     <string name="sub_setting_remarks">ملاحظات</string>
     <string name="sub_setting_url">عنوان URL اختياري</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
@@ -353,11 +353,12 @@
     <string name="sub_allow_insecure_url">السماح بعنوان HTTP غير آمن</string>
     <string name="sub_setting_pre_profile">وكيل الدخول</string>
     <string name="sub_setting_next_profile">وكيل الخروج</string>
-    <string name="sub_setting_pre_profile_tip">يُستخدم قبل كل ملف تعريف في هذا الاشتراك</string>
-    <string name="sub_setting_next_profile_tip">يُستخدم بعد كل ملف تعريف في هذا الاشتراك</string>
+    <string name="sub_setting_pre_profile_tip">يجب أن تكون ملاحظات التكوين موجودة وفريدة</string>
+    <string name="sub_setting_entry_proxy_tip">يُضاف الوكيل المحدد قبل كل ملف تعريف في هذا الاشتراك كحلقة الدخول في سلسلة الوكلاء لذلك الملف.</string>
+    <string name="sub_setting_exit_proxy_tip">يُضاف الوكيل المحدد بعد كل ملف تعريف في هذا الاشتراك كحلقة الخروج في سلسلة الوكلاء لذلك الملف.</string>
     <string name="sub_setting_no_proxy">بلا</string>
     <string name="toast_invalid_update_interval">فاصل التحديث غير صالح. الحد الأدنى هو 15 دقيقة.</string>
-    <string name="title_sub_update">تحديث الاشتراكات</string>
+    <string name="title_sub_update">تحديث الاشتراك</string>
     <string name="title_ping_all_server">اختبار تأخير TCP (TCPing)</string>
     <string name="title_real_ping_all_server">اختبار زمن الاستجابة الفعلي</string>
     <string name="title_user_asset_setting">ملفات الأصول</string>
@@ -532,7 +533,7 @@
     <string name="acc_add_subscription">إضافة اشتراك</string>
     <string name="toast_malformed_json_detail">تنسيق التكوين غير صالح: %1$s</string>
     <string name="acc_add_asset">إضافة مصدر موارد</string>
-    <string name="acc_download_file">تنزيل ملفات Geo</string>
+    <string name="acc_download_file">تنزيل ملفات الموارد</string>
     <string name="acc_qr_code">رمز QR</string>
     <string name="acc_copy_log">نسخ السجل</string>
     <string name="acc_clear_log">مسح السجل</string>
