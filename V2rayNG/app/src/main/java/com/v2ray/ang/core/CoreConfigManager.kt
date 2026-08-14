@@ -97,6 +97,12 @@ object CoreConfigManager {
         val result = ConfigResult(true, configContext.guid, raw)
 
         val json = JsonUtil.parseString(raw)?.takeIf { it.isJsonObject }?.asJsonObject ?: return result
+        fun customResult(content: String) = ConfigResult(
+            status = true,
+            guid = configContext.guid,
+            content = content,
+            hasPrimaryBalancer = json.hasPrimaryBalancer(),
+        )
 
         // Inject or remove traffic statistics configuration based on user preference
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) == true) {
@@ -117,7 +123,7 @@ object CoreConfigManager {
         }
 
         if (!needTun()) {
-            return JsonUtil.toJsonPretty(json)?.let { ConfigResult(true, configContext.guid, it) } ?: result
+            return JsonUtil.toJsonPretty(json)?.let(::customResult) ?: customResult(raw)
         }
 
         // Check whether package names need to be replaced with UIDs
@@ -156,7 +162,7 @@ object CoreConfigManager {
             }
         }
 
-        return JsonUtil.toJsonPretty(json)?.let { ConfigResult(true, configContext.guid, it) } ?: result
+        return JsonUtil.toJsonPretty(json)?.let(::customResult) ?: customResult(raw)
     }
 
     /**
@@ -450,8 +456,20 @@ object CoreConfigManager {
         return ConfigResult(
             status = true,
             guid = configContext.guid,
-            content = JsonUtil.toJsonPretty(v2rayConfig) ?: ""
+            content = JsonUtil.toJsonPretty(v2rayConfig) ?: "",
+            hasPrimaryBalancer = v2rayConfig.routing.balancers.orEmpty()
+                .any { it.tag == AppConfig.TAG_BALANCER },
         )
+    }
+
+    private fun JsonObject.hasPrimaryBalancer(): Boolean {
+        val balancers = get("routing")?.takeIf { it.isJsonObject }?.asJsonObject
+            ?.get("balancers")?.takeIf { it.isJsonArray }?.asJsonArray
+            ?: return false
+        return balancers.any { element ->
+            element.takeIf { it.isJsonObject }?.asJsonObject
+                ?.get("tag")?.takeIf { it.isJsonPrimitive }?.asString == AppConfig.TAG_BALANCER
+        }
     }
 
     /**
