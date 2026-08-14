@@ -70,7 +70,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val openDrawer: (FocusRequester?) -> Unit = if (isTelevision) {
         tvDrawerCoordinator::openFrom
     } else {
-        drawerCoordinator::openFrom
+        { drawerCoordinator.open() }
     }
     val dialogState = rememberMainDialogState()
     var dialogFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
@@ -285,7 +285,6 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
             drawerContent = {
                 MainDrawerContent(
                     drawerState = drawerCoordinator.state,
-                    onClose = drawerCoordinator::closeAndRestore,
                     onNavigate = onNavigate
                 )
             },

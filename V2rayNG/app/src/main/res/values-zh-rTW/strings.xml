@@ -21,7 +21,6 @@
     <string name="toast_services_stop">服務已停止</string>
     <string name="toast_services_success">服務已啟動</string>
     <string name="toast_services_failure">無法啟動服務</string>
-    <string name="toast_services_failure_detail">無法啟動服務：%1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">設定檔</string>

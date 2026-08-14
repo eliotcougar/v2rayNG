@@ -354,4 +354,3 @@ private fun TvPerAppInfoPopup(message: String, onDismiss: () -> Unit) {
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     )
 }
-

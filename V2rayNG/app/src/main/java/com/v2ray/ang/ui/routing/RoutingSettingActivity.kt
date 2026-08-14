@@ -210,7 +210,6 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
         }
     }
 }
-
 private class RoutingRowFocusTargets {
     val row = FocusRequester()
     val edit = FocusRequester()
@@ -541,4 +540,3 @@ fun RoutingSettingScreen(
         )
     }
 }
-

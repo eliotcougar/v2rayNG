@@ -28,6 +28,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.onClick as semanticsOnClick
 import androidx.compose.ui.semantics.onLongClick as semanticsOnLongClick
 import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -189,9 +192,11 @@ internal class DpadReorderState {
         return DpadReorderActivation.Dropped
     }
 
-    internal fun cancelPress(key: Any) {
+    internal fun cancelPendingPress(key: Any) {
         if (phase == DpadReorderPhase.Pressed && activeKey == key) reset()
     }
+
+    internal fun cancelInteraction() = reset()
 
     internal fun move(
         direction: DpadReorderDirection,
@@ -239,6 +244,19 @@ internal fun rememberSyncedDpadReorderState(
     onMovingItem: suspend (key: Any, index: Int) -> Unit
 ): DpadReorderState {
     val state = rememberDpadReorderState(stateKey)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(state, lifecycleOwner) {
+        // Row focus can move transiently while an item is reordered. End the interaction only
+        // when the owning screen leaves the foreground or composition.
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) state.cancelInteraction()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            state.cancelInteraction()
+        }
+    }
     LaunchedEffect(state, enabled, keys) {
         state.syncItems(keys, enabled)
     }
@@ -385,7 +403,7 @@ internal fun Modifier.dpadLongPressToMove(
     DisposableEffect(item.state, item.key) {
         onDispose {
             cancelLongPressTimer()
-            item.state.cancelPress(item.key)
+            item.state.cancelPendingPress(item.key)
         }
     }
 
@@ -413,7 +431,7 @@ internal fun Modifier.dpadLongPressToMove(
             isItemFocused = it.isFocused
             if (!it.isFocused) {
                 cancelLongPressTimer()
-                item.state.cancelPress(item.key)
+                item.state.cancelPendingPress(item.key)
                 suppressedKeyUp = null
             }
         }

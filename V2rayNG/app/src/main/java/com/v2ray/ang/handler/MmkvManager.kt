@@ -956,12 +956,6 @@ object MmkvManager {
         return settingsStorage.decodeStringSet(key)
     }
 
-
-    /** Encodes whether the background service should start after device boot. */
-    fun encodeStartOnBoot(startOnBoot: Boolean) {
-        encodeSettings(PREF_START_ON_BOOT, startOnBoot)
-    }
-
     /** Whether a cold launch of the app should connect automatically. */
     fun decodeAutoConnectOnAppStart(): Boolean {
         return decodeSettingsBool(PREF_IS_BOOTED, false)

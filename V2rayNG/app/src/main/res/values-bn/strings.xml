@@ -21,7 +21,6 @@
     <string name="toast_services_stop">সার্ভিস বন্ধ হয়েছে</string>
     <string name="toast_services_success">সার্ভিস শুরু হয়েছে</string>
     <string name="toast_services_failure">সার্ভিস শুরু করা যায়নি</string>
-    <string name="toast_services_failure_detail">সার্ভিস শুরু করা যায়নি: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">কনফিগারেশন ফাইল</string>
@@ -360,8 +359,8 @@
     <string name="sub_setting_no_proxy">কোনোটিই নয়</string>
     <string name="toast_invalid_update_interval">আপডেটের বিরতি সঠিক নয়। সর্বনিম্ন ১৫ মিনিট।</string>
     <string name="title_sub_update">সাবস্ক্রিপশন আপডেট করুন</string>
-    <string name="title_ping_all_server">সব কনফিগারেশন TCPing</string>
-    <string name="title_real_ping_all_server">সব কনফিগারেশন প্রকৃত বিলম্ব</string>
+    <string name="title_ping_all_server">TCP বিলম্ব পরীক্ষা করুন (TCPing)</string>
+    <string name="title_real_ping_all_server">প্রকৃত বিলম্ব পরীক্ষা করুন</string>
     <string name="title_user_asset_setting">অ্যাসেট ফাইল</string>
     <string name="title_sort_by_test_results">টেস্ট ফলাফল দ্বারা সাজানো</string>
     <string name="title_filter_config">কনফিগারেশন ফাইল ফিল্টার করুন</string>

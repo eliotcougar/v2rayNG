@@ -21,7 +21,6 @@
     <string name="toast_services_stop">Service stopped</string>
     <string name="toast_services_success">Service started</string>
     <string name="toast_services_failure">Failed to start service</string>
-    <string name="toast_services_failure_detail">Failed to start service: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">Config</string>
@@ -184,7 +183,7 @@
     <string name="menu_item_import_proxy_app">Import from Clipboard</string>
     <string name="per_app_proxy_settings">Per-app settings</string>
     <string name="per_app_proxy_settings_enable">Per-app routing</string>
-    <string name="app_picker_unknown_app">Unknown app (unidentified UID)</string>
+    <string name="app_picker_unknown_app">Unknown app (UID not recognized)</string>
 
     <!-- Preferences -->
     <string name="title_settings">Settings</string>
@@ -324,7 +323,7 @@
     <string name="title_pref_ui_mode_night">UI Theme</string>
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
-    <string name="title_pref_use_hev_tunnel">Enable Hev TUN Feature</string>
+    <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">When enabled, TUN will use hev-socks5-tunnel; otherwise, it will use xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN log level</string>
     <string name="title_pref_hev_tunnel_rw_timeout">Hev TUN read/write timeout (seconds; TCP/UDP defaults: 300/60)</string>
@@ -342,9 +341,9 @@
     <string name="logcat_clear">Clear</string>
     <string name="logcat_share">Share log</string>
     <string name="title_service_restart">Restart service</string>
-    <string name="title_del_all_config">Delete config</string>
-    <string name="title_del_duplicate_config">Delete duplicate config</string>
-    <string name="title_del_invalid_config">Delete invalid config</string>
+    <string name="title_del_all_config">Delete configs</string>
+    <string name="title_del_duplicate_config">Delete duplicate configs</string>
+    <string name="title_del_invalid_config">Delete invalid configs</string>
     <string name="title_export_all">Export configs to clipboard</string>
     <string name="sub_setting_remarks">Remarks</string>
     <string name="title_sub_setting">Subscription group settings</string>
@@ -362,8 +361,8 @@
     <string name="sub_setting_no_proxy">None</string>
     <string name="toast_invalid_update_interval">Invalid update interval. Minimum is 15 minutes.</string>
     <string name="title_sub_update">Update subscriptions</string>
-    <string name="title_ping_all_server">Tcping config</string>
-    <string name="title_real_ping_all_server">Real delay config</string>
+    <string name="title_ping_all_server">Test TCP delays (TCPing)</string>
+    <string name="title_real_ping_all_server">Test real delays</string>
     <string name="title_user_asset_setting">Asset files</string>
     <string name="title_sort_by_test_results">Sort by test results</string>
     <string name="title_filter_config">Filter configs</string>

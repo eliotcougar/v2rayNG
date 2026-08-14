@@ -117,7 +117,6 @@ class SubSettingActivity : BaseComponentActivity() {
         viewModel.remove(subId)
     }
 }
-
 private class SubscriptionRowFocusTargets {
     val row = FocusRequester()
     val share = FocusRequester()
@@ -520,4 +519,3 @@ fun SubSettingScreen(
         )
     }
 }
-

@@ -21,7 +21,6 @@
     <string name="toast_services_stop">سرویس واڌاشته وابی</string>
     <string name="toast_services_success">سرویس وا مووفقیت ره ایفت</string>
     <string name="toast_services_failure">ره وندن سرویس شکست خرد</string>
-    <string name="toast_services_failure_detail">ره وندن سرویس شکست خرد: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -364,8 +363,8 @@
 
     <string name="sub_setting_no_proxy">هیچ‌کدام</string>
     <string name="title_sub_update">ورۊ کردن اشتراکا</string>
-    <string name="title_ping_all_server">Tcping کانفیگا بونکۊ سکویی</string>
-    <string name="title_real_ping_all_server">تئخیر واقعی کانفیگا بونکۊ سکویی</string>
+    <string name="title_ping_all_server">آزمایش تئخیر TCP (TCPing)</string>
+    <string name="title_real_ping_all_server">آزمایش تئخیر واقعی</string>
     <string name="title_user_asset_setting">فایلا بونچک جغرافیایی</string>
     <string name="title_sort_by_test_results">ترتیب و ری نتیجه یل پینگ</string>
     <string name="title_filter_config">فیلتر کردن کانفیگا</string>

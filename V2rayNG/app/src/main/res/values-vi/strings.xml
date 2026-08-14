@@ -21,7 +21,6 @@
     <string name="toast_services_stop">Đã dừng dịch vụ</string>
     <string name="toast_services_success">Đã khởi động dịch vụ</string>
     <string name="toast_services_failure">Không thể khởi động dịch vụ</string>
-    <string name="toast_services_failure_detail">Không thể khởi động dịch vụ: %1$s</string>
 
     <!--ServerActivity-->
     <string name="title_server">v2rayNG</string>
@@ -323,7 +322,7 @@
     <string name="title_pref_ui_mode_night">Chủ đề giao diện</string>
     <string name="title_pref_dynamic_color">Bật màu động</string>
     <string name="summary_pref_dynamic_color">Chỉ hoạt động trên Android 12+</string>
-    <string name="title_pref_use_hev_tunnel">Bật tính năng Hev TUN</string>
+    <string name="title_pref_use_hev_tunnel">Dùng Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">Khi bật, TUN sẽ dùng hev-socks5-tunnel; nếu không, TUN sẽ dùng xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Mức nhật ký Hev TUN</string>
     <string name="title_pref_hev_tunnel_rw_timeout">Thời gian chờ đọc/ghi của Hev TUN (giây; mặc định TCP/UDP: 300/60)</string>

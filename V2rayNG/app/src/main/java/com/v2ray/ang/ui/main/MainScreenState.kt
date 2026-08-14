@@ -35,20 +35,8 @@ internal class MainDrawerCoordinator(
     val state: DrawerState,
     private val coroutineScope: CoroutineScope
 ) {
-    var focusToRestore by mutableStateOf<FocusRequester?>(null)
-        private set
-
-    fun openFrom(focusRequester: FocusRequester?) {
-        focusToRestore = focusRequester
+    fun open() {
         coroutineScope.launch { state.open() }
-    }
-
-    fun closeAndRestore() {
-        val focusRequester = focusToRestore
-        coroutineScope.launch {
-            state.close()
-            focusRequester?.requestFocus()
-        }
     }
 }
 
