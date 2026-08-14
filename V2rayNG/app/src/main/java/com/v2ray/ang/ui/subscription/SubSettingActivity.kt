@@ -186,7 +186,7 @@ fun SubSettingScreen(
                     ),
                     AppTopBarAction(
                         icon = painterResource(R.drawable.ic_cloud_download_24dp),
-                        label = stringResource(R.string.title_update_subscriptions),
+                        label = stringResource(R.string.title_sub_update),
                         onClick = { showUpdateDialog = true }
                     )
                 )
@@ -471,7 +471,7 @@ fun SubSettingScreen(
             text = {
                 Column {
                     SettingsSwitchItem(
-                        title = stringResource(R.string.title_update_subscriptions),
+                        title = stringResource(R.string.title_sub_update),
                         checked = updateSubscription,
                         onCheckedChange = { updateSubscription = it }
                     )

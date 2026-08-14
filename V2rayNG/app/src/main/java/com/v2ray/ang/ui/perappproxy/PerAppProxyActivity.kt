@@ -94,7 +94,7 @@ class PerAppProxyActivity : BaseComponentActivity() {
             onPerAppProxyChanged = { viewModel.setPerAppProxyEnabled(it) },
             onBypassAppsChanged = { viewModel.setBypassAppsEnabled(it) },
             onInfoClick = {
-                toastInfo(R.string.summary_pref_per_app_routing)
+                toastInfo(R.string.summary_pref_per_app_proxy)
             },
             onToggleApp = { viewModel.toggle(it) },
             onSearch = { viewModel.filterApps(it) },
@@ -197,7 +197,7 @@ fun PerAppProxyScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     PerAppModeToggle(
-                        label = stringResource(R.string.per_app_routing_enable),
+                        label = stringResource(R.string.per_app_proxy_settings_enable),
                         checked = perAppProxyEnabled,
                         isTelevision = isTelevision,
                         onCheckedChange = onPerAppProxyChanged,
@@ -288,7 +288,7 @@ fun PerAppProxyScreen(
 
     if (showInfoPopup) {
         TvPerAppInfoPopup(
-            message = stringResource(R.string.summary_pref_per_app_routing),
+            message = stringResource(R.string.summary_pref_per_app_proxy),
             onDismiss = { showInfoPopup = false }
         )
     }

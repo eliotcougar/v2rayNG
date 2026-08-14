@@ -268,7 +268,7 @@ fun SettingsScreen(
                     }
                 )
                 SettingsListItem(
-                    title = stringResource(R.string.title_pref_ui_theme),
+                    title = stringResource(R.string.title_pref_ui_mode_night),
                     entries = uiModeNightEntries,
                     values = uiModeNightValues,
                     selectedValue = uiModeNight,
@@ -615,8 +615,8 @@ fun SettingsScreen(
             )
             if (advancedSettingsExpanded) {
                 SettingsSwitchItem(
-                    title = stringResource(R.string.title_pref_auto_connect_on_app_start),
-                    summary = stringResource(R.string.summary_pref_auto_connect_on_app_start),
+                    title = stringResource(R.string.title_pref_is_booted),
+                    summary = stringResource(R.string.summary_pref_is_booted),
                     checked = autoConnectOnAppStart,
                     onCheckedChange = { autoConnectOnAppStart = it }
                 )
