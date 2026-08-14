@@ -56,7 +56,6 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation

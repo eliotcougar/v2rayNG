@@ -61,10 +61,7 @@ import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
-import com.v2ray.ang.ui.compose.colorFabActive
-import com.v2ray.ang.ui.compose.TvExpandableSwitch
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation

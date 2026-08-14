@@ -53,10 +53,11 @@ import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
+import com.v2ray.ang.ui.compose.AppDropdownMenuItems
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppRowSwitch
 import com.v2ray.ang.ui.compose.AppTopBar
-import com.v2ray.ang.ui.compose.ConfirmDialog
+import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.DpadReorderItem
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
@@ -67,7 +68,6 @@ import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadHorizontalFocusNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation

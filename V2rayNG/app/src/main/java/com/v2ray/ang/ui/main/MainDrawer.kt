@@ -265,10 +265,19 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
         ) {
             if (drawerValue == TvDrawerValue.Open) {
                 Box(modifier = Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
-                    AppBrandTitle(
-                        style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                        textAlign = TextAlign.Center
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        val isDarkTheme = LocalDarkTheme.current
+                        Image(
+                            painter = painterResource(R.mipmap.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(36.dp),
+                            colorFilter = if (isDarkTheme) ColorFilter.tint(Color.White, BlendMode.SrcIn) else null
+                        )
+                        AppBrandTitle(
+                            style = MaterialTheme.typography.titleLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             } else {
                 Box(modifier = Modifier.width(64.dp).height(48.dp), contentAlignment = Alignment.Center) {

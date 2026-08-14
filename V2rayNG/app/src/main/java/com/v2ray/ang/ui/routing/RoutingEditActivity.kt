@@ -156,8 +156,6 @@ fun RoutingEditScreen(
             processText = selectedPackages.joinToString(",")
         }
     }
-    val processSelectTitle = stringResource(R.string.routing_settings_process_select)
-
     fun buildRuleset(): RulesetItem {
         val rulesetItem = SettingsManager.getRoutingRuleset(position) ?: RulesetItem()
         rulesetItem.apply {
