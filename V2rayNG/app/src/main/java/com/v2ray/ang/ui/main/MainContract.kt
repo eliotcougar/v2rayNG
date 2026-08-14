@@ -68,7 +68,6 @@ sealed interface MainAction {
     data object ImportConfigLocal : ActivityRequest
     data class ImportManually(val type: Int) : ActivityRequest
     data object RestartService : ActivityRequest
-    data object Exit : ActivityRequest
     data class SelectServer(val guid: String) : ActivityRequest
     data class EditServer(val guid: String, val profile: ProfileItem) : ActivityRequest
     data class ShareClipboard(val guid: String) : ActivityRequest

@@ -58,7 +58,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : HelperBaseComponentActivity() {
     private companion object {
-        const val SERVICE_STOP_TIMEOUT_MILLIS = 5_000L
         const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
     }
 
@@ -67,7 +66,6 @@ class MainActivity : HelperBaseComponentActivity() {
     }
     private var autoConnectAttempted = false
     private var autoConnectJob: Job? = null
-    private var serviceTransitionJob: Job? = null
 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -98,7 +96,7 @@ class MainActivity : HelperBaseComponentActivity() {
             val refreshGroups = SettingsChangeManager.consumeSetupGroupTab()
             mainViewModel.refreshUiSettings()
             if (refreshGroups) mainViewModel.onAction(MainAction.RefreshGroups)
-            if (restartService) LauncherManager.restartService(this)
+            if (restartService && mainViewModel.uiState.value.isRunning) restartV2Ray()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -330,27 +328,7 @@ class MainActivity : HelperBaseComponentActivity() {
         val selected = mainViewModel.uiState.value.selectedGuid
         if (guid != selected) {
             mainViewModel.updateSelectedGuid(guid)
-            LauncherManager.restartService(this)
-        }
-    }
-
-    private fun exitApp() {
-        stopServiceThen(::finishAndRemoveTask)
-    }
-
-    private fun stopServiceThen(action: () -> Unit) {
-        serviceTransitionJob?.cancel()
-        if (!mainViewModel.uiState.value.isRunning) {
-            action()
-            return
-        }
-        val stopGeneration = mainViewModel.serviceStopGeneration.value
-        LauncherManager.stopService(this)
-        serviceTransitionJob = lifecycleScope.launch {
-            withTimeoutOrNull(SERVICE_STOP_TIMEOUT_MILLIS) {
-                mainViewModel.serviceStopGeneration.first { it > stopGeneration }
-            }
-            action()
+            if (mainViewModel.uiState.value.isRunning) restartV2Ray()
         }
     }
 
