@@ -22,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
@@ -78,8 +77,6 @@ internal fun MainTopBar(
 ) {
     val isTelevision = isTelevisionDevice()
     var openMenu by remember { mutableStateOf<MainTopBarMenu?>(null) }
-    var isRestartFocused by remember { mutableStateOf(false) }
-    val showRestart = isRunning || isRestartFocused
     val importMenuScrollState = rememberScrollState()
     val moreMenuScrollState = rememberScrollState()
     val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -87,13 +84,13 @@ internal fun MainTopBar(
     val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     val maxMenuHeight = windowHeight - statusBarHeight - navBarHeight - 20.dp
     val moveDownModifier = Modifier.dpadVerticalFocusNavigation(onMoveUp = { false }, onMoveDown = onMoveDown)
-    val focusOrder = remember(isRunning, showRestart, focusRequesters) {
+    val focusOrder = remember(isRunning, focusRequesters) {
         buildList {
             add(focusRequesters.start)
             if (isRunning) add(focusRequesters.test)
             add(focusRequesters.search)
             add(focusRequesters.add)
-            if (showRestart) add(focusRequesters.restart)
+            add(focusRequesters.restart)
             add(focusRequesters.more)
         }
     }
@@ -235,16 +232,13 @@ internal fun MainTopBar(
                     focusRequester = focusRequesters.add,
                     scrollState = importMenuScrollState
                 ) { ImportMenuContent { action -> openMenu = null; onAction(action) } }
-                if (isTelevision && showRestart) {
+                if (isTelevision) {
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_restore_24dp),
                         label = stringResource(R.string.title_service_restart),
-                        onClick = { if (isRunning) onAction(MainAction.RestartService) },
+                        onClick = { onAction(MainAction.RestartService) },
                         focusRequester = focusRequesters.restart,
-                        modifier = moveDownModifier
-                            .dpadOrderedFocusNavigation(focusRequesters.restart, focusOrder)
-                            // Keep the focused action composed across the restart's stop/start handoff.
-                            .onFocusChanged { isRestartFocused = it.isFocused }
+                        modifier = moveDownModifier.dpadOrderedFocusNavigation(focusRequesters.restart, focusOrder)
                     )
                 }
                 MenuButton(
@@ -255,7 +249,6 @@ internal fun MainTopBar(
                     scrollState = moreMenuScrollState
                 ) {
                     MoreMenuContent(
-                        isRunning = isRunning,
                         isTelevision = isTelevision,
                         onAction = { action -> openMenu = null; onAction(action) },
                         onBulkDelete = { target -> openMenu = null; onBulkDelete(target) }

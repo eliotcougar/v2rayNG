@@ -69,14 +69,13 @@ fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
 
 @Composable
 internal fun MoreMenuContent(
-    isRunning: Boolean,
     isTelevision: Boolean,
     onAction: (MainAction) -> Unit,
     onBulkDelete: (BulkDeleteTarget) -> Unit
 ) = AppDropdownMenuItems(
     items = MainMoreMenuAction.entries.filter { action ->
         when (action) {
-            MainMoreMenuAction.RestartService -> isRunning && !isTelevision
+            MainMoreMenuAction.RestartService -> !isTelevision
             MainMoreMenuAction.DeleteAll -> !isTelevision
             else -> true
         }
