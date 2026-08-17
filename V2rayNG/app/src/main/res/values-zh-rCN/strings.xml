@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">保存配置</string>
     <string name="menu_item_edit_config">编辑配置</string>
     <string name="menu_item_del_config">删除配置</string>
-    <string name="action_delete">删除</string>
-    <string name="action_close">关闭</string>
     <string name="action_exit">退出</string>
     <string name="action_back">返回</string>
     <string name="action_menu">菜单</string>
     <string name="action_more">更多</string>
     <string name="action_clear">清除</string>
-    <string name="action_edit">编辑</string>
     <string name="action_share">分享</string>
     <string name="action_info">信息</string>
     <string name="action_locked">已锁定</string>
@@ -161,7 +158,6 @@
     <string name="menu_item_scan_qrcode">扫描二维码</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">下载文件</string>
-
     <string name="menu_item_edit_asset">编辑资源</string>
     <string name="menu_item_del_asset">删除资源</string>
     <string name="title_user_asset_add_url">添加资源 URL</string>
@@ -334,7 +330,6 @@
     <string name="summary_root_lan_sharing">将 Wi-Fi 热点和 USB 网络共享设备的流量通过 VPN 转发。</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">更新</string>
     <string name="logcat_copy">复制</string>
     <string name="logcat_clear">清除</string>
@@ -480,6 +475,9 @@
     <string name="share_method_qrcode">二维码</string>
     <string name="share_method_clipboard">复制配置链接</string>
     <string name="share_method_full_content">复制完整配置</string>
+    <string name="action_edit">编辑</string>
+    <string name="action_delete">删除</string>
+    <string name="action_close">关闭</string>
 
     <string name="share_subscription_qrcode">二维码</string>
     <string name="share_subscription_clipboard">导出至剪贴板</string>

@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">Lưu cấu hình</string>
     <string name="menu_item_edit_config">Chỉnh sửa cấu hình</string>
     <string name="menu_item_del_config">Xoá cấu hình</string>
-    <string name="action_delete">Xoá</string>
-    <string name="action_close">Đóng</string>
     <string name="action_exit">Thoát</string>
     <string name="action_back">Quay lại</string>
     <string name="action_menu">Trình đơn</string>
     <string name="action_more">Thêm</string>
     <string name="action_clear">Xoá</string>
-    <string name="action_edit">Chỉnh sửa</string>
     <string name="action_share">Chia sẻ</string>
     <string name="action_info">Thông tin</string>
     <string name="action_locked">Đã khoá</string>
@@ -161,7 +158,6 @@
     <string name="menu_item_scan_qrcode">Quét mã QR</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">Tải xuống tệp tin</string>
-
     <string name="menu_item_edit_asset">Sửa tài nguyên</string>
     <string name="menu_item_del_asset">Xóa tài nguyên</string>
     <string name="title_user_asset_add_url">Thêm URL tài nguyên</string>
@@ -334,7 +330,6 @@
     <string name="summary_root_lan_sharing">Định tuyến lưu lượng từ thiết bị dùng điểm phát Wi-Fi và chia sẻ kết nối USB qua VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">Cập nhật</string>
     <string name="logcat_copy">Sao chép</string>
     <string name="logcat_clear">Xoá</string>
@@ -377,7 +372,6 @@
     <string name="title_update_subscription_result">Đã cập nhật %1$d cấu hình (%2$d thành công, %3$d thất bại, %4$d bỏ qua)</string>
     <string name="title_update_subscription_no_subscription">Không có đăng ký</string>
     <string name="toast_server_not_found_in_group">Không tìm thấy máy chủ đã chọn trong nhóm hiện tại</string>
-
     <string name="title_locate_selected_config">Tìm cấu hình đã chọn</string>
 
     <string name="tasker_start_service">Khởi động v2rayNG</string>
@@ -454,7 +448,6 @@
     <string name="title_policy_group_fallback">Kết nối dự phòng (outbound, tùy chọn)</string>
 
     <string name="server_proxy_chain_members">Thành viên chuỗi proxy</string>
-
     <string name="server_proxy_chain_member">Thành viên</string>
     <string name="server_proxy_chain_pick_members">Chạm vào đây để chọn thành viên</string>
     <string name="server_proxy_chain_member_unselected">Chọn một thành viên</string>
@@ -482,6 +475,9 @@
     <string name="share_method_qrcode">Mã QR</string>
     <string name="share_method_clipboard">Sao chép liên kết cấu hình</string>
     <string name="share_method_full_content">Sao chép toàn bộ cấu hình</string>
+    <string name="action_edit">Chỉnh sửa</string>
+    <string name="action_delete">Xoá</string>
+    <string name="action_close">Đóng</string>
 
     <string name="share_subscription_qrcode">Xuất gói ra mã QR (Chụp màn hình để lưu)</string>
     <string name="share_subscription_clipboard">Xuất gói vào bảng tạm</string>

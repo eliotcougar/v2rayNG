@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">حفظ التكوين</string>
     <string name="menu_item_edit_config">تعديل التكوين</string>
     <string name="menu_item_del_config">حذف التكوين</string>
-    <string name="action_delete">حذف</string>
-    <string name="action_close">إغلاق</string>
     <string name="action_exit">خروج</string>
     <string name="action_back">رجوع</string>
     <string name="action_menu">القائمة</string>
     <string name="action_more">المزيد</string>
     <string name="action_clear">مسح</string>
-    <string name="action_edit">تعديل</string>
     <string name="action_share">مشاركة</string>
     <string name="action_info">معلومات</string>
     <string name="action_locked">مقفل</string>
@@ -333,7 +330,6 @@
     <string name="summary_root_lan_sharing">توجيه حركة مرور أجهزة نقطة اتصال Wi-Fi والأجهزة المربوطة عبر USB من خلال VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">تحديث</string>
     <string name="logcat_copy">نسخ</string>
     <string name="logcat_clear">مسح</string>
@@ -376,7 +372,6 @@
     <string name="title_update_subscription_result">تم تحديث %1$d إعدادات (%2$d ناجحة، %3$d فاشلة، %4$d متخطاة)</string>
     <string name="title_update_subscription_no_subscription">لا توجد اشتراكات</string>
     <string name="toast_server_not_found_in_group">لم يُعثر على الخادم المحدد في المجموعة الحالية</string>
-
     <string name="title_locate_selected_config">العثور على التكوين المحدد</string>
 
     <string name="tasker_start_service">بدء الخدمة</string>
@@ -480,6 +475,9 @@
     <string name="share_method_qrcode">رمز QR</string>
     <string name="share_method_clipboard">نسخ رابط التكوين</string>
     <string name="share_method_full_content">نسخ التكوين الكامل</string>
+    <string name="action_edit">تعديل</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_close">إغلاق</string>
 
     <string name="share_subscription_qrcode">رمز QR</string>
     <string name="share_subscription_clipboard">تصدير إلى الحافظة</string>

@@ -59,7 +59,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 class MainActivity : HelperBaseComponentActivity() {
     private companion object {
         const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
-        const val SERVICE_STOP_TIMEOUT_MILLIS = 5_000L
     }
 
     private val mainViewModel: MainViewModel by viewModels {
@@ -67,7 +66,6 @@ class MainActivity : HelperBaseComponentActivity() {
     }
     private var autoConnectAttempted = false
     private var autoConnectJob: Job? = null
-    private var serviceTransitionJob: Job? = null
 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -249,21 +247,8 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun exitApp() {
-        serviceTransitionJob?.cancel()
-        if (!mainViewModel.uiState.value.isRunning) {
-            LauncherManager.stopService(this)
-            finishAndRemoveTask()
-            return
-        }
-
-        val stopGeneration = mainViewModel.serviceStopGeneration.value
         LauncherManager.stopService(this)
-        serviceTransitionJob = lifecycleScope.launch {
-            withTimeoutOrNull(SERVICE_STOP_TIMEOUT_MILLIS) {
-                mainViewModel.serviceStopGeneration.first { it > stopGeneration }
-            }
-            finishAndRemoveTask()
-        }
+        finishAndRemoveTask()
     }
 
     private fun importManually(createConfigType: Int) {

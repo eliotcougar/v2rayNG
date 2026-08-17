@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">Сохранить профиль</string>
     <string name="menu_item_edit_config">Изменить профиль</string>
     <string name="menu_item_del_config">Удалить профиль</string>
-    <string name="action_delete">Удалить</string>
-    <string name="action_close">Закрыть</string>
     <string name="action_exit">Выход</string>
     <string name="action_back">Назад</string>
     <string name="action_menu">Меню</string>
     <string name="action_more">Ещё</string>
     <string name="action_clear">Очистить</string>
-    <string name="action_edit">Изменить</string>
     <string name="action_share">Поделиться</string>
     <string name="action_info">Информация</string>
     <string name="action_locked">Заблокировано</string>
@@ -161,9 +158,7 @@
     <string name="menu_item_scan_qrcode">Сканировать QR-код</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">Загрузить файлы</string>
-
     <string name="menu_item_edit_asset">Изменить ресурс</string>
-
     <string name="menu_item_del_asset">Удалить ресурс</string>
     <string name="title_user_asset_add_url">Добавить URL ресурса</string>
     <string name="msg_file_not_found">Файл не найден</string>
@@ -335,7 +330,6 @@
     <string name="summary_root_lan_sharing">Направлять через VPN трафик устройств, подключённых к точке доступа Wi-Fi или по USB.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">Обновить</string>
     <string name="logcat_copy">Копировать</string>
     <string name="logcat_clear">Очистить</string>
@@ -481,6 +475,9 @@
     <string name="share_method_qrcode">QR-код</string>
     <string name="share_method_clipboard">Копировать ссылку профиля</string>
     <string name="share_method_full_content">Копировать полную конфигурацию</string>
+    <string name="action_edit">Изменить</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_close">Закрыть</string>
 
     <string name="share_subscription_qrcode">QR-код</string>
     <string name="share_subscription_clipboard">Экспорт в буфер обмена</string>

@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">儲存設定</string>
     <string name="menu_item_edit_config">編輯設定檔</string>
     <string name="menu_item_del_config">刪除設定</string>
-    <string name="action_delete">刪除</string>
-    <string name="action_close">關閉</string>
     <string name="action_exit">退出</string>
     <string name="action_back">返回</string>
     <string name="action_menu">選單</string>
     <string name="action_more">更多</string>
     <string name="action_clear">清除</string>
-    <string name="action_edit">編輯</string>
     <string name="action_share">分享</string>
     <string name="action_info">資訊</string>
     <string name="action_locked">已鎖定</string>
@@ -161,7 +158,6 @@
     <string name="menu_item_scan_qrcode">掃描 QR Code</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">下載檔案</string>
-
     <string name="menu_item_edit_asset">編輯資源</string>
     <string name="menu_item_del_asset">刪除資源</string>
     <string name="title_user_asset_add_url">新增資源 URL</string>
@@ -334,7 +330,6 @@
     <string name="summary_root_lan_sharing">將 Wi-Fi 熱點和 USB 網路共享裝置的流量透過 VPN 轉送。</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">更新</string>
     <string name="logcat_copy">複製</string>
     <string name="logcat_clear">清除</string>
@@ -480,6 +475,9 @@
     <string name="share_method_qrcode">QR Code</string>
     <string name="share_method_clipboard">複製設定連結</string>
     <string name="share_method_full_content">複製完整設定</string>
+    <string name="action_edit">編輯</string>
+    <string name="action_delete">刪除</string>
+    <string name="action_close">關閉</string>
 
     <string name="share_subscription_qrcode">QR Code</string>
     <string name="share_subscription_clipboard">匯出至剪貼簿</string>

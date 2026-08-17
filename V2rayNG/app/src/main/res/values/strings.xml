@@ -28,23 +28,6 @@
     <string name="menu_item_save_config">Save config</string>
     <string name="menu_item_edit_config">Edit config</string>
     <string name="menu_item_del_config">Delete config</string>
-    <string name="action_delete">Delete</string>
-    <string name="action_close">Close</string>
-    <string name="action_exit">Exit</string>
-    <string name="action_back">Back</string>
-    <string name="action_menu">Menu</string>
-    <string name="action_more">More</string>
-    <string name="action_clear">Clear</string>
-    <string name="action_edit">Edit</string>
-    <string name="action_share">Share</string>
-    <string name="action_info">Info</string>
-    <string name="action_locked">Locked</string>
-    <string name="action_remove">Remove</string>
-    <string name="action_add_member">Add member</string>
-    <string name="action_start_scan">Start scan</string>
-    <string name="action_stop_scan">Stop scan</string>
-    <string name="action_torch">Torch</string>
-    <string name="action_select_image">Select image</string>
     <string name="menu_item_import_config_qrcode">Import from QR code</string>
     <string name="menu_item_import_config_clipboard">Import from Clipboard</string>
     <string name="menu_item_import_config_local">Import from a local file</string>
@@ -161,10 +144,6 @@
     <string name="menu_item_scan_qrcode">Scan QR code</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">Download files</string>
-
-    <string name="menu_item_edit_asset">Edit asset</string>
-
-    <string name="menu_item_del_asset">Delete asset</string>
     <string name="title_user_asset_add_url">Add asset URL</string>
     <string name="msg_file_not_found">File not found</string>
     <string name="msg_remark_is_duplicate">This name already exists</string>
@@ -194,8 +173,6 @@
     <string name="summary_pref_per_app_proxy">General: checked apps use the proxy, and unchecked apps connect directly;\nBypass mode: checked apps connect directly, and unchecked apps use the proxy.\nThe option to automatically select apps that should use the proxy is in the menu.</string>
     <string name="title_pref_is_booted">Auto connect at startup</string>
     <string name="summary_pref_is_booted">Automatically connects to the selected server at startup, which may be unsuccessful</string>
-    <string name="title_pref_start_on_boot">Auto-connect after device boot</string>
-    <string name="summary_pref_start_on_boot">Starts v2rayNG in the background and connects to the selected server after the device boots.</string>
 
 
     <string name="subscription_updater_job_tips">The task will run in the background, and progress information will be displayed in the notification.</string>
@@ -335,8 +312,6 @@
     <string name="summary_root_lan_sharing">Route traffic from Wi-Fi hotspot and USB-tethered devices through the VPN.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
-    <string name="logcat_update">Update</string>
     <string name="logcat_copy">Copy</string>
     <string name="logcat_clear">Clear</string>
     <string name="logcat_share">Share log</string>
@@ -345,8 +320,8 @@
     <string name="title_del_duplicate_config">Delete duplicate configs</string>
     <string name="title_del_invalid_config">Delete invalid configs</string>
     <string name="title_export_all">Export configs to clipboard</string>
-    <string name="sub_setting_remarks">Remarks</string>
     <string name="title_sub_setting">Subscriptions</string>
+    <string name="sub_setting_remarks">Remarks</string>
     <string name="sub_setting_url">Optional URL</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
     <string name="sub_setting_request_headers">Request Headers (JSON format)</string>
@@ -359,7 +334,6 @@
     <string name="sub_setting_pre_profile_tip">Make sure the config remarks exist and are unique</string>
     <string name="sub_setting_entry_proxy_tip">The selected proxy is added before every profile in this subscription as the entry link in the proxy chain for that profile.</string>
     <string name="sub_setting_exit_proxy_tip">The selected proxy is added after every profile in this subscription as the exit link in the proxy chain for that profile.</string>
-    <string name="sub_setting_no_proxy">None</string>
     <string name="toast_invalid_update_interval">Invalid update interval. Minimum is 15 minutes.</string>
     <string name="title_sub_update">Update subscription</string>
     <string name="title_ping_all_server">Test TCP delays (TCPing)</string>
@@ -390,7 +364,6 @@
     <string name="routing_settings_comma_tip">Separate multiple entries with commas (,).</string>
     <string name="routing_settings_save">Save</string>
     <string name="routing_settings_delete">Clear</string>
-    <string name="routing_settings_enable_rule">Enable rule</string>
     <string name="routing_settings_rule_title">Routing Rule Settings</string>
     <string name="routing_settings_add_rule">Add rule</string>
     <string name="routing_settings_import_predefined_rulesets">Import predefined rulesets</string>
@@ -419,7 +392,6 @@
     <string name="connection_test_fail">Internet unavailable</string>
     <string name="connection_test_error_status_code">Error code: #%d</string>
     <string name="connection_connected">Connected. Tap to check connection.</string>
-    <string name="connection_connected_tv">Connected</string>
     <string name="connection_not_connected">Not connected</string>
     <string name="connection_running_task_left">Tests running: %s</string>
 
@@ -455,7 +427,6 @@
 
     <string name="server_proxy_chain_members">Proxy chain members</string>
     <string name="server_proxy_chain_pick_members">Tap here to pick a member</string>
-    <string name="server_proxy_chain_member">Member</string>
     <string name="server_proxy_chain_member_unselected">Select a member</string>
     <string name="server_proxy_chain_members_unselected">Please select a member for each chain row</string>
     <string name="server_proxy_chain_members_insufficient">Insufficient members</string>
@@ -481,6 +452,9 @@
     <string name="share_method_qrcode">QR code</string>
     <string name="share_method_clipboard">Copy profile link</string>
     <string name="share_method_full_content">Copy full configuration</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_close">Close</string>
 
     <string name="share_subscription_qrcode">QR code</string>
     <string name="share_subscription_clipboard">Export to clipboard</string>
@@ -573,4 +547,27 @@
     <string name="connection_test_empty_message">no details available</string>
     <string name="value_unknown">unknown</string>
 
+    <string name="action_exit">Exit</string>
+    <string name="action_back">Back</string>
+    <string name="action_menu">Menu</string>
+    <string name="action_more">More</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_share">Share</string>
+    <string name="action_info">Info</string>
+    <string name="action_locked">Locked</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_add_member">Add member</string>
+    <string name="action_start_scan">Start scan</string>
+    <string name="action_stop_scan">Stop scan</string>
+    <string name="action_torch">Torch</string>
+    <string name="action_select_image">Select image</string>
+    <string name="menu_item_edit_asset">Edit asset</string>
+    <string name="menu_item_del_asset">Delete asset</string>
+    <string name="title_pref_start_on_boot">Auto-connect after device boot</string>
+    <string name="summary_pref_start_on_boot">Starts v2rayNG in the background and connects to the selected server after the device boots.</string>
+    <string name="logcat_update">Update</string>
+    <string name="sub_setting_no_proxy">None</string>
+    <string name="routing_settings_enable_rule">Enable rule</string>
+    <string name="connection_connected_tv">Connected</string>
+    <string name="server_proxy_chain_member">Member</string>
 </resources>

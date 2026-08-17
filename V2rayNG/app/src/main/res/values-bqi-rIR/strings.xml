@@ -28,14 +28,11 @@
     <string name="menu_item_save_config">زفت کردن کانفیگ</string>
     <string name="menu_item_edit_config">آلشتکاری کانفیگ</string>
     <string name="menu_item_del_config">پاک کردن کانفیگ</string>
-    <string name="action_delete">پاک کردن</string>
-    <string name="action_close">بستن</string>
     <string name="action_exit">خروج</string>
     <string name="action_back">بازگشت</string>
     <string name="action_menu">منو</string>
     <string name="action_more">بیشتر</string>
     <string name="action_clear">پاک کردن</string>
-    <string name="action_edit">آلشتکاری</string>
     <string name="action_share">همرسانی</string>
     <string name="action_info">دونستنی</string>
     <string name="action_locked">قفل وابی</string>
@@ -161,9 +158,7 @@
     <string name="menu_item_scan_qrcode">اسکن کود QR</string>
     <string name="title_url" translatable="false">URL</string>
     <string name="menu_item_download_file">دانلود فایلا</string>
-
     <string name="menu_item_edit_asset">آلشتکاری دارایی</string>
-
     <string name="menu_item_del_asset">پاک کردن دارایی</string>
     <string name="title_user_asset_add_url">نشۊوی اینترنتی بونچک ن اضاف کۊنین</string>
     <string name="msg_file_not_found">فایلن نجوست</string>
@@ -335,7 +330,6 @@
     <string name="summary_root_lan_sharing">ترافیک هات‌اسپات وای‌فای وو دسگا یل منپیز وابیڌه وا USB (تترینگ) ن ز تور VPN بفشنین.</string>
 
     <string name="title_logcat" translatable="false">Logcat</string>
-
     <string name="logcat_update">ورۊ کردن</string>
     <string name="logcat_copy">لف گیری</string>
     <string name="logcat_clear">روفتن</string>
@@ -357,11 +351,9 @@
     <string name="sub_setting_pre_profile">پروکسی وۊرۊی</string>
     <string name="sub_setting_next_profile">پروکسی دری</string>
     <string name="sub_setting_pre_profile_tip">موطمئن بۊ ک نیشتنا هڌس وو جۊرس نی</string>
-    <string name="toast_invalid_update_interval">فاصله ورۊ کردن نا موئتبر هڌ. حداقل مقدار 15 دؽقه هڌ.</string>
-
     <string name="sub_setting_entry_proxy_tip">ای پروکسی پؽش ز هر کانفیگ من ای اشتراک، وری ٱول عوزو زنجیره پروکسی اضاف ابۊ.</string>
     <string name="sub_setting_exit_proxy_tip">ای پروکسی بئڌ ز هر کانفیگ من ای اشتراک، وری آخر عوزو زنجیره پروکسی اضاف ابۊ.</string>
-
+    <string name="toast_invalid_update_interval">فاصله ورۊ کردن نا موئتبر هڌ. حداقل مقدار 15 دؽقه هڌ.</string>
     <string name="sub_setting_no_proxy">هیچ‌کدام</string>
     <string name="title_sub_update">ورۊ کردن اشتراک بونکۊ سکویی</string>
     <string name="title_ping_all_server">آزمایش تئخیر TCP (TCPing)</string>
@@ -483,6 +475,9 @@
     <string name="share_method_qrcode">کود QR</string>
     <string name="share_method_clipboard">لف گیری لینک کانفیگ</string>
     <string name="share_method_full_content">لف گیری پوی کانفیگ</string>
+    <string name="action_edit">آلشتکاری</string>
+    <string name="action_delete">پاک کردن</string>
+    <string name="action_close">بستن</string>
 
     <string name="share_subscription_qrcode">کود QR</string>
     <string name="share_subscription_clipboard">و در کشیڌن من کلیپ بورد</string>
