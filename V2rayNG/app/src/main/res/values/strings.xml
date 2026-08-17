@@ -30,6 +30,7 @@
     <string name="menu_item_del_config">Delete config</string>
     <string name="action_delete">Delete</string>
     <string name="action_close">Close</string>
+    <string name="action_exit">Exit</string>
     <string name="action_back">Back</string>
     <string name="action_menu">Menu</string>
     <string name="action_more">More</string>

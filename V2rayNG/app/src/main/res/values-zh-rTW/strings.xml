@@ -30,6 +30,7 @@
     <string name="menu_item_del_config">刪除設定</string>
     <string name="action_delete">刪除</string>
     <string name="action_close">關閉</string>
+    <string name="action_exit">退出</string>
     <string name="action_back">返回</string>
     <string name="action_menu">選單</string>
     <string name="action_more">更多</string>

@@ -30,6 +30,7 @@
     <string name="menu_item_del_config">Удалить профиль</string>
     <string name="action_delete">Удалить</string>
     <string name="action_close">Закрыть</string>
+    <string name="action_exit">Выход</string>
     <string name="action_back">Назад</string>
     <string name="action_menu">Меню</string>
     <string name="action_more">Ещё</string>

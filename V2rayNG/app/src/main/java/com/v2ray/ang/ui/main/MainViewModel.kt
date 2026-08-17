@@ -63,6 +63,9 @@ class MainViewModel(
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private val _serviceStopGeneration = MutableStateFlow(0L)
+    val serviceStopGeneration: StateFlow<Long> = _serviceStopGeneration.asStateFlow()
+
     private val _serviceStatusMessages = MutableSharedFlow<ServiceStatusMessage>(
         extraBufferCapacity = 1
     )
@@ -134,6 +137,8 @@ class MainViewModel(
                 )
                 updateRunningState(false)
             }
+
+            MainServiceEvent.StateStopComplete -> _serviceStopGeneration.update { it + 1L }
 
             is MainServiceEvent.MeasureDelayResult -> {
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }

@@ -30,6 +30,7 @@
     <string name="menu_item_del_config">حذف کانفیگ</string>
     <string name="action_delete">حذف</string>
     <string name="action_close">بستن</string>
+    <string name="action_exit">خروج</string>
     <string name="action_back">بازگشت</string>
     <string name="action_menu">منو</string>
     <string name="action_more">بیشتر</string>

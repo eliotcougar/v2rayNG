@@ -59,6 +59,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class MainActivity : HelperBaseComponentActivity() {
     private companion object {
         const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
+        const val SERVICE_STOP_TIMEOUT_MILLIS = 5_000L
     }
 
     private val mainViewModel: MainViewModel by viewModels {
@@ -66,6 +67,7 @@ class MainActivity : HelperBaseComponentActivity() {
     }
     private var autoConnectAttempted = false
     private var autoConnectJob: Job? = null
+    private var serviceTransitionJob: Job? = null
 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -96,7 +98,7 @@ class MainActivity : HelperBaseComponentActivity() {
             val refreshGroups = SettingsChangeManager.consumeSetupGroupTab()
             mainViewModel.refreshUiSettings()
             if (refreshGroups) mainViewModel.onAction(MainAction.RefreshGroups)
-            if (restartService && mainViewModel.uiState.value.isRunning) restartV2Ray()
+            if (restartService) LauncherManager.restartService(this)
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -223,10 +225,7 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun autoConnectOnAppStart() {
-        if (mainViewModel.uiState.value.isRunning ||
-            CoreServiceManager.isRunning() ||
-            MmkvManager.getSelectServer().isNullOrEmpty()
-        ) return
+        if (mainViewModel.uiState.value.isRunning || MmkvManager.getSelectServer().isNullOrEmpty()) return
 
         if (SettingsManager.isVpnMode()) {
             val intent = VpnService.prepare(this)
@@ -247,6 +246,24 @@ class MainActivity : HelperBaseComponentActivity() {
             checkAndRequestPermission(PermissionType.ACCESS_LOCAL_NETWORK) {}
         }
         LauncherManager.startService(this)
+    }
+
+    private fun exitApp() {
+        serviceTransitionJob?.cancel()
+        if (!mainViewModel.uiState.value.isRunning) {
+            LauncherManager.stopService(this)
+            finishAndRemoveTask()
+            return
+        }
+
+        val stopGeneration = mainViewModel.serviceStopGeneration.value
+        LauncherManager.stopService(this)
+        serviceTransitionJob = lifecycleScope.launch {
+            withTimeoutOrNull(SERVICE_STOP_TIMEOUT_MILLIS) {
+                mainViewModel.serviceStopGeneration.first { it > stopGeneration }
+            }
+            finishAndRemoveTask()
+        }
     }
 
     private fun importManually(createConfigType: Int) {
@@ -328,7 +345,7 @@ class MainActivity : HelperBaseComponentActivity() {
         val selected = mainViewModel.uiState.value.selectedGuid
         if (guid != selected) {
             mainViewModel.updateSelectedGuid(guid)
-            if (mainViewModel.uiState.value.isRunning) restartV2Ray()
+            LauncherManager.restartService(this)
         }
     }
 
