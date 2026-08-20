@@ -24,7 +24,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.delay
+import com.v2ray.ang.extension.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -222,7 +222,7 @@ class MainViewModel(
         viewModelScope.launch(preloadDispatcher) {
             try {
                 initialPageReady.await()
-                delay(32L)
+                delay(32)
                 dataSource.initAssets()
                 dataSource.syncSubscriptions()
             } catch (cancelled: CancellationException) {
@@ -364,7 +364,7 @@ class MainViewModel(
                 preloadJob = viewModelScope.launch(preloadDispatcher) {
                     preloadOrder.forEach { groupId ->
                         ensureActive()
-                        delay(32L)
+                        delay(32)
                         val servers = loadGroup(groupId, forceRefresh)
                         updateGroupUi(groupId, servers)
                     }
@@ -617,7 +617,7 @@ class MainViewModel(
             }
             order.forEachIndexed { index, groupId ->
                 ensureActive()
-                if (index > 0) delay(32L)
+                if (index > 0) delay(32)
                 updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
             }
         }
@@ -628,7 +628,7 @@ class MainViewModel(
         keywordFilter = keyword
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
-            delay(300L)
+            delay(300)
             val snapshot = cacheMutex.withLock { groupDataCache.toMap() }
             ensureActive()
             snapshot.forEach { (groupId, servers) ->
@@ -689,10 +689,16 @@ class MainViewModel(
         dataSource.cancelAllPing()
         val groupId = uiState.value.selectedGroupId
         val servers = currentServers()
-        dataSource.clearAllTestDelayResults(servers.map { it.guid })
         if (servers.isEmpty()) {
             _uiState.update { it.copy(isTesting = false) }
             return
+        }
+        val serverGuids = servers.map { it.guid }
+        mutableServersForGroup(groupId).update { current ->
+            current.map { server ->
+                if (server.testDelayMillis == 0L) server
+                else server.copy(testDelayMillis = 0L)
+            }
         }
         testingGroupId = groupId
         _uiState.update {
@@ -702,12 +708,13 @@ class MainViewModel(
             )
         }
         viewModelScope.launch(ioDispatcher) {
+            dataSource.clearAllTestDelayResults(serverGuids)
             cacheMutex.withLock { groupDataCache.remove(groupId) }
             dataSource.sendMsg2TestService(
                 TestServiceMessage(
                     key = AppConfig.MSG_MEASURE_CONFIG_START,
                     subscriptionId = groupId,
-                    serverGuids = if (keywordFilter.isNotEmpty()) servers.map { it.guid } else emptyList(),
+                    serverGuids = if (keywordFilter.isNotEmpty()) serverGuids else emptyList(),
                     onlyTcp = onlyTcp
                 )
             )
