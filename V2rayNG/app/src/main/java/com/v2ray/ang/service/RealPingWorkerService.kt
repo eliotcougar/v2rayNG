@@ -250,17 +250,19 @@ class RealPingWorkerService(
     }
 
     private fun startTcping(guid: String): Long {
-        val config = MmkvManager.decodeServerConfig(guid) ?: return -1L
-        if (!config.configType.isComplexType() &&
-            config.configType != EConfigType.HYSTERIA2 &&
-            config.configType != EConfigType.WIREGUARD &&
-            config.alpn?.startsWith("h3") != true &&
-            config.server.isNotNullEmpty() &&
-            config.serverPort?.toIntOrNull() != null
+        val retFailure = -1L
+
+        val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
+        if (!config.configType.isComplexType()
+            && config.configType != EConfigType.HYSTERIA2
+            && config.configType != EConfigType.WIREGUARD
+            && config.alpn?.split(',')?.all { it.trim().startsWith("h3") } != true
+            && config.server.isNotNullEmpty()
+            && config.serverPort?.toIntOrNull() != null
         ) {
             return SpeedtestManager.socketConnectTime(config.server.orEmpty(), config.serverPort.orEmpty().toInt(), 1000)
         }
-        return -1L
+        return retFailure
     }
 
     private suspend fun startRealPing(guid: String): Long {
