@@ -136,7 +136,12 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureDelayResult -> {
-                _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
+                _uiState.update {
+                    it.copy(
+                        isTesting = false,
+                        testStatus = MainStatus.ConnectionTest(event.result)
+                    )
+                }
             }
 
             MainServiceEvent.MeasureConfigSuccess -> {
@@ -148,7 +153,7 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigNotify -> {
-                _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
+                _uiState.update { it.copy(testStatus = MainStatus.TestProgress(event.progress)) }
             }
 
             is MainServiceEvent.MeasureConfigFinish -> {
@@ -736,7 +741,7 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 isTesting = false,
-                status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
+                testStatus = null
             )
         }
     }
@@ -746,7 +751,7 @@ class MainViewModel(
         val groupId = uiState.value.selectedGroupId
         val servers = currentServers()
         if (servers.isEmpty()) {
-            _uiState.update { it.copy(isTesting = false) }
+            _uiState.update { it.copy(isTesting = false, testStatus = null) }
             return
         }
         val serverGuids = servers.map { it.guid }
@@ -766,7 +771,7 @@ class MainViewModel(
         _uiState.update {
             it.copy(
                 isTesting = true,
-                status = MainStatus.Testing
+                testStatus = MainStatus.Testing
             )
         }
         viewModelScope.launch(ioDispatcher) {
@@ -784,7 +789,12 @@ class MainViewModel(
     }
 
     fun testCurrentServerRealPing() {
-        _uiState.update { it.copy(status = MainStatus.Testing) }
+        _uiState.update {
+            it.copy(
+                isTesting = true,
+                testStatus = MainStatus.Testing
+            )
+        }
         dataSource.testCurrentServerRealPing()
     }
 
@@ -795,7 +805,7 @@ class MainViewModel(
             _uiState.update {
                 it.copy(
                     isTesting = false,
-                    status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
+                    testStatus = null
                 )
             }
             reloadAllGroups(_uiState.value.groups.map { it.id })
@@ -831,8 +841,8 @@ class MainViewModel(
             state.copy(
                 isRunning = running,
                 serviceStateKnown = true,
-                status = if (!clearTestingText && state.isTesting) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                status = if (running) MainStatus.Connected else MainStatus.Disconnected,
+                testStatus = if (!clearTestingText && state.isTesting) state.testStatus else null
             )
         }
     }

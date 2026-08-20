@@ -41,11 +41,15 @@ import com.v2ray.ang.ui.compose.isTelevisionDevice
 @Composable
 fun MainBottomBar(
     displayText: String,
+    testDisplayText: String,
     isRunning: Boolean,
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
+    val statusDescription = listOf(displayText, testDisplayText)
+        .filter { it.isNotBlank() }
+        .joinToString(". ")
 
     if (isTelevision) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -61,7 +65,8 @@ fun MainBottomBar(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 48.dp),
+                        .padding(horizontal = 48.dp)
+                        .semantics { contentDescription = statusDescription },
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -70,6 +75,14 @@ fun MainBottomBar(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    if (testDisplayText.isNotBlank()) {
+                        Text(
+                            text = testDisplayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
@@ -82,6 +95,7 @@ fun MainBottomBar(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
                 .clickable(onClick = { onAction(MainAction.TestCurrentServer) })
+                .semantics { contentDescription = statusDescription }
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             AppDivider()
@@ -93,13 +107,22 @@ fun MainBottomBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics {
-                        contentDescription = displayText
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (testDisplayText.isNotBlank()) {
+                        Text(
+                            text = testDisplayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
-                )
+                }
             }
         }
         FloatingActionButton(

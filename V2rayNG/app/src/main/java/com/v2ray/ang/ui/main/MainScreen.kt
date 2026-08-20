@@ -51,6 +51,10 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         mainViewModel.formatStatus(uiState.status)
     }
     val selectedGuid = uiState.selectedGuid
+    val testDisplayText = uiState.testStatus
+        ?.let(mainViewModel::formatStatus)
+        ?.replace('\n', ' ')
+        .orEmpty()
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = isTelevision || uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
@@ -187,7 +191,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                     )
                 },
                 bottomBar = {
-                    MainBottomBar(displayText, isRunning, isDarkTheme, onAction)
+                    MainBottomBar(displayText, testDisplayText, isRunning, isDarkTheme, onAction)
                 }
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {

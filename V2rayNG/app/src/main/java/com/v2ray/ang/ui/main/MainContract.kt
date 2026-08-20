@@ -25,6 +25,7 @@ data class MainUiState(
     val serviceStateKnown: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val testStatus: MainStatus? = null,
     val searchQuery: String = "",
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
