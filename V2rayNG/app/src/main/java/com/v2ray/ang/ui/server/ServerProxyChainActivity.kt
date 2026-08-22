@@ -485,7 +485,11 @@ fun ProxyChainScreen(
                                 state = dropdownState,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .dpadOrderedFocusNavigation(focusTargets.field, actionFocusOrder)
+                                    .dpadOrderedFocusNavigation(
+                                        current = focusTargets.field,
+                                        order = actionFocusOrder,
+                                        onBeforeFirst = { backFocusRequester.requestFocus() }
+                                    )
                                     .dpadLongPressToMove(
                                         enabled = isTelevision,
                                         item = dpadReorderItem,

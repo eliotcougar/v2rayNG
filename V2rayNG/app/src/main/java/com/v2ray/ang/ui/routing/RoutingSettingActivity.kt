@@ -381,7 +381,11 @@ fun RoutingSettingScreen(
                                                 cornerRadius = 16.dp,
                                                 showFocus = !isMoving
                                             )
-                                            .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
+                                            .dpadOrderedFocusNavigation(
+                                                current = focusTargets.row,
+                                                order = actionFocusOrder,
+                                                onBeforeFirst = { navigationFocusRequester.requestFocus() }
+                                            )
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     previousTargets?.row?.requestFocus()

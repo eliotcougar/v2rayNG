@@ -308,12 +308,15 @@ internal fun Modifier.dpadPopupHorizontalNavigation(
     }
 }
 
-/** Lets a focused subtree leave through its logical leading edge before a child consumes the key. */
+/**
+ * Lets a focused row leave through its logical leading edge. This deliberately handles the
+ * bubbling event: a focused child action gets the first chance to navigate within the row.
+ */
 @Composable
 internal fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMovePrevious: () -> Unit): Modifier {
     if (!isTelevisionDevice() || !enabled) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    return onPreviewKeyEvent { event ->
+    return onKeyEvent { event ->
         if (event.type == KeyEventType.KeyDown &&
             logicalHorizontalDirection(event.key, isRtl) == DpadHorizontalDirection.Previous
         ) {

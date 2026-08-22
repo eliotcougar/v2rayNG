@@ -45,6 +45,8 @@ import com.v2ray.ang.ui.compose.InputField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsMenuItem
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -202,6 +204,7 @@ fun BackupScreen(
     var showWebDavDialog by remember { mutableStateOf(false) }
 
     val webDavSummary = currentWebDavConfig?.baseUrl
+    val backFocusRequester = rememberDpadFocusRequester()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -209,7 +212,8 @@ fun BackupScreen(
             AppTopBar(
                 title = stringResource(R.string.title_configuration_backup_restore),
                 onBackClick = onBackClick,
-                isLoading = isLoading
+                isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester
             )
         }
     ) { innerPadding ->
@@ -223,22 +227,26 @@ fun BackupScreen(
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_backup_24dp),
                 title = stringResource(R.string.title_configuration_backup),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { showBackupDialog = true }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_share_24dp),
                 title = stringResource(R.string.title_configuration_share),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = onShareClick
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_restore_24dp),
                 title = stringResource(R.string.title_configuration_restore),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { showRestoreDialog = true }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_delete_24dp),
                 title = stringResource(R.string.title_profile_storage_cleanup),
                 subtitle = stringResource(R.string.summary_profile_storage_cleanup),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { showCleanupDialog = true }
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -246,6 +254,7 @@ fun BackupScreen(
                 icon = painterResource(R.drawable.ic_settings_24dp),
                 title = stringResource(R.string.title_webdav_config_setting),
                 subtitle = webDavSummary,
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { showWebDavDialog = true }
             )
             NavigationBarsSpacer()

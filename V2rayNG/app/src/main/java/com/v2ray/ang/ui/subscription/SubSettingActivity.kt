@@ -60,7 +60,6 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
-import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
@@ -249,7 +248,11 @@ fun SubSettingScreen(
                                                 cornerRadius = 16.dp,
                                                 showFocus = !isMoving
                                             )
-                                            .dpadOrderedFocusNavigation(focusTargets.row, actionFocusOrder)
+                                            .dpadOrderedFocusNavigation(
+                                                current = focusTargets.row,
+                                                order = actionFocusOrder,
+                                                onBeforeFirst = { backFocusRequester.requestFocus() }
+                                            )
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     previousTargets?.row?.requestFocus() ?: false
