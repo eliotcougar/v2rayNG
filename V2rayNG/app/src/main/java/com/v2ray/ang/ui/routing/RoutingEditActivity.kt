@@ -65,7 +65,11 @@ import java.util.UUID
 private val ROUTING_NETWORK_OPTIONS = listOf("tcp", "udp", "tcp,udp")
 
 class RoutingEditActivity : BaseComponentActivity() {
-    private val position by lazy { intent.getIntExtra("position", -1) }
+    companion object {
+        const val EXTRA_RULE_ID = "rule_id"
+    }
+
+    private val ruleId by lazy { intent.getStringExtra(EXTRA_RULE_ID).orEmpty() }
 
     private var initial: RulesetItem? = null
     private lateinit var outboundSuggestions: List<String>
@@ -73,7 +77,7 @@ class RoutingEditActivity : BaseComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        initial = SettingsManager.getRoutingRuleset(position)
+        initial = SettingsManager.getRoutingRulesetById(ruleId)
         val profileRemarks = SettingsManager.getProfileRemarks()
         outboundSuggestions = (BUILTIN_OUTBOUND_TAGS.toList() + profileRemarks).distinct()
         canUseProcess = SettingsManager.canUseProcessRouting()
@@ -82,7 +86,6 @@ class RoutingEditActivity : BaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         RoutingEditScreen(
-            position = position,
             initial = initial,
             outboundSuggestions = outboundSuggestions,
             canUseProcess = canUseProcess,
@@ -97,19 +100,23 @@ class RoutingEditActivity : BaseComponentActivity() {
             toast(R.string.sub_setting_remarks)
             return false
         }
-        if (position < 0 && rulesetItem.id.isEmpty()) {
+        if (rulesetItem.id.isEmpty()) {
             rulesetItem.id = UUID.randomUUID().toString()
         }
-        SettingsManager.saveRoutingRuleset(position, rulesetItem)
+        if (ruleId.isEmpty()) {
+            SettingsManager.saveRoutingRuleset(-1, rulesetItem)
+        } else if (!SettingsManager.saveRoutingRulesetById(ruleId, rulesetItem)) {
+            return false
+        }
         toastSuccess(R.string.toast_success)
         finish()
         return true
     }
 
     private fun deleteServer(): Boolean {
-        if (position >= 0) {
+        if (ruleId.isNotEmpty()) {
             lifecycleScope.launch(Dispatchers.IO) {
-                SettingsManager.removeRoutingRuleset(position)
+                SettingsManager.removeRoutingRulesetById(ruleId)
                 withContext(Dispatchers.Main) { finish() }
             }
         }
@@ -119,7 +126,6 @@ class RoutingEditActivity : BaseComponentActivity() {
 
 @Composable
 fun RoutingEditScreen(
-    position: Int,
     initial: RulesetItem?,
     outboundSuggestions: List<String>,
     canUseProcess: Boolean,
@@ -157,7 +163,7 @@ fun RoutingEditScreen(
         }
     }
     fun buildRuleset(): RulesetItem {
-        val rulesetItem = SettingsManager.getRoutingRuleset(position) ?: RulesetItem()
+        val rulesetItem = initial?.copy() ?: RulesetItem()
         rulesetItem.apply {
             this.remarks = remarks
             this.locked = locked
@@ -195,7 +201,7 @@ fun RoutingEditScreen(
                 title = stringResource(R.string.routing_settings_rule_title),
                 onBackClick = onBackClick,
                 actionItems = buildList {
-                    if (position >= 0) add(
+                    if (initial != null) add(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
                             label = stringResource(R.string.acc_delete),

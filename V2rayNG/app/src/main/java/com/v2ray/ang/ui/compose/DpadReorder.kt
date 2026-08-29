@@ -42,7 +42,9 @@ import kotlinx.coroutines.launch
  * Without a quiet period, one hold can start movement, drop the item, and then click it.
  * Keep a conservative 500 ms floor, while allowing slower configured key-repeat
  * delays to extend it. This only delays the Center press that drops a moving item;
- * directional movement remains immediate.
+ * directional movement remains immediate. Remove the quiet period only when every supported
+ * Android TV remote and USB/Bluetooth keyboard path reports a held activation as one down/up
+ * sequence with non-zero repeatCount or isLongPress on every repeated event.
  */
 private const val MIN_KEY_REPEAT_QUIET_PERIOD_MS = 500L
 

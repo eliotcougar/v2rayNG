@@ -28,6 +28,12 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -81,6 +87,8 @@ private fun SettingsItemRow(
     modifier: Modifier = Modifier,
     showFocus: Boolean = true,
     focusRequester: FocusRequester? = null,
+    role: Role? = null,
+    toggleState: Boolean? = null,
     trailing: @Composable (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
@@ -98,8 +106,12 @@ private fun SettingsItemRow(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester, showFocus = showFocus)
+            .semantics(mergeDescendants = true) {
+                role?.let { this.role = it }
+                toggleState?.let { toggleableState = ToggleableState(it) }
+            }
             .then(
-                onClick?.let { Modifier.dpadClickable(enabled, onClick = it) } ?: Modifier
+                onClick?.let { Modifier.dpadClickable(enabled, role = role, onClick = it) } ?: Modifier
             )
             .padding(
                 horizontal = if (isTelevision) 24.dp else 16.dp,
@@ -314,11 +326,13 @@ fun SettingsSwitchItem(
             { onCheckedChange(!checked) }
         } else null,
         modifier = modifier,
+        role = Role.Switch,
+        toggleState = checked,
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = if (!isTelevision && enabled) onCheckedChange else null,
-                modifier = Modifier.scale(if (isTelevision) 0.75f else 0.8f),
+                onCheckedChange = null,
+                modifier = Modifier.scale(if (isTelevision) 0.75f else 0.8f).clearAndSetSemantics {},
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                     checkedTrackColor = MaterialTheme.colorScheme.secondary

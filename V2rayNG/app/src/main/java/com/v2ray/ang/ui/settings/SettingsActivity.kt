@@ -74,6 +74,7 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val backFocusRequester = rememberDpadFocusRequester()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val startupSettings by viewModel.startupSettings.collectAsStateWithLifecycle()
     val isTelevision = isTelevisionDevice()
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -146,8 +147,6 @@ fun SettingsScreen(
     var coreLogLevel by rememberMmkvString(AppConfig.PREF_LOGLEVEL, "warning")
     var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "0")
 
-    var autoConnectOnAppStart by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
-    var startOnBoot by rememberMmkvBool(AppConfig.PREF_START_ON_BOOT, MmkvManager.decodeStartOnBoot())
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
     var realPingConcurrency by rememberMmkvString(AppConfig.PREF_REAL_PING_CONCURRENCY, "16")
     var ipApiUrl by rememberMmkvString(AppConfig.PREF_IP_API_URL, "")
@@ -617,15 +616,15 @@ fun SettingsScreen(
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_is_booted),
                     summary = stringResource(R.string.summary_pref_is_booted),
-                    checked = autoConnectOnAppStart,
-                    onCheckedChange = { autoConnectOnAppStart = it }
+                    checked = startupSettings.autoConnectOnAppStart,
+                    onCheckedChange = viewModel::setAutoConnectOnAppStart
                 )
                 if (isTelevision) {
                     SettingsSwitchItem(
                         title = stringResource(R.string.title_pref_start_on_boot),
                         summary = stringResource(R.string.summary_pref_start_on_boot),
-                        checked = startOnBoot,
-                        onCheckedChange = { startOnBoot = it }
+                        checked = startupSettings.startOnBoot,
+                        onCheckedChange = viewModel::setStartOnBoot
                     )
                 }
                 SettingsEditItem(

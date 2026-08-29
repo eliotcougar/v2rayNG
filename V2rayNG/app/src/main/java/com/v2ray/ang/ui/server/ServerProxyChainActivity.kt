@@ -217,7 +217,7 @@ fun ProxyChainScreen(
     var memberIds by rememberSaveable { mutableStateOf(initialMembers.indices.map(Int::toLong)) }
     var nextMemberId by rememberSaveable { mutableLongStateOf(initialMembers.size.toLong()) }
     var showProfileDeleteConfirm by remember { mutableStateOf(false) }
-    var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var memberToDeleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }
     var pendingAddFocus by remember { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
@@ -298,7 +298,8 @@ fun ProxyChainScreen(
         pendingAddFocus = false
     }
 
-    fun removeMember(index: Int) {
+    fun removeMember(memberId: Long) {
+        val index = memberIds.indexOf(memberId)
         if (index !in members.indices || index !in memberIds.indices) return
         val nextFocusId = memberIds.getOrNull(index + 1)
             ?: memberIds.getOrNull(index - 1)
@@ -514,8 +515,8 @@ fun ProxyChainScreen(
                                         }
                                     ),
                                 onClick = {
-                                    if (member.isBlank()) removeMember(index)
-                                    else memberToDeleteIndex = index
+                                    if (member.isBlank()) removeMember(memberId)
+                                    else memberToDeleteId = memberId
                                 }
                             )
                         }
@@ -532,14 +533,14 @@ fun ProxyChainScreen(
             onDismiss = { showProfileDeleteConfirm = false }
         )
     }
-    memberToDeleteIndex?.let { index ->
+    memberToDeleteId?.let { memberId ->
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_proxy_chain_member),
             onConfirm = {
-                removeMember(index)
-                memberToDeleteIndex = null
+                removeMember(memberId)
+                memberToDeleteId = null
             },
-            onDismiss = { memberToDeleteIndex = null }
+            onDismiss = { memberToDeleteId = null }
         )
     }
 }

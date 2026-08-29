@@ -67,6 +67,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -251,6 +257,11 @@ fun AppIconButton(
             )
             .onFocusChanged { isFocused = it.isFocused }
             .clip(shape)
+            .then(
+                contentDescription?.let { description ->
+                    Modifier.semantics(mergeDescendants = true) { this.contentDescription = description }
+                } ?: Modifier
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -263,7 +274,7 @@ fun AppIconButton(
     ) {
         Icon(
             painter = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = resolvedContentColor,
             modifier = Modifier.size(24.dp)
         )
@@ -282,7 +293,13 @@ fun AppIconButton(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(8.dp))
-                Text(text = label, color = resolvedContentColor, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                Text(
+                    text = label,
+                    color = resolvedContentColor,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    modifier = Modifier.clearAndSetSemantics {}
+                )
             }
         }
     }
@@ -312,6 +329,10 @@ fun AppRowSwitch(
             .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 24.dp)
             .onFocusChanged { isFocused = it.isFocused }
             .clip(shape)
+            .semantics(mergeDescendants = true) {
+                role = Role.Switch
+                toggleableState = ToggleableState(checked)
+            }
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -326,7 +347,7 @@ fun AppRowSwitch(
             checked = checked,
             onCheckedChange = null,
             enabled = enabled,
-            modifier = Modifier.scale(0.75f),
+            modifier = Modifier.scale(0.75f).clearAndSetSemantics {},
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                 checkedTrackColor = colorFabActive
@@ -351,7 +372,8 @@ fun AppRowSwitch(
                     text = label.orEmpty(),
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1
+                    maxLines = 1,
+                    modifier = Modifier.clearAndSetSemantics {}
                 )
             }
         }
@@ -453,12 +475,16 @@ fun AppListItem(
     focusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
-    val isTelevision = isTelevisionDevice()
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester)
-            .dpadClickable { onCheckedChange(!checked) }
+            .semantics(mergeDescendants = true) {
+                contentDescription = appName
+                role = Role.Checkbox
+                toggleableState = ToggleableState(checked)
+            }
+            .dpadClickable(role = Role.Checkbox) { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -483,7 +509,7 @@ fun AppListItem(
             fallback = painterResource(R.drawable.ic_image_24dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).clearAndSetSemantics {}) {
             Text(text = appName, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -496,7 +522,8 @@ fun AppListItem(
         }
         Checkbox(
             checked = checked,
-            onCheckedChange = if (isTelevision) null else onCheckedChange,
+            onCheckedChange = null,
+            modifier = Modifier.clearAndSetSemantics {},
             colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
         )
     }

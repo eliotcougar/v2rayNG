@@ -34,6 +34,16 @@ import kotlinx.coroutines.flow.drop
 
 internal class ProfileStorageException(message: String) : IllegalStateException(message)
 
+internal fun migrateStartOnBootSetting(
+    storedValue: Boolean?,
+    legacyValue: Boolean,
+    persist: (Boolean) -> Unit
+): Boolean {
+    if (storedValue != null) return storedValue
+    persist(legacyValue)
+    return legacyValue
+}
+
 object MmkvManager {
 
     //region private
@@ -968,14 +978,13 @@ object MmkvManager {
      * value once so existing installations retain their behavior and the two switches can then
      * change independently.
      */
-    fun decodeStartOnBoot(): Boolean {
-        if (!settingsStorage.containsKey(PREF_START_ON_BOOT)) {
-            val legacyValue = decodeAutoConnectOnAppStart()
-            settingsStorage.encode(PREF_START_ON_BOOT, legacyValue)
-            return legacyValue
-        }
-        return decodeSettingsBool(PREF_START_ON_BOOT, false)
-    }
+    fun decodeStartOnBoot(): Boolean = migrateStartOnBootSetting(
+        storedValue = if (settingsStorage.containsKey(PREF_START_ON_BOOT)) {
+            decodeSettingsBool(PREF_START_ON_BOOT, false)
+        } else null,
+        legacyValue = decodeAutoConnectOnAppStart(),
+        persist = { settingsStorage.encode(PREF_START_ON_BOOT, it) }
+    )
 
     //endregion
 

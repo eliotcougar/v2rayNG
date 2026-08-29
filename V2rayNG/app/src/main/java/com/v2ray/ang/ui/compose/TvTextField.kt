@@ -45,6 +45,20 @@ import androidx.compose.ui.unit.dp
 private val TvImeBottomClearance = 32.dp
 private const val TvImeLayoutSettlingFrames = 3
 
+internal enum class TvTextFieldRecoveryAction { None, FinishEditing, MaintainEditor, RequestEditorFocus }
+
+internal fun tvTextFieldRecoveryAction(
+    isEditing: Boolean,
+    editorHasFocus: Boolean,
+    imeWasVisible: Boolean,
+    isImeVisible: Boolean
+): TvTextFieldRecoveryAction = when {
+    isEditing && editorHasFocus && imeWasVisible && !isImeVisible -> TvTextFieldRecoveryAction.FinishEditing
+    isEditing && editorHasFocus -> TvTextFieldRecoveryAction.MaintainEditor
+    isEditing -> TvTextFieldRecoveryAction.RequestEditorFocus
+    else -> TvTextFieldRecoveryAction.None
+}
+
 data class TvTextFieldNavigation(
     val focusRequester: FocusRequester? = null,
     val onMoveUp: (() -> Boolean)? = null,
@@ -116,6 +130,12 @@ internal class TvTextFieldState(val passiveFocusRequester: FocusRequester, priva
     }
 }
 
+/**
+ * Isolates [ExperimentalLayoutApi] for WindowInsets.isImeVisible. Android TV overlay IMEs and
+ * resizing multi-line editors can otherwise leave the field under the keyboard or oscillating by
+ * one pixel. Reevaluate the opt-in when isImeVisible becomes stable; remove the frame settling
+ * workaround when supported TV keyboards report final editor bounds in the visibility frame.
+ */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = null): TvTextFieldState {
@@ -139,15 +159,11 @@ internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = n
      * BringIntoViewRequester immediately uses stale bounds, causing the rapid one-pixel jitter or
      * leaving the last line under the keyboard. Three frames is the shortest value verified on the
      * AOSP TV keyboard; it is a compatibility delay, not animation timing.
-     */
+    */
     LaunchedEffect(state.isEditing, state.editorHasFocus, isImeVisible, state.measuredSize) {
-        when {
-            state.isEditing &&
-                state.editorHasFocus &&
-                state.imeWasVisible &&
-                !isImeVisible -> state.finishEditing(restoreFocus = true)
-
-            state.isEditing && state.editorHasFocus -> {
+        when (tvTextFieldRecoveryAction(state.isEditing, state.editorHasFocus, state.imeWasVisible, isImeVisible)) {
+            TvTextFieldRecoveryAction.FinishEditing -> state.finishEditing(restoreFocus = true)
+            TvTextFieldRecoveryAction.MaintainEditor -> {
                 if (isImeVisible) {
                     state.imeWasVisible = true
                     repeat(TvImeLayoutSettlingFrames) { withFrameNanos { } }
@@ -155,8 +171,8 @@ internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = n
                 }
                 keyboardController?.show()
             }
-
-            state.isEditing -> state.editorFocusRequester.requestFocus()
+            TvTextFieldRecoveryAction.RequestEditorFocus -> state.editorFocusRequester.requestFocus()
+            TvTextFieldRecoveryAction.None -> Unit
         }
     }
     LaunchedEffect(state.isEditing, state.restorePassiveFocus) {

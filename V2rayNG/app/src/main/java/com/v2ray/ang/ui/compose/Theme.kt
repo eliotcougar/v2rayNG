@@ -1,10 +1,9 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-
 package com.v2ray.ang.ui.compose
 
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -168,7 +167,15 @@ fun resolveDarkTheme(): Boolean {
 
 val LocalDarkTheme = compositionLocalOf { false }
 
-/** Keeps the platform TV focus policy, but aligns its requested movement with lazy-list pixels. */
+internal fun pixelAlignedScrollDistance(distance: Float): Float = distance.roundToInt().toFloat()
+
+/**
+ * Isolates [ExperimentalFoundationApi] while retaining the platform focus policy and rounding its
+ * movement to lazy-list pixels, preventing one-pixel oscillation on Android TV. Reevaluate when
+ * BringIntoViewSpec becomes stable; remove this adapter when the stable platform policy returns
+ * pixel-aligned distances on the supported Compose and TV versions.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 private class PixelAlignedBringIntoViewSpec(
     private val delegate: BringIntoViewSpec
 ) : BringIntoViewSpec {
@@ -176,16 +183,13 @@ private class PixelAlignedBringIntoViewSpec(
         offset: Float,
         size: Float,
         containerSize: Float
-    ): Float = delegate.calculateScrollDistance(
-        offset = offset,
-        size = size,
-        containerSize = containerSize
+    ): Float = pixelAlignedScrollDistance(
+        delegate.calculateScrollDistance(offset = offset, size = size, containerSize = containerSize)
     )
-        .roundToInt()
-        .toFloat()
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun AppTheme(
     darkTheme: Boolean = resolveDarkTheme(),
     content: @Composable () -> Unit

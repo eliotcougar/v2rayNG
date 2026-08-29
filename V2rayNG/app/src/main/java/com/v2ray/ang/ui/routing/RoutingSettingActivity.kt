@@ -124,8 +124,8 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
             domainStrategyState = domainStrategyState,
             onBackClick = { finish() },
             onAddRule = { startActivity(Intent(this, RoutingEditActivity::class.java)) },
-            onEditRule = { position ->
-                startActivity(Intent(this, RoutingEditActivity::class.java).putExtra("position", position))
+            onEditRule = { ruleId ->
+                startActivity(Intent(this, RoutingEditActivity::class.java).putExtra(RoutingEditActivity.EXTRA_RULE_ID, ruleId))
             },
             onDomainStrategySelected = { value ->
                 MmkvManager.encodeSettings(AppConfig.PREF_ROUTING_DOMAIN_STRATEGY, value)
@@ -223,7 +223,7 @@ fun RoutingSettingScreen(
     domainStrategyState: MutableStateFlow<String>,
     onBackClick: () -> Unit,
     onAddRule: () -> Unit,
-    onEditRule: (Int) -> Unit,
+    onEditRule: (String) -> Unit,
     onDomainStrategySelected: (String) -> Unit,
     onImportPredefined: (RoutingType) -> Unit,
     onImportClipboard: () -> Unit,
@@ -398,7 +398,7 @@ fun RoutingSettingScreen(
                                             .dpadLongPressToMove(
                                                 enabled = isTelevision,
                                                 item = dpadReorderItem,
-                                                onClick = { onEditRule(index) }
+                                                onClick = { onEditRule(ruleset.id) }
                                             )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
@@ -455,7 +455,7 @@ fun RoutingSettingScreen(
                                             previousRow = previousTargets?.edit,
                                             nextRow = nextTargets?.edit
                                         ),
-                                        onClick = { onEditRule(index) }
+                                        onClick = { onEditRule(ruleset.id) }
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
@@ -474,7 +474,7 @@ fun RoutingSettingScreen(
                                         checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
-                                            viewModel.update(index, updated)
+                                            viewModel.update(ruleset.id, updated)
                                         },
                                         label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = focusTargets.toggle,
@@ -491,14 +491,14 @@ fun RoutingSettingScreen(
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_edit_24dp),
                                     label = stringResource(R.string.action_edit),
-                                    onClick = { onEditRule(index) }
+                                    onClick = { onEditRule(ruleset.id) }
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Switch(
                                     checked = ruleset.enabled,
                                     onCheckedChange = { checked ->
                                         val updated = ruleset.copy(enabled = checked)
-                                        viewModel.update(index, updated)
+                                        viewModel.update(ruleset.id, updated)
                                     },
                                     modifier = Modifier.scale(0.7f),
                                     colors = SwitchDefaults.colors(
@@ -523,8 +523,7 @@ fun RoutingSettingScreen(
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_routing_rule),
             onConfirm = {
-                val position = rulesets.indexOfFirst { it.id == ruleId }
-                if (position >= 0) viewModel.remove(position)
+                viewModel.remove(ruleId)
                 deleteRuleId = null
             },
             onDismiss = { deleteRuleId = null }

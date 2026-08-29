@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
@@ -50,22 +51,13 @@ import com.v2ray.ang.ui.userasset.UserAssetActivity
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 
 class MainActivity : HelperBaseComponentActivity() {
-    private companion object {
-        const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
-    }
-
     private val mainViewModel: MainViewModel by viewModels {
         MainViewModel.Factory(application, MainRepository(application as AngApplication))
     }
-    private var autoConnectAttempted = false
-    private var autoConnectJob: Job? = null
 
     private val requestVpnPermission =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
@@ -114,30 +106,24 @@ class MainActivity : HelperBaseComponentActivity() {
                 intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER))
             && !mainViewModel.uiState.value.isRunning
         ) {
-            autoConnectAttempted = false
+            mainViewModel.onAction(MainAction.ResetAutoConnectAttempt)
         }
     }
 
     override fun onPostResume() {
         super.onPostResume()
-        if (autoConnectAttempted || !MmkvManager.decodeAutoConnectOnAppStart()) return
-        autoConnectAttempted = true
-        autoConnectJob?.cancel()
-        autoConnectJob = lifecycleScope.launch {
-            val currentState = mainViewModel.uiState.value
-            val resolvedState = if (currentState.serviceStateKnown) {
-                currentState
-            } else {
-                withTimeoutOrNull(SERVICE_STATE_QUERY_TIMEOUT_MILLIS) {
-                    mainViewModel.uiState.first { it.serviceStateKnown }
-                }
-            }
-            if (resolvedState?.isRunning != true) autoConnectOnAppStart()
-        }
+        mainViewModel.onAction(MainAction.AppResumed)
     }
 
     @Composable
     override fun ScreenContent() {
+        LaunchedEffect(mainViewModel) {
+            mainViewModel.activityEffects.collect { effect ->
+                when (effect) {
+                    MainActivityEffect.RequestAutoConnect -> autoConnectOnAppStart()
+                }
+            }
+        }
         BackHandler { moveTaskToBack(false) }
         MainScreen(
             mainViewModel = mainViewModel,

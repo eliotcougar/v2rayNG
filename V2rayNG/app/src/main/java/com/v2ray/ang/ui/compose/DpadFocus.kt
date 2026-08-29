@@ -143,11 +143,18 @@ internal fun Modifier.tvSafeAreaPadding(horizontal: Dp = 48.dp, vertical: Dp = 0
     return padding(horizontal = horizontal, vertical = vertical)
 }
 
+internal fun tvImeOverlayPadding(
+    isTelevision: Boolean,
+    isImeVisible: Boolean,
+    reportedImeBottomInset: Int,
+    fallbackHeight: Dp
+): Dp = if (isTelevision && isImeVisible && reportedImeBottomInset == 0) fallbackHeight else 0.dp
+
 /**
- * Applies the platform IME inset everywhere, and reserves layout space for TV keyboards that
- * are rendered as overlays while reporting a zero-height IME inset. Because the fallback is
- * layout padding outside the scroll container, even a short form gains enough scroll range for
- * BringIntoViewRequester to reveal its final field.
+ * Isolates [ExperimentalLayoutApi] for WindowInsets.isImeVisible. Some Android TV overlay IMEs
+ * report a visible keyboard with a zero-height inset; without fallback space, the last form field
+ * cannot be brought above the keyboard. Reevaluate the opt-in when isImeVisible becomes stable,
+ * and remove the fallback when supported TV keyboards consistently report a non-zero IME inset.
  */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
@@ -160,11 +167,7 @@ internal fun Modifier.tvAwareImePadding(overlayFallbackHeight: Dp = 240.dp): Mod
     } else {
         0
     }
-    val overlayPadding = if (isTelevision && isImeVisible && reportedImeBottomInset == 0) {
-        overlayFallbackHeight
-    } else {
-        0.dp
-    }
+    val overlayPadding = tvImeOverlayPadding(isTelevision, isImeVisible, reportedImeBottomInset, overlayFallbackHeight)
 
     return imePadding().padding(bottom = overlayPadding)
 }
