@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.system.OsConstants
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
@@ -553,6 +554,7 @@ object CoreServiceManager {
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_USER_PRESENT)
+            addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
         }
         val registered = mutableListOf<BroadcastReceiver>()
         try {
@@ -666,6 +668,14 @@ object CoreServiceManager {
             onUnderlyingNetworksChanged = { networks -> serviceControl?.get()?.setUnderlyingNetworks(networks) },
             onNetworkEvent = { event -> handleNetworkEvent(service, event) },
         ).also { it.register() }
+    }
+
+    private fun retireXHTTPClientsAfterDeviceIdle(ctx: Context) {
+        val powerManager = ctx.getSystemService(PowerManager::class.java)
+        if (powerManager.isDeviceIdleMode || !isRunning()) return
+
+        val retired = coreController.retireXHTTPClients()
+        LogUtil.i(AppConfig.TAG, "StartCore-Manager: Retired $retired cached XHTTP clients after device idle")
     }
 
     private fun handleNetworkEvent(service: Service, event: NetworkMonitor.NetworkEvent) {
@@ -971,6 +981,10 @@ object CoreServiceManager {
                 Intent.ACTION_SCREEN_ON -> {
                     LogUtil.i(AppConfig.TAG, "StartCore-Manager: Screen on")
                     NotificationManager.startSpeedNotification()
+                }
+
+                PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED -> {
+                    ctx?.let(::retireXHTTPClientsAfterDeviceIdle)
                 }
             }
         }
