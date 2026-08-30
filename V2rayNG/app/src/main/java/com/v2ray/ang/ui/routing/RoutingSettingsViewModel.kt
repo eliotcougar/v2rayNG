@@ -62,7 +62,7 @@ class RoutingSettingsViewModel(application: Application) : BaseViewModel(applica
 
     fun remove(ruleId: String) {
         val removal = removeRoutingRule(rulesets, ruleId) ?: return
-        SettingsManager.removeRoutingRuleset(removal.position)
+        SettingsManager.removeRoutingRuleset(ruleId)
         rulesets.clear()
         rulesets.addAll(removal.remainingRules)
         _rulesetsFlow.value = rulesets.toList()
