@@ -442,6 +442,7 @@
     <string name="connection_connected">منپیز هڌ. سی واجۊری کیلیک کوݩ.</string>
     <string name="connection_connected_accessibility">منپیز هڌ</string>
     <string name="connection_connected_tv">منپیز هڌ</string>
+    <string name="connection_connected_via">منپیز وا %s</string>
     <string name="connection_not_connected">منپیز نؽڌ</string>
     <string name="connection_running_task_left">آزمایشا هونی ٱنجوم ابۊن: %s</string>
 
@@ -685,4 +686,8 @@
     <string name="connection_test_empty_message">دووسمندی نؽ</string>
     <string name="value_unknown">نا مؽخص</string>
 
+    <string name="notification_core_recovery_failed">بازیابی اتصال ناموفق بود. برای جلوگیری از نشت، ترافیک مسدود می‌ماند؛ v2rayNG را دوباره راه‌اندازی کنید.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">تورا کارا سی هر شبکه وای‌فای ن و یاد ودارین</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">نوم شبکه وای‌فای منپیز وابیڌه ن سی نگهداشتن تاریخچه تور جۊری و کار اگره. چۊ ٱندروید نوم وای‌فای ن دووسمندی جایونی دونسته، دسرسی جای دقیق لازوم هڌ.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">دسرسی جای دقیق سی خوندن نوم شبکه وای‌فای لازوم هڌ</string>
 </resources>

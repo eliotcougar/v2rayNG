@@ -442,6 +442,7 @@
     <string name="connection_connected">متصل است.\nبرای بررسی اتصال ضربه بزنید.</string>
     <string name="connection_connected_accessibility">متصل است</string>
     <string name="connection_connected_tv">متصل است</string>
+    <string name="connection_connected_via">متصل از طریق %s</string>
     <string name="connection_not_connected">متصل نیست</string>
     <string name="connection_running_task_left">آزمایش‌های در حال اجرا: %s</string>
 
@@ -685,4 +686,8 @@
     <string name="connection_test_empty_message">جزئیاتی در دسترس نیست</string>
     <string name="value_unknown">ناشناخته</string>
 
+    <string name="notification_core_recovery_failed">بازیابی اتصال ناموفق بود. برای جلوگیری از نشت، ترافیک مسدود می‌ماند؛ v2rayNG را دوباره راه‌اندازی کنید.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">به‌خاطر سپردن مسیرهای قابل استفاده برای هر شبکه Wi-Fi</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">برای نگه‌داری سابقه مسیر جداگانه، از نام شبکه Wi-Fi متصل استفاده می‌کند. به مجوز مکان دقیق نیاز دارد، زیرا Android نام شبکه‌های Wi-Fi را به‌عنوان اطلاعات مکانی محافظت می‌کند.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">برای خواندن نام شبکه Wi-Fi، مجوز مکان دقیق لازم است</string>
 </resources>

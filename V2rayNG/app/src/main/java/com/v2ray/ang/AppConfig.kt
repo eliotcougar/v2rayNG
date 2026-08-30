@@ -49,6 +49,7 @@ object AppConfig {
     const val PREF_OBSERVATORY_LEAST_LOAD_METHOD = "pref_observatory_least_load_method"
     const val PREF_OBSERVATORY_LEAST_LOAD_SAMPLING = "pref_observatory_least_load_sampling"
     const val PREF_OBSERVATORY_LEAST_LOAD_TIMEOUT = "pref_observatory_least_load_timeout"
+    const val PREF_REMEMBER_ROUTES_PER_WIFI_NETWORK = "pref_remember_routes_per_wifi_network"
     const val SUBSCRIPTION_UPDATE_TASK_NAME = "subscription_updater"
     const val SUBSCRIPTION_MIN_INTERVAL_MINUTES = 15L
     const val PREF_SPEED_ENABLED = "pref_speed_enabled"
@@ -188,13 +189,14 @@ object AppConfig {
     const val MSG_MEASURE_CONFIG_SUCCESS = 72
     const val MSG_MEASURE_CONFIG_NOTIFY = 73
     const val MSG_MEASURE_CONFIG_FINISH = 74
-    const val MSG_QUERY_HOTSPOT_CONFIG = 81
-    const val MSG_HOTSPOT_CONFIG_RESPONSE = 82
-    const val MSG_SHIZUKU_APP_FOREGROUND = 83
+    const val MSG_QUERY_HOTSPOT_CONFIG = 91
+    const val MSG_HOTSPOT_CONFIG_RESPONSE = 92
+    const val MSG_SHIZUKU_APP_FOREGROUND = 93
 
     const val MSG_SUB_UPDATE_START = 8
     const val MSG_SUB_UPDATE_CANCEL = 81
     const val MSG_SUB_UPDATE_DATA_CHANGED = 82
+    const val MSG_ACTIVE_OUTBOUND_CHANGED = 76
 
     /** Notification channel IDs. */
     // Use a new ID because Android does not let an app raise an existing channel's importance.

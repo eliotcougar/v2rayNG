@@ -450,6 +450,7 @@
     <string name="connection_connected">Подключено.\nНажмите, чтобы проверить соединение.</string>
     <string name="connection_connected_accessibility">Подключено</string>
     <string name="connection_connected_tv">Соединено</string>
+    <string name="connection_connected_via">Соединено через %s</string>
     <string name="connection_not_connected">Нет соединения</string>
     <string name="connection_running_task_left">Выполняется проверок: %s</string>
 
@@ -695,4 +696,8 @@
     <string name="connection_test_empty_message">подробности отсутствуют</string>
     <string name="value_unknown">неизвестно</string>
 
+    <string name="notification_core_recovery_failed">Не удалось восстановить подключение. Трафик заблокирован для предотвращения утечки; перезапустите v2rayNG.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">Запоминать рабочие маршруты для каждой сети Wi-Fi</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">Использует имя подключённой сети Wi-Fi, чтобы хранить отдельную историю маршрутов. Требуется доступ к точному местоположению, поскольку Android защищает имена сетей Wi-Fi как данные о местоположении.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">Для чтения имени сети Wi-Fi требуется доступ к точному местоположению</string>
 </resources>

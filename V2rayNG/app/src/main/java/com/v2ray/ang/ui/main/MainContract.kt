@@ -41,6 +41,7 @@ data class MainUiState(
     val status: MainStatus = MainStatus.Disconnected,
     val testStatus: MainStatus? = null,
     val searchQuery: String = "",
+    val connectionTargetText: String = "",
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
@@ -102,6 +103,7 @@ sealed interface MainAction {
     data object DismissQRCodeDialog : ViewModelIntent
     data class ImportBatchConfig(val configText: String) : ViewModelIntent
     data class LocateHandled(val target: LocateTarget) : ViewModelIntent
+    data class MainUiVisibilityChanged(val visible: Boolean) : ViewModelIntent
 
     data object ToggleService : ActivityRequest
     data object TestCurrentServer : ActivityRequest

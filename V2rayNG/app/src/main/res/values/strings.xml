@@ -420,6 +420,7 @@
     <string name="connection_test_error_status_code">Error code: #%d</string>
     <string name="connection_connected">Connected. Tap to check connection.</string>
     <string name="connection_connected_accessibility">Connected</string>
+    <string name="connection_connected_via">Connected via %s</string>
     <string name="connection_not_connected">Not connected</string>
     <string name="connection_running_task_left">Tests running: %s</string>
 
@@ -685,4 +686,8 @@
     <string name="routing_settings_enable_rule">Enable rule</string>
     <string name="connection_connected_tv">Connected</string>
     <string name="server_proxy_chain_member">Member</string>
+    <string name="notification_core_recovery_failed">Connection recovery failed. Traffic remains blocked to prevent leaks; restart v2rayNG.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">Remember viable routes per Wi-Fi network</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">Uses the connected Wi-Fi name to keep separate route histories. Requires precise location permission because Android protects Wi-Fi names as location information.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">Precise location permission is required to read the Wi-Fi network name</string>
 </resources>

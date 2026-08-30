@@ -42,7 +42,9 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isTelevision = isTelevisionDevice()
     val isRunning = uiState.isRunning
-    val displayText = if (isTelevision && isRunning) {
+    val displayText = if (isRunning && uiState.connectionTargetText.isNotBlank()) {
+        stringResource(R.string.connection_connected_via, uiState.connectionTargetText)
+    } else if (isTelevision && isRunning) {
         stringResource(R.string.connection_connected_tv)
     } else {
         mainViewModel.formatStatus(accessibilityConnectionStatus(isRunning))
@@ -96,6 +98,25 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         if (!isTelevision || tvDrawerCoordinator.isOpen) return@LaunchedEffect
         val requester = tvDrawerCoordinator.focusToRestore ?: topBarFocus.start
         requestFocusWhenReady(requester, topBarFocus.start)
+    }
+
+    val latestOnAction by rememberUpdatedState(onAction)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> latestOnAction(MainAction.MainUiVisibilityChanged(true))
+                Lifecycle.Event.ON_STOP -> latestOnAction(MainAction.MainUiVisibilityChanged(false))
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            latestOnAction(MainAction.MainUiVisibilityChanged(true))
+        }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            latestOnAction(MainAction.MainUiVisibilityChanged(false))
+        }
     }
 
     BackHandler(enabled = isTelevision && showSearch) {
