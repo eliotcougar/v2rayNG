@@ -7,6 +7,7 @@ import com.google.gson.JsonObject
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.ConfigResult
 import com.v2ray.ang.dto.CoreConfigContext
+import com.v2ray.ang.dto.ProbePlan
 import com.v2ray.ang.dto.V2rayConfig
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.RulesetItem
@@ -58,7 +59,7 @@ object CoreConfigManager {
      *
      * The core flow is reused, then non-essential sections are removed.
      */
-    fun getV2rayConfig4Speedtest(context: Context, guid: String): ConfigResult {
+    fun getV2rayConfig4RealDelay(context: Context, guid: String): ConfigResult {
         try {
             val configContext = CoreConfigContextBuilder.build(context, guid)
                 ?: return ConfigResult(
@@ -69,19 +70,51 @@ object CoreConfigManager {
             if (configContext.isCustom) {
                 return buildV2rayCustomConfig(configContext)
             }
-            val v2rayConfig = buildUnifiedConfig(configContext)
-            postProcessForSpeedtest(v2rayConfig)
-
-            return toConfigResult(configContext, v2rayConfig)
+            return toConfigResult(configContext, buildRealDelayConfig(configContext))
         } catch (e: Exception) {
-            LogUtil.e(AppConfig.TAG, "Failed to get V2ray config for speedtest", e)
+            LogUtil.e(AppConfig.TAG, "Failed to get V2ray config for real delay", e)
             return ConfigResult(
                 status = false,
                 guid = guid,
-                errorMessage = "Failed to get V2ray config: ${e.message ?: e.javaClass.simpleName}"
+                errorMessage = "Failed to get V2ray config for real delay: ${e.message ?: e.javaClass.simpleName}"
             )
         }
     }
+
+    /** Builds one isolated Xray configuration for a complete UI delay-test batch. */
+    internal fun getProbePlan(context: Context, guids: List<String>): ProbePlan {
+        val sources = mutableListOf<ProbeConfigBuilder.Source>()
+        val individualGuids = mutableListOf<String>()
+        val failedGuids = mutableListOf<String>()
+        val distinctGuids = guids.distinct()
+        val profileLookup = CoreConfigContextBuilder.ProbeProfileLookup(distinctGuids)
+        distinctGuids.forEach { guid ->
+            try {
+                val configContext = CoreConfigContextBuilder.buildForProbe(context, guid, profileLookup)
+                if (configContext == null) {
+                    failedGuids += guid
+                } else if (configContext.isCustom) {
+                    individualGuids += guid
+                } else {
+                    sources += ProbeConfigBuilder.Source(guid, buildRealDelayConfig(configContext))
+                }
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to build probe config for $guid", error)
+                failedGuids += guid
+            }
+        }
+        val plan = ProbeConfigBuilder.build(
+            sources = sources,
+            destination = SettingsManager.getDelayTestUrl(),
+        )
+        return plan.copy(
+            individualGuids = individualGuids + plan.individualGuids,
+            failedGuids = failedGuids,
+        )
+    }
+
+    private fun buildRealDelayConfig(configContext: CoreConfigContext): V2rayConfig =
+        buildUnifiedConfig(configContext).also(::postProcessForRealDelay)
 
     /**
      * Build configuration for custom profiles.
@@ -444,10 +477,21 @@ object CoreConfigManager {
     /**
      * Trim runtime sections that are not needed for latency testing.
      */
-    private fun postProcessForSpeedtest(v2rayConfig: V2rayConfig) {
+    private fun postProcessForRealDelay(v2rayConfig: V2rayConfig) {
         v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.inbounds.clear()
+        val usesPrimaryBalancer = v2rayConfig.routing.balancers
+            ?.any { it.tag == AppConfig.TAG_BALANCER }
+            ?: false
         v2rayConfig.routing.rules.clear()
+        if (usesPrimaryBalancer) {
+            v2rayConfig.routing.rules.add(
+                V2rayConfig.RoutingBean.RulesBean(
+                    network = "tcp,udp",
+                    balancerTag = AppConfig.TAG_BALANCER,
+                )
+            )
+        }
         v2rayConfig.dns = null
         v2rayConfig.fakedns = null
         v2rayConfig.stats = null
@@ -728,7 +772,7 @@ object CoreConfigManager {
     }
 
     /**
-     * Remove speed-test runtime sections when the feature is disabled.
+     * Remove speed-display runtime sections when the feature is disabled.
      */
     private fun applySpeedDisabled(v2rayConfig: V2rayConfig) {
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) != true) {

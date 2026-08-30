@@ -10,6 +10,7 @@ import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.ConnectionTestResult
+import com.v2ray.ang.dto.RealPingResult
 import com.v2ray.ang.dto.SubscriptionUpdateResult
 import com.v2ray.ang.dto.TestServiceMessage
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -42,11 +43,16 @@ class MainRepository(
 
     private val _mainServiceEvent = MutableSharedFlow<MainServiceEvent>(
         replay = 0,
-        extraBufferCapacity = 64,
+        // Absorb large result bursts before the ViewModel coalesces UI updates.
+        extraBufferCapacity = SERVICE_EVENT_BUFFER_CAPACITY,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
 
     override val mainServiceEvent: SharedFlow<MainServiceEvent> = _mainServiceEvent.asSharedFlow()
+
+    private companion object {
+        const val SERVICE_EVENT_BUFFER_CAPACITY = 2048
+    }
 
     private val serviceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -67,7 +73,9 @@ class MainRepository(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
 
-                AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> MainServiceEvent.MeasureConfigSuccess
+                AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> safeIntent
+                    .serializable<RealPingResult>("content")
+                    ?.let(MainServiceEvent::MeasureConfigSuccess)
                 AppConfig.MSG_MEASURE_CONFIG_NOTIFY -> MainServiceEvent.MeasureConfigNotify(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
