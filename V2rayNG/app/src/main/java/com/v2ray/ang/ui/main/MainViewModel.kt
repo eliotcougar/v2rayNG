@@ -27,9 +27,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -39,6 +42,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.PatternSyntaxException
 
 class MainViewModel(
@@ -60,6 +64,13 @@ class MainViewModel(
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    private val testAnnouncementIds = AtomicLong()
+    private val _testAnnouncements = MutableSharedFlow<MainTestAnnouncement>(
+        extraBufferCapacity = 8,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val testAnnouncements = _testAnnouncements.asSharedFlow()
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -126,7 +137,9 @@ class MainViewModel(
                 updateRunningState(false)
             }
             is MainServiceEvent.MeasureDelayResult -> {
-                _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
+                val status = MainStatus.ConnectionTest(event.result)
+                _uiState.update { it.withCurrentTestResult(event.result) }
+                publishTestAnnouncement(status)
             }
 
             MainServiceEvent.MeasureConfigSuccess -> {
@@ -151,17 +164,48 @@ class MainViewModel(
         MainStatus.Disconnected -> dataSource.getString(R.string.connection_not_connected)
         MainStatus.Connected -> dataSource.getString(R.string.connection_connected)
         MainStatus.Testing -> dataSource.getString(R.string.connection_test_testing)
+        MainStatus.TestCompleted -> dataSource.getString(R.string.connection_test_complete)
         is MainStatus.TestProgress -> dataSource.getString(
             R.string.connection_running_task_left,
             status.progress
         )
 
-        is MainStatus.ConnectionTest -> formatConnectionTestResult(status.result)
+        is MainStatus.ConnectionTest -> formatConnectionTestResult(status.result, accessible = false)
     }
 
-    private fun formatConnectionTestResult(result: ConnectionTestResult): String {
+    internal fun formatConnectionStatusForAccessibility(isRunning: Boolean): String =
+        when (accessibilityConnectionStatus(isRunning)) {
+            MainStatus.Connected -> dataSource.getString(R.string.connection_connected_accessibility)
+            MainStatus.Disconnected -> dataSource.getString(R.string.connection_not_connected)
+            else -> error("Unexpected connection status")
+        }
+
+    internal fun formatTestAnnouncement(announcement: MainTestAnnouncement): String {
+        check(announcement.status.isTestAnnouncement())
+        return if (announcement.status is MainStatus.ConnectionTest) {
+            formatConnectionTestResult(announcement.status.result, accessible = true)
+        } else {
+            formatStatus(announcement.status)
+        }
+    }
+
+    private fun formatConnectionTestResult(
+        result: ConnectionTestResult,
+        accessible: Boolean,
+    ): String {
         val status = if (result.delayMillis >= 0) {
-            val delay = dataSource.getString(R.string.server_test_delay_value, result.delayMillis)
+            val delay = if (accessible) {
+                dataSource.getQuantityString(
+                    R.plurals.connection_test_delay_accessibility_value,
+                    result.delayMillis.coerceIn(
+                        Int.MIN_VALUE.toLong(),
+                        Int.MAX_VALUE.toLong(),
+                    ).toInt(),
+                    result.delayMillis,
+                )
+            } else {
+                dataSource.getString(R.string.server_test_delay_value, result.delayMillis)
+            }
             dataSource.getString(R.string.connection_test_available, delay)
         } else {
             val detail = result.errorMessage.ifBlank {
@@ -176,6 +220,16 @@ class MainViewModel(
 
         val unknown = dataSource.getString(R.string.value_unknown)
         return "$status\n(${result.country ?: unknown}) ${result.ipAddress ?: unknown}"
+    }
+
+    private fun publishTestAnnouncement(status: MainStatus) {
+        check(status.isTestAnnouncement())
+        _testAnnouncements.tryEmit(
+            MainTestAnnouncement(
+                id = testAnnouncementIds.incrementAndGet(),
+                status = status,
+            )
+        )
     }
 
     // ---------- Public state accessors ----------
@@ -753,14 +807,9 @@ class MainViewModel(
 
     // ---------- Testing ----------
     fun cancelAllPing() {
-        dataSource.cancelAllPing()
         testingGroupId = null
-        _uiState.update {
-            it.copy(
-                isTesting = false,
-                status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
-            )
-        }
+        _uiState.update { it.withTestingFinished(completedBulkTest = false) }
+        dataSource.cancelAllPing()
     }
 
     fun testAllRealPing(onlyTcp: Boolean = false) {
@@ -768,7 +817,8 @@ class MainViewModel(
         val groupId = uiState.value.selectedGroupId
         val servers = currentServers()
         if (servers.isEmpty()) {
-            _uiState.update { it.copy(isTesting = false) }
+            testingGroupId = null
+            _uiState.update { it.withTestingFinished(completedBulkTest = false) }
             return
         }
         val serverGuids = servers.map { it.guid }
@@ -785,12 +835,8 @@ class MainViewModel(
             )
         }
         testingGroupId = groupId
-        _uiState.update {
-            it.copy(
-                isTesting = true,
-                status = MainStatus.Testing
-            )
-        }
+        _uiState.update(MainUiState::withTestingStarted)
+        publishTestAnnouncement(MainStatus.Testing)
         viewModelScope.launch(ioDispatcher) {
             dataSource.clearAllTestDelayResults(serverGuids)
             cacheMutex.withLock { groupDataCache.remove(groupId) }
@@ -806,20 +852,19 @@ class MainViewModel(
     }
 
     fun testCurrentServerRealPing() {
-        _uiState.update { it.copy(status = MainStatus.Testing) }
+        _uiState.update(MainUiState::withTestingStarted)
+        publishTestAnnouncement(MainStatus.Testing)
         dataSource.testCurrentServerRealPing()
     }
 
     private fun onTestsFinished() {
         viewModelScope.launch(ioDispatcher) {
             cacheMutex.withLock { groupDataCache.clear() }
+            val completedBulkTest = testingGroupId != null
             testingGroupId = null
-            _uiState.update {
-                it.copy(
-                    isTesting = false,
-                    status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected
-                )
-            }
+            val terminalStatus = MainStatus.TestCompleted.takeIf { completedBulkTest }
+            _uiState.update { it.withTestingFinished(completedBulkTest) }
+            terminalStatus?.let(::publishTestAnnouncement)
             reloadAllGroups(_uiState.value.groups.map { it.id })
         }
     }
