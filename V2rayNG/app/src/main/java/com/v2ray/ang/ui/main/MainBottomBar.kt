@@ -28,22 +28,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
-import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.intl.LocaleList
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.AccessibilityLiveRegionText
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
@@ -148,25 +141,10 @@ private fun AssertiveTestLiveRegion(
         if (liveRegionEventId == eventId) liveRegionText = ""
     }
 
-    val languageTag = LocalConfiguration.current.locales[0].toLanguageTag()
-    val localizedText = remember(liveRegionText, languageTag) {
-        buildAnnotatedString {
-            withStyle(
-                SpanStyle(localeList = LocaleList(Locale(languageTag)))
-            ) {
-                append(liveRegionText)
-            }
-        }
-    }
-
-    Text(
-        text = localizedText,
-        color = Color.Transparent,
-        fontSize = 1.sp,
-        maxLines = 1,
-        modifier = Modifier
-            .size(1.dp)
-            .semantics { liveRegion = LiveRegionMode.Assertive },
+    AccessibilityLiveRegionText(
+        eventId = liveRegionEventId,
+        text = liveRegionText,
+        mode = LiveRegionMode.Assertive,
     )
 }
 
