@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.res.booleanResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.hideFromAccessibility
@@ -90,6 +91,7 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
     Logcat(R.drawable.ic_logcat_24dp, R.string.title_logcat),
     CheckUpdate(R.drawable.ic_check_update_24dp, R.string.update_check_for_update),
     BackupRestore(R.drawable.ic_restore_24dp, R.string.title_configuration_backup_restore),
+    Tethering(R.drawable.ic_device_hub_24dp, R.string.title_tethering),
     About(R.drawable.ic_about_24dp, R.string.title_about)
 }
 
@@ -123,6 +125,7 @@ private val secondaryDrawerItems = listOf(
     MainDestination.Logcat,
     MainDestination.CheckUpdate,
     MainDestination.BackupRestore,
+    MainDestination.Tethering,
     MainDestination.About
 )
 
@@ -131,6 +134,7 @@ private val drawerItems = primaryDrawerItems + secondaryDrawerItems
 @Composable
 fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
     val drawerScrollState = rememberScrollState()
+    val tetheringEnabled = booleanResource(R.bool.shizuku_tethering_enabled)
 
     ModalDrawerSheet(
         drawerState = drawerState,
@@ -173,16 +177,17 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     )
                 }
             }
-            drawerItems.forEachIndexed { index, item ->
-                if (index == primaryDrawerItems.size) AppDivider()
-                NavigationDrawerItem(
-                    label = { Text(stringResource(item.labelRes)) },
-                    selected = false,
-                    onClick = { onNavigate(item) },
-                    icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
-            }
+            drawerItems.filter { tetheringEnabled || it != MainDestination.Tethering }
+                .forEachIndexed { index, item ->
+                    if (index == primaryDrawerItems.size) AppDivider()
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(item.labelRes)) },
+                        selected = false,
+                        onClick = { onNavigate(item) },
+                        icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    )
+                }
         }
     }
 }
@@ -217,7 +222,9 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
     onClose: () -> Unit,
     onNavigate: (MainDestination) -> Unit
 ) {
-    val focusRequesters = remember { List(drawerItems.size) { FocusRequester() } }
+    val tetheringEnabled = booleanResource(R.bool.shizuku_tethering_enabled)
+    val visibleDrawerItems = drawerItems.filter { tetheringEnabled || it != MainDestination.Tethering }
+    val focusRequesters = remember(visibleDrawerItems) { List(visibleDrawerItems.size) { FocusRequester() } }
     val drawerScrollState = rememberScrollState()
     var focusedIndex by remember { mutableIntStateOf(0) }
 
@@ -284,7 +291,7 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 }
             }
 
-            drawerItems.forEachIndexed { index, item ->
+            visibleDrawerItems.forEachIndexed { index, item ->
                 if (index == primaryDrawerItems.size) {
                     AppDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp))
                 }
