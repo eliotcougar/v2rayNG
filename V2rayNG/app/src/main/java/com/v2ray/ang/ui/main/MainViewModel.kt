@@ -25,22 +25,28 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.regex.PatternSyntaxException
@@ -50,6 +56,17 @@ class MainViewModel(
     private val dataSource: MainDataSource,
     private val serviceEventDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
 ) : BaseViewModel(application) {
+
+    private companion object {
+        /*
+         * The UI and daemon are separate Android processes, and vendor TVs may delay the
+         * registration-state broadcast after resume. Waiting briefly avoids a duplicate visible
+         * start while still allowing auto-connect when the daemon is absent. Remove this timeout
+         * only when client registration returns an explicit running/not-running acknowledgement
+         * that MainViewModel can await before handling AppResumed.
+         */
+        const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
+    }
 
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -72,6 +89,8 @@ class MainViewModel(
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val testAnnouncements = _testAnnouncements.asSharedFlow()
+    private val _activityEffects = Channel<MainActivityEffect>(Channel.BUFFERED)
+    val activityEffects = _activityEffects.receiveAsFlow()
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -86,10 +105,13 @@ class MainViewModel(
     private val groupLoadMutexes = ConcurrentHashMap<String, Mutex>()
     private val serverOrderPersistenceJobs = mutableMapOf<String, Job>()
 
+    private var initializeJob: Job? = null
     private var setupGroupJob: Job? = null
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
+    private var autoConnectJob: Job? = null
+    private var autoConnectAttempted = false
 
     @Volatile
     private var testingGroupId: String? = null
@@ -155,7 +177,7 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigNotify -> {
-                _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
+                _uiState.update { it.copy(testStatus = MainStatus.TestProgress(event.progress)) }
             }
 
             is MainServiceEvent.MeasureConfigFinish -> {
@@ -269,7 +291,7 @@ class MainViewModel(
         mutableServerGroupState(uiState.value.selectedGroupId).value.servers
 
     // ---------- Action handler ----------
-    fun onAction(action: MainAction) {
+    fun onAction(action: MainAction.ViewModelIntent) {
         when (action) {
             MainAction.Initialize -> initialize()
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
@@ -282,12 +304,14 @@ class MainViewModel(
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
+            MainAction.LocateSelectedServer -> triggerLocateSelectedServer()
+            MainAction.AppResumed -> handleAppResumed()
+            MainAction.ResetAutoConnectAttempt -> resetAutoConnectAttempt()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
-            is MainAction.SelectServer -> updateSelectedGuid(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
-            MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.LocateHandled -> consumeLocateTarget(action.target)
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -296,26 +320,36 @@ class MainViewModel(
             MainAction.DismissQRCodeDialog -> {
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
+        }
+    }
 
-            MainAction.ToggleService,
-            MainAction.TestCurrentServer,
-            MainAction.ImportQRcode,
-            MainAction.ImportClipboard,
-            MainAction.ImportConfigLocal,
-            is MainAction.ImportManually,
-            MainAction.RestartService,
-            MainAction.LocateSelectedServer,
-            is MainAction.EditServer,
-            is MainAction.ShareClipboard,
-            is MainAction.ShareFullContent -> {
-                // Handled by Activity via its onAction lambda
+    private fun handleAppResumed() {
+        if (autoConnectAttempted || !dataSource.isAutoConnectOnAppStartEnabled()) return
+        autoConnectAttempted = true
+        autoConnectJob?.cancel()
+        autoConnectJob = viewModelScope.launch {
+            val currentState = uiState.value
+            val resolvedState = if (currentState.serviceStateKnown) {
+                currentState
+            } else {
+                withTimeoutOrNull(SERVICE_STATE_QUERY_TIMEOUT_MILLIS) {
+                    uiState.first { it.serviceStateKnown }
+                }
+            }
+            if (resolvedState?.isRunning != true && !uiState.value.selectedGuid.isNullOrEmpty()) {
+                _activityEffects.send(MainActivityEffect.RequestAutoConnect)
             }
         }
     }
 
+    private fun resetAutoConnectAttempt() {
+        if (!uiState.value.isRunning) autoConnectAttempted = false
+    }
+
     // ---------- Initialization ----------
     fun initialize() {
-        viewModelScope.launch(preloadDispatcher) {
+        if (initializeJob != null) return
+        initializeJob = viewModelScope.launch(preloadDispatcher) {
             try {
                 initialPageReady.await()
                 delay(32)
@@ -390,6 +424,16 @@ class MainViewModel(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers)
         )
+        _uiState.update { state ->
+            val index = state.groups.indexOfFirst { it.id == groupId }
+            if (index < 0 || state.groups[index].serverCount == filteredServers.size) {
+                state
+            } else {
+                val groups = state.groups.toMutableList()
+                groups[index] = groups[index].copy(serverCount = filteredServers.size)
+                state.copy(groups = groups)
+            }
+        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -411,8 +455,6 @@ class MainViewModel(
             )
         }
     }
-
-    fun getSubscriptions(): List<SubscriptionCache> = dataSource.getSubscriptions()
 
     private fun resolveSelectedGroup(groups: List<GroupMapItem>): String {
         val current = uiState.value.selectedGroupId
@@ -743,14 +785,6 @@ class MainViewModel(
         }
     }
 
-    fun reloadServerList() {
-        val groupId = uiState.value.selectedGroupId
-        selectedGroupLoadJob?.cancel()
-        selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
-            updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
-        }
-    }
-
     fun reloadAllGroups(groupIds: List<String>) {
         reloadJob?.cancel()
         reloadJob = viewModelScope.launch(preloadDispatcher) {
@@ -789,6 +823,7 @@ class MainViewModel(
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
         keywordFilter = keyword
+        _uiState.update { it.copy(searchQuery = keyword) }
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
             delay(300)
@@ -826,13 +861,15 @@ class MainViewModel(
     }
 
     fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
-        val groupState = mutableServerGroupState(groupId).value
+        if (groupId.isEmpty()) return
+        val groupFlow = mutableServerGroupState(groupId)
+        val groupState = groupFlow.value
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return
         val rows = groupState.rows.toMutableList()
         rows.moveItem(fromPosition, toPosition)
         val guids = servers.map { it.guid }
-        mutableServerGroupState(groupId).value = ServerGroupUiState(servers, rows)
+        groupFlow.value = ServerGroupUiState(servers, rows)
         // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
         serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
@@ -923,8 +960,10 @@ class MainViewModel(
         }
     }
 
-    private fun consumeLocateTarget() {
-        _uiState.update { it.copy(locateTarget = null) }
+    private fun consumeLocateTarget(target: LocateTarget) {
+        _uiState.update { state ->
+            if (state.locateTarget == target) state.copy(locateTarget = null) else state
+        }
     }
 
     // ---------- Running state ----------
@@ -932,8 +971,9 @@ class MainViewModel(
         _uiState.update { state ->
             state.copy(
                 isRunning = running,
-                status = if (!clearTestingText && state.isTesting) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                serviceStateKnown = true,
+                status = if (running) MainStatus.Connected else MainStatus.Disconnected,
+                testStatus = if (!clearTestingText && state.isTesting) state.testStatus else null
             )
         }
     }
@@ -946,7 +986,6 @@ class MainViewModel(
         filterJob?.cancel()
         cancelAllPing()
         dataSource.close()
-        super.onCleared()
     }
 
     // ---------- Factory ----------

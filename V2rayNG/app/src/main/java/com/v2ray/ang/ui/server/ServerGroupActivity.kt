@@ -5,12 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +23,10 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BalancerStrategyType
 import com.v2ray.ang.enums.EConfigType
@@ -232,6 +233,7 @@ fun ServerGroupScreen(
     onDelete: () -> Unit
 ) {
     val typeEntries = stringArrayResource(R.array.policy_group_type).toList()
+    val scrollState = rememberScrollState()
 
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
@@ -250,19 +252,23 @@ fun ServerGroupScreen(
             AppTopBar(
                 title = EConfigType.POLICYGROUP.toString(),
                 onBackClick = onBackClick,
-                actions = {
-                    if (showDelete) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
+                actionItems = buildList {
+                    if (showDelete) add(
+                        AppTopBarAction(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
+                        )
+                    )
+                    add(AppTopBarAction(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = {
+                            val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
+                            val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
+                            onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
                         }
-                    }
-                    IconButton(onClick = {
-                        val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
-                        val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
-                        onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    ))
                 }
             )
         }
@@ -272,9 +278,11 @@ fun ServerGroupScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .imePadding()
+                .tvAwareImePadding()
+                .tvSafeAreaPadding()
+                .verticalScroll(scrollState)
+                .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)
-                .verticalScroll(rememberScrollState())
         ) {
             FormTextField(stringResource(R.string.server_lab_remarks), remarks, { remarks = it })
             FormDropdownField(
@@ -301,8 +309,7 @@ fun ServerGroupScreen(
                         label = stringResource(R.string.title_policy_group_fallback),
                         value = fallbackTag,
                         options = fallbackSuggestions,
-                        onValueChange = { fallbackTag = it },
-                        editable = true
+                        onValueChange = { fallbackTag = it }
                     )
                 }
                 NavigationBarsSpacer()
@@ -313,7 +320,10 @@ fun ServerGroupScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_policy_group_named, initialRemarks),
-            onConfirm = onDelete,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
             onDismiss = { showDeleteConfirm = false }
         )
     }

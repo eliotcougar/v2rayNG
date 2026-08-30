@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -22,8 +21,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -55,6 +52,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberTvTextFieldState
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.tvAwareTextFieldFocus
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
+import com.v2ray.ang.ui.compose.tvTextFieldEditorFocus
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.AccessibilityLiveRegionMode
@@ -143,10 +149,10 @@ class ServerCustomConfigActivity : BaseComponentActivity() {
                 ?: ProfileItem.create(EConfigType.CUSTOM)
 
         config.remarks =
-            remarks.ifEmpty { parsedProfile?.remarks.orEmpty() }
+            remarks.ifEmpty { parsedProfile.remarks.orEmpty() }
 
-        config.server = parsedProfile?.server
-        config.serverPort = parsedProfile?.serverPort
+        config.server = parsedProfile.server
+        config.serverPort = parsedProfile.serverPort
         config.description =
             AngConfigManager.generateDescription(config)
 
@@ -216,6 +222,8 @@ fun ServerCustomConfigScreen(
 ) {
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     val textFieldState = rememberTextFieldState(initialText = initialContent)
+    val isTelevision = isTelevisionDevice()
+    val editorTvState = if (isTelevision) rememberTvTextFieldState() else null
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
@@ -253,6 +261,15 @@ fun ServerCustomConfigScreen(
         with(density) {
             measured.size.width.toDp() +
                     EditorConstants.LINE_NUMBER_HORIZONTAL_PADDING * 2
+        }
+    }
+    val lineNumberColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    val measuredLineNumbers = remember(textLayoutResult?.lineCount, lineNumberStyle, lineNumberColor) {
+        List(textLayoutResult?.lineCount ?: 1) { index ->
+            textMeasurer.measure(
+                text = (index + 1).toString(),
+                style = lineNumberStyle.copy(color = lineNumberColor, textAlign = TextAlign.End)
+            )
         }
     }
 
@@ -324,21 +341,19 @@ fun ServerCustomConfigScreen(
             AppTopBar(
                 title = EConfigType.CUSTOM.toString(),
                 onBackClick = onBackClick,
-                actions = {
-                    if (showDelete) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(remarks, textFieldState.text.toString()) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
+                actionItems = buildList {
+                    if (showDelete) add(
+                        AppTopBarAction(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete),
+                            onClick = { showDeleteConfirm = true }
                         )
-                    }
+                    )
+                    add(AppTopBarAction(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(remarks, textFieldState.text.toString()) }
+                    ))
                 }
             )
         },
@@ -348,7 +363,8 @@ fun ServerCustomConfigScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .imePadding()
+                .tvAwareImePadding()
+                .tvSafeAreaPadding()
         ) {
             FormTextField(
                 label = stringResource(R.string.server_lab_remarks),
@@ -360,14 +376,19 @@ fun ServerCustomConfigScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
+                    .dpadFocusOutline(showFocus = editorTvState?.isEditing != true)
+                    .tvAwareTextFieldFocus(
+                        state = editorTvState,
+                        enabled = true,
+                        navigation = TvTextFieldNavigation(),
+                        onActivate = { editorTvState?.beginEditing() }
+                    )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(verticalScroll)
                 ) {
-                    val lineNumberColor =
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     val layoutForLineNumbers = textLayoutResult
 
                     if (layoutForLineNumbers != null && layoutForLineNumbers.lineCount > 0) {
@@ -379,14 +400,7 @@ fun ServerCustomConfigScreen(
                         ) {
                             val lc = layoutForLineNumbers.lineCount
                             for (i in 0 until lc) {
-                                val lineLabel = (i + 1).toString()
-                                val measured = textMeasurer.measure(
-                                    text = lineLabel,
-                                    style = lineNumberStyle.copy(
-                                        color = lineNumberColor,
-                                        textAlign = TextAlign.End,
-                                    ),
-                                )
+                                val measured = measuredLineNumbers[i]
                                 val lineTop = layoutForLineNumbers.getLineTop(i)
                                 val lineBaseline = layoutForLineNumbers.getLineBaseline(i)
                                 val measuredBaseline = measured.firstBaseline
@@ -431,7 +445,8 @@ fun ServerCustomConfigScreen(
                                 .weight(1f)
                                 .horizontalScroll(horizontalScroll)
                                 .padding(end = 24.dp)
-                                .padding(bottom = 36.dp),
+                                .padding(bottom = 36.dp)
+                                .then(editorTvState?.let { Modifier.tvTextFieldEditorFocus(it) } ?: Modifier),
                             textStyle = TextStyle(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = EditorConstants.FONT_SIZE,

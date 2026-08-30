@@ -34,15 +34,21 @@ import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.ui.compose.AppDivider
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 
 @Composable
 fun GroupTabBar(
-    groups: List<GroupMapItem>,
-    selectedTabIndex: Int,
+    groups: List<GroupMapItem>, selectedTabIndex: Int,
     mainViewModel: MainViewModel,
-    onTabClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    tabFocusRequesters: List<FocusRequester>, onOpenDrawer: (FocusRequester) -> Unit,
+    onMoveUp: () -> Unit, onTabClick: (Int) -> Unit, modifier: Modifier = Modifier
 ) {
+    val isTelevision = isTelevisionDevice()
     val selectedIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
 
@@ -69,26 +75,40 @@ fun GroupTabBar(
                 items = groups,
                 key = { _, group -> group.id },
             ) { index, group ->
-                val serverFlow = remember(group.id, mainViewModel) {
-                    mainViewModel.serversForGroup(group.id)
-                }
-                GroupTabItem(
-                    group = group,
-                    selected = index == selectedIndex,
-                    serverFlow = serverFlow,
-                    onClick = { onTabClick(index) }
-                )
+            val focusRequester = tabFocusRequesters[index]
+            val tabModifier = if (isTelevision) {
+                Modifier
+                    .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 20.dp)
+                    .onFocusChanged { if (it.isFocused && index != selectedIndex) onTabClick(index) }
+                    .dpadOrderedFocusNavigation(
+                        current = focusRequester,
+                        order = tabFocusRequesters,
+                        onBeforeFirst = { onOpenDrawer(focusRequester) }
+                    )
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = { onMoveUp(); true },
+                        onMoveDown = { false }
+                    )
+            } else {
+                Modifier
             }
+            val serverFlow = remember(group.id, mainViewModel) { mainViewModel.serversForGroup(group.id) }
+            GroupTabItem(
+                group = group,
+                serverFlow = serverFlow,
+                selected = index == selectedIndex,
+                modifier = tabModifier,
+                onClick = { onTabClick(index) }
+            )
+        }
         }
     }
 }
 
 @Composable
 private fun GroupTabItem(
-    group: GroupMapItem,
-    selected: Boolean,
-    serverFlow: StateFlow<List<ServersCache>>,
-    onClick: () -> Unit
+    group: GroupMapItem, selected: Boolean,
+    serverFlow: StateFlow<List<ServersCache>>, modifier: Modifier = Modifier, onClick: () -> Unit
 ) {
     val servers by serverFlow.collectAsStateWithLifecycle()
     val accessibilityLabel = pluralStringResource(
@@ -123,7 +143,7 @@ private fun GroupTabItem(
         Tab(
             selected = selected,
             onClick = onClick,
-            modifier = Modifier
+            modifier = modifier
                 .heightIn(min = 48.dp)
                 .semantics { contentDescription = accessibilityLabel },
             text = {

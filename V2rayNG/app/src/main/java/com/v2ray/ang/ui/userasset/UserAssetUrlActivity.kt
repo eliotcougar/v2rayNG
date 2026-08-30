@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,11 +17,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.tvAwareImePadding
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
+import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.extension.AccessibilityLiveRegionMode
 import com.v2ray.ang.extension.toast
@@ -155,6 +159,8 @@ fun UserAssetUrlScreen(
     var remarks by remember { mutableStateOf(initialRemarks) }
     var url by remember { mutableStateOf(initialUrl) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val remarksFocusRequester = remember { FocusRequester() }
+    val urlFocusRequester = remember { FocusRequester() }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -162,46 +168,57 @@ fun UserAssetUrlScreen(
             AppTopBar(
                 title = stringResource(R.string.title_user_asset_add_url),
                 onBackClick = onBackClick,
-                actions = {
-                    if (editAssetId.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(
-                                    R.string.acc_delete_asset_named,
-                                    initialRemarks
-                                )
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(remarks, url) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
+                onMoveDown = remarksFocusRequester::requestFocus,
+                actionItems = buildList {
+                    if (editAssetId.isNotEmpty()) add(
+                        AppTopBarAction(
+                            icon = painterResource(R.drawable.ic_delete_24dp),
+                            label = stringResource(R.string.acc_delete_asset_named, initialRemarks),
+                            onClick = { showDeleteConfirm = true }
                         )
-                    }
+                    )
+                    add(
+                        AppTopBarAction(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = { onSave(remarks, url) }
+                    )
+                    )
                 }
             )
         }
     ) { innerPadding ->
+        val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
+                .tvSafeAreaPadding()
+                .verticalScrollbar(scrollState)
+                .verticalScroll(scrollState)
+                .tvAwareImePadding()
                 .padding(vertical = 8.dp)
         ) {
             FormTextField(
                 label = stringResource(R.string.sub_setting_remarks),
                 value = remarks,
-                onValueChange = { remarks = it }
+                onValueChange = { remarks = it },
+                tvNavigation = TvTextFieldNavigation(
+                    focusRequester = remarksFocusRequester,
+                    onMoveUp = { false },
+                    onMoveDown = urlFocusRequester::requestFocus
+                )
             )
             FormTextField(
                 label = stringResource(R.string.title_url),
                 value = url,
-                onValueChange = { url = it }
+                onValueChange = { url = it },
+                tvNavigation = TvTextFieldNavigation(
+                    focusRequester = urlFocusRequester,
+                    onMoveUp = remarksFocusRequester::requestFocus,
+                    onMoveDown = { true }
+                )
             )
             NavigationBarsSpacer()
         }
@@ -210,7 +227,10 @@ fun UserAssetUrlScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_asset_source_named, initialRemarks),
-            onConfirm = onDelete,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
             onDismiss = { showDeleteConfirm = false }
         )
     }

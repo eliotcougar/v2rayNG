@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +35,7 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AccessibilityLiveRegionText
@@ -43,6 +45,8 @@ import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 
 @Composable
 fun MainBottomBar(
@@ -50,6 +54,7 @@ fun MainBottomBar(
     accessibilityText: String,
     testAnnouncements: Flow<MainTestAnnouncement>,
     formatTestAnnouncement: (MainTestAnnouncement) -> String,
+    testDisplayText: String,
     isRunning: Boolean,
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
@@ -68,6 +73,51 @@ fun MainBottomBar(
         )
     } else {
         Modifier
+    }
+
+    val isTelevision = isTelevisionDevice()
+    val statusDescription = listOf(displayText, testDisplayText)
+        .filter { it.isNotBlank() }
+        .joinToString(". ")
+
+    if (isTelevision) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            AppDivider()
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .height(64.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 48.dp)
+                        .semantics(mergeDescendants = true) { contentDescription = accessibilityText }
+                        .then(connectionActionModifier),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (testDisplayText.isNotBlank()) {
+                        Text(
+                            text = testDisplayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+        AssertiveTestLiveRegion(testAnnouncement?.id, testAnnouncement?.let(formatTestAnnouncement).orEmpty())
+        return
     }
 
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -90,11 +140,22 @@ fun MainBottomBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics { hideFromAccessibility() }
-                )
+                Column(modifier = Modifier.weight(1f).semantics { hideFromAccessibility() }) {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (testDisplayText.isNotBlank()) {
+                        Text(
+                            text = testDisplayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
         AssertiveTestLiveRegion(
@@ -107,7 +168,8 @@ fun MainBottomBar(
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .dpadFocusOutline(cornerRadius = 16.dp),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
@@ -115,9 +177,11 @@ fun MainBottomBar(
             Icon(
                 painter = if (isRunning) painterResource(R.drawable.ic_stop_24dp)
                 else painterResource(R.drawable.ic_play_24dp),
-                contentDescription = stringResource(
-                    if (isRunning) R.string.acc_stop else R.string.acc_start
-                ),
+                contentDescription = if (isRunning) {
+                    stringResource(R.string.action_stop_service)
+                } else {
+                    stringResource(R.string.tasker_start_service)
+                },
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )

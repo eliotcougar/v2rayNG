@@ -36,7 +36,8 @@ enum class MainMoreMenuAction(@StringRes val labelRes: Int) {
     SortByTestResults(R.string.title_sort_by_test_results),
     TestAll(R.string.title_ping_all_server),
     TestAllRealPing(R.string.title_real_ping_all_server),
-    UpdateSubscriptions(R.string.title_sub_update)
+    UpdateSubscriptions(R.string.title_sub_update),
+    Exit(R.string.action_exit)
 }
 
 internal enum class ServerMenuAction(
@@ -51,11 +52,13 @@ internal enum class ServerMenuAction(
     Delete(R.string.action_delete, isShareAction = false, supportsComplexProfiles = true),
 }
 
-internal fun serverMenuActions(
-    isComplexProfile: Boolean,
-    includeManagementActions: Boolean,
-): List<ServerMenuAction> = ServerMenuAction.entries.filter { action ->
-    (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
+internal enum class BulkDeleteTarget { All, Duplicate, Invalid }
+
+internal fun serverMenuActions(isComplexProfile: Boolean, includeManagementActions: Boolean): List<ServerMenuAction> {
+    return ServerMenuAction.entries.filter { action ->
+        (includeManagementActions || action.isShareAction) &&
+            (!isComplexProfile || action.supportsComplexProfiles)
+    }
 }
 
 @Composable
@@ -66,10 +69,35 @@ fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
 )
 
 @Composable
-fun MoreMenuContent(onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
-    items = MainMoreMenuAction.entries,
+internal fun MoreMenuContent(
+    isTelevision: Boolean,
+    onAction: (MainAction) -> Unit,
+    onBulkDelete: (BulkDeleteTarget) -> Unit
+) = AppDropdownMenuItems(
+    items = MainMoreMenuAction.entries.filter { action ->
+        when (action) {
+            MainMoreMenuAction.RestartService -> !isTelevision
+            MainMoreMenuAction.DeleteAll -> !isTelevision
+            MainMoreMenuAction.Exit -> isTelevision
+            else -> true
+        }
+    },
     labelRes = { it.labelRes },
-    onSelected = onSelected
+    onSelected = { action ->
+        when (action) {
+            MainMoreMenuAction.RestartService -> onAction(MainAction.RestartService)
+            MainMoreMenuAction.DeleteAll -> onBulkDelete(BulkDeleteTarget.All)
+            MainMoreMenuAction.DeleteDuplicate -> onBulkDelete(BulkDeleteTarget.Duplicate)
+            MainMoreMenuAction.DeleteInvalid -> onBulkDelete(BulkDeleteTarget.Invalid)
+            MainMoreMenuAction.ExportAll -> onAction(MainAction.ExportAll)
+            MainMoreMenuAction.LocateSelected -> onAction(MainAction.LocateSelectedServer)
+            MainMoreMenuAction.SortByTestResults -> onAction(MainAction.SortByTestResults)
+            MainMoreMenuAction.TestAll -> onAction(MainAction.TestAllServers)
+            MainMoreMenuAction.TestAllRealPing -> onAction(MainAction.TestRealAllServers)
+            MainMoreMenuAction.UpdateSubscriptions -> onAction(MainAction.UpdateSubscriptions)
+            MainMoreMenuAction.Exit -> onAction(MainAction.Exit)
+        }
+    }
 )
 
 @Composable
@@ -78,18 +106,17 @@ fun ShareMethodDialog(
     profile: ProfileItem,
     more: Boolean,
     onDismiss: () -> Unit,
+    onActionSelected: () -> Unit,
     onAction: (MainAction) -> Unit,
     onRemove: (String, String) -> Unit,
 ) {
-    val menuActions = serverMenuActions(
-        isComplexProfile = profile.configType.isComplexType(),
-        includeManagementActions = more,
-    )
+    val isCustom = profile.configType.isComplexType()
+    val menuActions = serverMenuActions(isComplexProfile = isCustom, includeManagementActions = more)
     SelectListDialog(
         options = menuActions,
         optionText = { stringResource(it.labelRes) },
         onSelected = { action ->
-            onDismiss()
+            onActionSelected()
             when (action) {
                 ServerMenuAction.ShareQRCode -> onAction(MainAction.ShareQRCode(guid))
                 ServerMenuAction.ShareClipboard -> onAction(MainAction.ShareClipboard(guid))
@@ -98,6 +125,7 @@ fun ShareMethodDialog(
                 ServerMenuAction.Delete -> onRemove(guid, profile.remarks)
             }
         },
-        onDismiss = onDismiss
+        onDismiss = onDismiss,
+        onMovePrevious = onDismiss
     )
 }

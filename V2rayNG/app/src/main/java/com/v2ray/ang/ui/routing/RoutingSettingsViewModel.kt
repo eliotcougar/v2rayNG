@@ -11,25 +11,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
-internal data class RoutingRuleRemoval(
-    val position: Int,
-    val remainingRules: List<RulesetItem>
-)
-
-internal fun removeRoutingRule(
-    rules: List<RulesetItem>,
-    ruleId: String
-): RoutingRuleRemoval? {
-    val position = rules.indexOfFirst { it.id == ruleId }
-    if (position < 0) return null
-
-    return RoutingRuleRemoval(
-        position = position,
-        remainingRules = rules.toMutableList().apply { removeAt(position) }
-    )
+internal interface RoutingRulesDataSource {
+    fun load(): MutableList<RulesetItem>
+    fun save(ruleId: String, item: RulesetItem): Boolean
+    fun remove(ruleId: String): Boolean
+    fun saveAll(items: List<RulesetItem>)
 }
 
-class RoutingSettingsViewModel(application: Application) : BaseViewModel(application) {
+private object MmkvRoutingRulesDataSource : RoutingRulesDataSource {
+    override fun load(): MutableList<RulesetItem> = MmkvManager.decodeRoutingRulesets() ?: mutableListOf()
+    override fun save(ruleId: String, item: RulesetItem): Boolean = SettingsManager.saveRoutingRulesetById(ruleId, item)
+    override fun remove(ruleId: String): Boolean = SettingsManager.removeRoutingRulesetById(ruleId)
+    override fun saveAll(items: List<RulesetItem>) = MmkvManager.encodeRoutingRulesets(items.toMutableList())
+}
+
+class RoutingSettingsViewModel private constructor(
+    application: Application,
+    private val dataSource: RoutingRulesDataSource,
+    private val newRuleId: () -> String
+) : BaseViewModel(application) {
+    constructor(application: Application) : this(application, MmkvRoutingRulesDataSource, { UUID.randomUUID().toString() })
+
+    internal companion object {
+        fun createForTest(
+            application: Application,
+            dataSource: RoutingRulesDataSource,
+            newRuleId: () -> String = { UUID.randomUUID().toString() }
+        ) = RoutingSettingsViewModel(application, dataSource, newRuleId)
+    }
     private val rulesets: MutableList<RulesetItem> = mutableListOf()
 
     private val _rulesetsFlow = MutableStateFlow<List<RulesetItem>>(emptyList())
@@ -38,39 +47,37 @@ class RoutingSettingsViewModel(application: Application) : BaseViewModel(applica
     fun getAll(): List<RulesetItem> = rulesets.toList()
 
     fun reload() {
-        val loaded = MmkvManager.decodeRoutingRulesets()?.toMutableList() ?: mutableListOf()
+        val loaded = dataSource.load()
         var needsSave = false
-        loaded.forEachIndexed { index, item ->
+        loaded.forEach { item ->
             if (item.id.isEmpty()) {
-                item.id = UUID.randomUUID().toString()
-                SettingsManager.saveRoutingRuleset(index, item)
+                item.id = newRuleId()
                 needsSave = true
             }
         }
+        if (needsSave) dataSource.saveAll(loaded)
         rulesets.clear()
         rulesets.addAll(loaded)
         _rulesetsFlow.value = rulesets.toList()
     }
 
-    fun update(position: Int, item: RulesetItem) {
-        if (position in rulesets.indices) {
-            rulesets[position] = item
-            SettingsManager.saveRoutingRuleset(position, item)
-            _rulesetsFlow.value = rulesets.toList()
-        }
+    fun update(ruleId: String, item: RulesetItem) {
+        val index = rulesets.indexOfFirst { it.id == ruleId }
+        if (index < 0 || !dataSource.save(ruleId, item)) return
+        rulesets[index] = item
+        _rulesetsFlow.value = rulesets.toList()
     }
 
     fun remove(ruleId: String) {
-        val removal = removeRoutingRule(rulesets, ruleId) ?: return
-        SettingsManager.removeRoutingRuleset(ruleId)
-        rulesets.clear()
-        rulesets.addAll(removal.remainingRules)
+        val index = rulesets.indexOfFirst { it.id == ruleId }
+        if (index < 0 || !dataSource.remove(ruleId)) return
+        rulesets.removeAt(index)
         _rulesetsFlow.value = rulesets.toList()
     }
 
     fun move(fromPosition: Int, toPosition: Int) {
         if (rulesets.moveItem(fromPosition, toPosition)) {
-            MmkvManager.encodeRoutingRulesets(rulesets)
+            dataSource.saveAll(rulesets)
             _rulesetsFlow.value = rulesets.toList()
         }
     }

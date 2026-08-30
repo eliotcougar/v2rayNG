@@ -188,12 +188,16 @@ object MessageHelper {
      */
     private fun sendMsg(ctx: Context, action: String, what: Int, content: Serializable) {
         try {
-            ctx.sendBroadcast(messageIntent(action, what, content))
+            val intent = Intent()
+            intent.action = action
+            intent.`package` = AppConfig.ANG_PACKAGE
+            intent.putExtra("key", what)
+            intent.putExtra("content", content)
+            ctx.sendBroadcast(intent)
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to send message with action: $action", e)
         }
     }
-
     private fun messageIntent(action: String, what: Int, content: Serializable): Intent =
         Intent(action).apply {
             `package` = AppConfig.ANG_PACKAGE

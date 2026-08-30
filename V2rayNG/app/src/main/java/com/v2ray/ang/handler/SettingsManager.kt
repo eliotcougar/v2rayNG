@@ -133,6 +133,27 @@ object SettingsManager {
        return MmkvManager.decodeRoutingRulesets()?.firstOrNull { it.id == index }
     }
 
+    fun getRoutingRulesetById(ruleId: String): RulesetItem? =
+        MmkvManager.decodeRoutingRulesets()?.firstOrNull { it.id == ruleId }
+
+    fun saveRoutingRulesetById(ruleId: String, ruleset: RulesetItem): Boolean {
+        val rulesetList = MmkvManager.decodeRoutingRulesets() ?: mutableListOf()
+        val index = rulesetList.indexOfFirst { it.id == ruleId }
+        if (index < 0) return false
+        rulesetList[index] = ruleset
+        MmkvManager.encodeRoutingRulesets(rulesetList)
+        return true
+    }
+
+    fun removeRoutingRulesetById(ruleId: String): Boolean {
+        val rulesetList = MmkvManager.decodeRoutingRulesets() ?: return false
+        val index = rulesetList.indexOfFirst { it.id == ruleId }
+        if (index < 0) return false
+        rulesetList.removeAt(index)
+        MmkvManager.encodeRoutingRulesets(rulesetList)
+        return true
+    }
+
     /**
      * Save a routing ruleset.
      * @param index The index of the ruleset.

@@ -136,6 +136,8 @@ class MainRepository(
     override fun isGroupAllDisplayEnabled(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_GROUP_ALL_DISPLAY)
 
+    override fun isAutoConnectOnAppStartEnabled(): Boolean = MmkvManager.decodeAutoConnectOnAppStart()
+
     override fun getString(resId: Int): String = localizedContext.getString(resId)
 
     override fun getString(resId: Int, vararg formatArgs: Any): String =

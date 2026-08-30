@@ -5,28 +5,67 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.TextSelectionColors
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+
+data class FormDropdownConfig(
+    val editable: Boolean = false,
+    val placeholder: String? = null,
+    val supportingText: String? = null,
+    val emptyOptionLabel: String? = null
+)
+
+@Stable
+class FormDropdownState internal constructor() {
+    var expanded by mutableStateOf(false)
+        internal set
+    internal var restoreFieldFocus by mutableStateOf(false)
+
+    fun open() {
+        restoreFieldFocus = false
+        expanded = true
+    }
+
+    fun close(restoreFocus: Boolean = true) {
+        expanded = false
+        restoreFieldFocus = restoreFocus
+    }
+
+    fun toggle() {
+        if (expanded) close() else open()
+    }
+}
+
+@Composable
+fun rememberFormDropdownState(): FormDropdownState = remember { FormDropdownState() }
+
+internal fun formDropdownMenuOptions(
+    options: List<String>,
+    emptyOptionLabel: String?
+): List<String> = if (emptyOptionLabel == null) options else listOf("") + options
+
+internal fun formDropdownSelectedOptionIndex(
+    menuOptions: List<String>,
+    value: String
+): Int = menuOptions.indexOf(value).takeIf { it >= 0 } ?: 0
 
 @Composable
 fun FormTextField(
@@ -38,31 +77,40 @@ fun FormTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     placeholder: String? = null,
     maxLines: Int = 5,
+    tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation()
 ) {
+    val isTelevision = isTelevisionDevice()
+    val tvFieldState = if (isTelevision) {
+        rememberTvTextFieldState(tvNavigation.focusRequester)
+    } else {
+        null
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .tvAwareTextFieldFocus(
+                state = tvFieldState,
+                enabled = enabled,
+                navigation = tvNavigation,
+                onActivate = { tvFieldState?.beginEditing() }
+            )
     ) {
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            label = { Text(label) },
-            placeholder = placeholder?.let { { Text(it) } },
-            singleLine = false,
-            maxLines = maxLines,
-            enabled = enabled,
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
+            spec = OutlinedTextFieldSpec(
+                label = label,
+                placeholder = placeholder,
+                enabled = enabled,
+                maxLines = maxLines,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType)
             ),
-            modifier = Modifier.fillMaxWidth()
+            tvFieldState = tvFieldState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(tvFieldState?.let { Modifier.tvTextFieldEditorFocus(it) } ?: Modifier)
         )
     }
 }
@@ -75,73 +123,128 @@ fun FormDropdownField(
     options: List<String>,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    editable: Boolean = false,
     enabled: Boolean = true,
-    placeholder: String? = null,
-    supportingText: String? = null,
+    config: FormDropdownConfig = FormDropdownConfig(),
+    tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
+    state: FormDropdownState? = null
 ) {
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    val dropdownState = state ?: remember { FormDropdownState() }
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val isTelevision = isTelevisionDevice()
+    val tvFieldState = if (isTelevision) {
+        rememberTvTextFieldState(tvNavigation.focusRequester)
+    } else {
+        null
+    }
+    val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
+    val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel)
+    val selectedOptionIndex = formDropdownSelectedOptionIndex(menuOptions, value)
+    val displayedValue = if (!config.editable && value.isEmpty()) {
+        config.emptyOptionLabel.orEmpty()
+    } else {
+        value
+    }
+
+    fun dismissMenu() {
+        dropdownState.close(restoreFocus = isTelevision)
+    }
+
+    fun activateTvField() {
+        val textFieldState = tvFieldState ?: return
+        if (config.editable) {
+            textFieldState.beginEditing()
+        } else {
+            keyboardController?.hide()
+            if (dropdownState.expanded) dismissMenu() else dropdownState.open()
+        }
+    }
+
+    LaunchedEffect(dropdownState.expanded, dropdownState.restoreFieldFocus, selectedOptionIndex) {
+        when {
+            dropdownState.expanded &&
+                menuOptions.isNotEmpty() &&
+                selectedOptionFocusRequester != null ->
+                requestFocusWhenReady(selectedOptionFocusRequester)
+
+            !dropdownState.expanded &&
+                dropdownState.restoreFieldFocus &&
+                tvFieldState != null -> {
+                tvFieldState.finishEditing()
+                requestFocusWhenReady(tvFieldState.passiveFocusRequester)
+                dropdownState.restoreFieldFocus = false
+            }
+        }
+    }
 
     ExposedDropdownMenuBox(
-        expanded = expanded,
+        expanded = dropdownState.expanded,
         onExpandedChange = { newExpanded ->
             if (!enabled) return@ExposedDropdownMenuBox
-            if (!editable && newExpanded) {
-                keyboardController?.hide()
-            }
-            expanded = newExpanded
+            if (!config.editable && newExpanded) keyboardController?.hide()
+            if (newExpanded) dropdownState.open() else dismissMenu()
         },
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
+            .tvAwareTextFieldFocus(
+                state = tvFieldState,
+                enabled = enabled,
+                navigation = tvNavigation,
+                onActivate = ::activateTvField
+            )
     ) {
         OutlinedTextField(
-            value = value,
-            onValueChange = { if (editable) onValueChange(it) },
-            readOnly = !editable,
-            enabled = enabled,
-            label = { Text(label) },
-            placeholder = { if (placeholder != null) Text(placeholder) },
-            supportingText = supportingText?.let { { Text(it) } },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
+            value = displayedValue,
+            onValueChange = { if (config.editable) onValueChange(it) },
+            spec = OutlinedTextFieldSpec(
+                label = label,
+                placeholder = config.placeholder,
+                supportingText = config.supportingText,
+                enabled = enabled,
+                readOnly = !config.editable
             ),
+            tvFieldState = tvFieldState,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownState.expanded)
+            },
             modifier = Modifier
+                .then(tvFieldState?.let {
+                    Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
+                } ?: Modifier)
                 .menuAnchor(
-                    type = if (editable) ExposedDropdownMenuAnchorType.PrimaryEditable
+                    type = if (config.editable) ExposedDropdownMenuAnchorType.PrimaryEditable
                     else ExposedDropdownMenuAnchorType.PrimaryNotEditable
                 )
                 .fillMaxWidth()
                 .onFocusChanged { focusState ->
-                    if (!editable && focusState.isFocused) {
-                        keyboardController?.hide()
-                    }
+                    if (!config.editable && focusState.isFocused) keyboardController?.hide()
                 }
         )
         ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
+            expanded = dropdownState.expanded,
+            onDismissRequest = ::dismissMenu,
             modifier = Modifier.verticalScrollbar(menuScrollState),
             scrollState = menuScrollState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
+            menuOptions.forEachIndexed { index, option ->
+                AppDropdownMenuItem(
+                    text = if (option.isEmpty() && config.emptyOptionLabel != null) {
+                        config.emptyOptionLabel
+                    } else {
+                        option
+                    },
+                    modifier = if (index == selectedOptionIndex && selectedOptionFocusRequester != null) {
+                        Modifier.focusRequester(selectedOptionFocusRequester)
+                    } else {
+                        Modifier
+                    },
                     onClick = {
                         onValueChange(option)
-                        expanded = false
-                        focusManager.clearFocus()
+                        dismissMenu()
+                        if (!isTelevision) focusManager.clearFocus()
                     }
                 )
             }
