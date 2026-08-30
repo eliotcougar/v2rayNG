@@ -132,6 +132,7 @@ private object ShizukuRoutingSyncDispatcher {
 
     private fun forward(service: IShizukuTetheringService, pending: PendingUpdate) {
         val update = pending.update
+        if (MmkvManager.decodeSettingsString(AppConfig.PREF_SHIZUKU_SYNC_TOKEN) != update.token) return
         val result = when (update.event) {
             HotspotRoutingSync.EVENT_CORE_STOPPING -> service.notifyCoreStopping(update.token)
             HotspotRoutingSync.EVENT_CORE_STARTED -> {
@@ -148,7 +149,7 @@ private object ShizukuRoutingSyncDispatcher {
                     parameters.ipv6Enabled,
                     coreLease,
                 )
-                if (syncResult != ShizukuTetheringService.RESULT_INVALID_SESSION) {
+                if (syncResult != ShizukuTetheringService.RESULT_RECOVERY_REQUIRED) {
                     syncResult
                 } else {
                     LogUtil.i(TAG, "Recreating Shizuku tethering after its UserService was lost")
@@ -166,6 +167,7 @@ private object ShizukuRoutingSyncDispatcher {
             HotspotRoutingSync.EVENT_CORE_START_FAILED -> {
                 service.notifyCoreStartFailed(update.token, update.detail)
             }
+            HotspotRoutingSync.EVENT_RETIRE_XHTTP_CLIENTS -> service.retireXHTTPClients(update.token)
             else -> error("Unknown hotspot synchronization event ${update.event}")
         }
         if (result == ShizukuTetheringService.RESULT_INVALID_SESSION) {

@@ -15,5 +15,6 @@ data class HotspotRoutingSync(
         const val EVENT_CORE_STOPPING = 1
         const val EVENT_CORE_STARTED = 2
         const val EVENT_CORE_START_FAILED = 3
+        const val EVENT_RETIRE_XHTTP_CLIENTS = 4
     }
 }

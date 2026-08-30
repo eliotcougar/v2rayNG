@@ -52,6 +52,49 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 
 @Composable
+fun ConfirmDialog(
+    title: String? = null,
+    message: String,
+    confirmText: String = stringResource(R.string.action_ok),
+    dismissText: String? = stringResource(R.string.action_cancel),
+    confirmIcon: @Composable (() -> Unit)? = null,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val confirmFocusRequester = remember { FocusRequester() }
+    val dismissFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(dismissText) {
+        requestFocusWhenReady(if (dismissText != null) dismissFocusRequester else confirmFocusRequester)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = title?.let { { Text(it) } },
+        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(); onDismiss() },
+                modifier = Modifier.focusRequester(confirmFocusRequester).dpadFocusOutline()
+            ) {
+                confirmIcon?.invoke()
+                if (confirmIcon != null) Spacer(Modifier.width(8.dp))
+                Text(confirmText)
+            }
+        },
+        dismissButton = dismissText?.let { text ->
+            {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.focusRequester(dismissFocusRequester).dpadFocusOutline()
+                ) { Text(text) }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
 fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val isTelevision = isTelevisionDevice()
     val dismissFocusRequester = remember { FocusRequester() }

@@ -75,32 +75,32 @@ fun GroupTabBar(
                 items = groups,
                 key = { _, group -> group.id },
             ) { index, group ->
-            val focusRequester = tabFocusRequesters[index]
-            val tabModifier = if (isTelevision) {
-                Modifier
-                    .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 20.dp)
-                    .onFocusChanged { if (it.isFocused && index != selectedIndex) onTabClick(index) }
-                    .dpadOrderedFocusNavigation(
-                        current = focusRequester,
-                        order = tabFocusRequesters,
-                        onBeforeFirst = { onOpenDrawer(focusRequester) }
-                    )
-                    .dpadVerticalFocusNavigation(
-                        onMoveUp = { onMoveUp(); true },
-                        onMoveDown = { false }
-                    )
-            } else {
-                Modifier
+                val focusRequester = tabFocusRequesters[index]
+                val tabModifier = if (isTelevision) {
+                    Modifier
+                        .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 20.dp)
+                        .onFocusChanged { if (it.isFocused && index != selectedIndex) onTabClick(index) }
+                        .dpadOrderedFocusNavigation(
+                            current = focusRequester,
+                            order = tabFocusRequesters,
+                            onBeforeFirst = { onOpenDrawer(focusRequester) }
+                        )
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = { onMoveUp(); true },
+                            onMoveDown = { false }
+                        )
+                } else {
+                    Modifier
+                }
+                val serverFlow = remember(group.id, mainViewModel) { mainViewModel.serversForGroup(group.id) }
+                GroupTabItem(
+                    group = group,
+                    serverFlow = serverFlow,
+                    selected = index == selectedIndex,
+                    modifier = tabModifier,
+                    onClick = { onTabClick(index) }
+                )
             }
-            val serverFlow = remember(group.id, mainViewModel) { mainViewModel.serversForGroup(group.id) }
-            GroupTabItem(
-                group = group,
-                serverFlow = serverFlow,
-                selected = index == selectedIndex,
-                modifier = tabModifier,
-                onClick = { onTabClick(index) }
-            )
-        }
         }
     }
 }

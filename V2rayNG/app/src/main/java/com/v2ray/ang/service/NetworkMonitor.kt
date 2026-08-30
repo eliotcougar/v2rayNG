@@ -13,6 +13,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +46,7 @@ class NetworkMonitor(
 
     private var upstream: Network? = null
     private var handoverJob: Job? = null
+    private var monitorScope: CoroutineScope? = null
     @Volatile
     private var currentCapabilities: NetworkCapabilities? = null
     private var registered = false
@@ -76,12 +79,17 @@ class NetworkMonitor(
     /**
      * Starts watching. Safe to call more than once, only the first call registers.
      */
+    @Synchronized
     fun register() {
         if (registered) return
+        monitorScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        registered = true
         try {
             connectivity.requestNetwork(request, callback)
-            registered = true
         } catch (e: Exception) {
+            registered = false
+            monitorScope?.cancel()
+            monitorScope = null
             LogUtil.e(AppConfig.TAG, "NetworkMonitor: Failed to request network", e)
         }
     }
@@ -89,13 +97,17 @@ class NetworkMonitor(
     /**
      * Stops watching and drops the tracked state. Safe to call more than once.
      */
+    @Synchronized
     fun unregister() {
+        val wasRegistered = registered
+        registered = false
+        monitorScope?.cancel()
+        monitorScope = null
         handoverJob?.cancel()
         handoverJob = null
         currentCapabilities = null
         upstream = null
-        if (!registered) return
-        registered = false
+        if (!wasRegistered) return
         try {
             connectivity.unregisterNetworkCallback(callback)
         } catch (e: Exception) {
@@ -124,7 +136,9 @@ class NetworkMonitor(
         override fun onLost(network: Network) = handleLost(network)
     }
 
+    @Synchronized
     private fun handleAvailable(network: Network) {
+        if (!registered) return
         val previous = upstream
         upstream = network
         val capabilities = runCatching { connectivity.getNetworkCapabilities(network) }.getOrNull()
@@ -138,7 +152,9 @@ class NetworkMonitor(
         }
     }
 
+    @Synchronized
     private fun handleCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+        if (!registered || upstream != network) return
         currentCapabilities = capabilities
         onUnderlyingNetworksChanged(arrayOf(network))
         // Keep the previous identity until the pending handover has cached its working route.
@@ -147,7 +163,9 @@ class NetworkMonitor(
         }
     }
 
-    private fun handleLost(@Suppress("UNUSED_PARAMETER") network: Network) {
+    @Synchronized
+    private fun handleLost(network: Network) {
+        if (!registered || upstream != network) return
         currentCapabilities = null
         onUnderlyingNetworksChanged(null)
     }
@@ -155,7 +173,7 @@ class NetworkMonitor(
     private fun scheduleHandover(network: Network) {
         LogUtil.i(AppConfig.TAG, "NetworkMonitor: Upstream is now $network")
         handoverJob?.cancel()
-        handoverJob = CoroutineScope(Dispatchers.IO).launch {
+        handoverJob = monitorScope?.launch {
             try {
                 delay(HANDOVER_DEBOUNCE_MS)
                 notifyNetworkEvent(network, currentCapabilities, isHandover = true)
@@ -167,11 +185,14 @@ class NetworkMonitor(
         }
     }
 
+    @Synchronized
     private fun notifyNetworkEvent(
         network: Network,
         capabilities: NetworkCapabilities?,
         isHandover: Boolean,
     ) {
+        // Serialize delivery with unregister so an old monitor cannot enqueue a late recovery.
+        if (!registered || upstream != network) return
         onNetworkEvent(
             NetworkEvent(
                 network = network,

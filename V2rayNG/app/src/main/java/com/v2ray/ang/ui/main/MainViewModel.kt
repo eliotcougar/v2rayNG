@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
@@ -36,7 +35,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -70,6 +68,7 @@ class MainViewModel(
          * that MainViewModel can await before handling AppResumed.
          */
         const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
+        const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
     }
 
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -244,7 +243,7 @@ class MainViewModel(
         cacheMutex.withLock {
             groupDataCache[groupId]?.let { groupDataCache[groupId] = applyUpdates(it) }
         }
-        mutableServersForGroup(groupId).update(applyUpdates)
+        mutableServerGroupState(groupId).update { it.withTestResults(updates) }
     }
 
     internal fun formatStatus(status: MainStatus): String = when (status) {
@@ -367,7 +366,8 @@ class MainViewModel(
     }
 
     private fun updateActiveOutboundUpdates(guid: String? = _uiState.value.selectedGuid) {
-        CoreServiceManager.setActiveOutboundUpdatesEnabled(mainUiVisible && shouldPollActiveOutbound(guid))
+        val enabled = mainUiVisible && shouldPollActiveOutbound(guid)
+        dataSource.sendMsg2Service(AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES, if (enabled) "1" else "0")
     }
 
     private fun outboundTargetDisplayName(target: String): String {
@@ -1094,6 +1094,7 @@ class MainViewModel(
                 }
             )
         }
+        if (running) updateActiveOutboundUpdates()
     }
 
     override fun onCleared() {
@@ -1102,7 +1103,7 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
-        CoreServiceManager.setActiveOutboundUpdatesEnabled(false)
+        dataSource.sendMsg2Service(AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES, "0")
         testResultFlushJob?.cancel()
         cancelAllPing()
         dataSource.close()
@@ -1119,9 +1120,6 @@ class MainViewModel(
         }
     }
 
-    private companion object {
-        const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
-    }
 }
 
 internal fun subscriptionGroupRefreshOrder(

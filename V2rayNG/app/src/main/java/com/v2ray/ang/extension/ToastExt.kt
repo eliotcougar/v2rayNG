@@ -57,9 +57,7 @@ fun Context.toastSuccess(
  */
 fun Context.toastErrorLong(message: Int) {
     val text = getString(message)
-    dispatchMessage(text, ToastType.ERROR, long = true) {
-        Toast.makeText(this, text, Toast.LENGTH_LONG).show()
-    }
+    dispatchMessage(text, ToastType.ERROR, AccessibilityLiveRegionMode.POLITE, long = true)
 }
 
 /**

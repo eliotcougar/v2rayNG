@@ -23,6 +23,21 @@ internal data class ServerGroupUiState(
     val rows: List<ServerRowUiModel> = emptyList()
 )
 
+/** Keep prebuilt rows and the source list in sync when observatory results arrive in batches. */
+internal fun ServerGroupUiState.withTestResults(updates: Map<String, Long>): ServerGroupUiState {
+    if (updates.isEmpty()) return this
+    return copy(
+        servers = servers.map { server ->
+            val delay = updates[server.guid]
+            if (delay == null || delay == server.testDelayMillis) server else server.copy(testDelayMillis = delay)
+        },
+        rows = rows.map { row ->
+            val delay = updates[row.guid]
+            if (delay == null || delay == row.testDelayMillis) row else row.copy(testDelayMillis = delay)
+        }
+    )
+}
+
 internal fun buildServerRowUiModel(server: ServersCache, subscriptionRemarks: String): ServerRowUiModel {
     val profile = server.profile
     return ServerRowUiModel(

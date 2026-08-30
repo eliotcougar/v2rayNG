@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import com.v2ray.ang.dto.ConnectionTestResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -20,14 +21,17 @@ class MainAccessibilityStatusTest {
         val started = MainUiState(isRunning = true).withTestingStarted()
         assertTrue(started.isTesting)
         assertSame(MainStatus.Testing, started.status)
+        assertSame(MainStatus.Testing, started.testStatus)
 
         val completed = started.withTestingFinished(completedBulkTest = true)
         assertFalse(completed.isTesting)
         assertSame(MainStatus.TestCompleted, completed.status)
+        assertSame(MainStatus.TestCompleted, completed.testStatus)
 
         val cancelled = started.withTestingFinished(completedBulkTest = false)
         assertFalse(cancelled.isTesting)
         assertSame(MainStatus.Connected, cancelled.status)
+        assertNull(cancelled.testStatus)
 
         val disconnected = MainUiState(isRunning = false, isTesting = true)
             .withTestingFinished(completedBulkTest = false)
@@ -40,11 +44,13 @@ class MainAccessibilityStatusTest {
         val successState = MainUiState(isTesting = true).withCurrentTestResult(success)
         assertFalse(successState.isTesting)
         assertEquals(success, (successState.status as MainStatus.ConnectionTest).result)
+        assertEquals(successState.status, successState.testStatus)
 
         val failure = ConnectionTestResult(delayMillis = -1L, errorMessage = "failure")
         val failureState = MainUiState(isTesting = true).withCurrentTestResult(failure)
         assertFalse(failureState.isTesting)
         assertEquals(failure, (failureState.status as MainStatus.ConnectionTest).result)
+        assertEquals(failureState.status, failureState.testStatus)
     }
 
     @Test

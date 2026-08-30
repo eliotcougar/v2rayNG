@@ -13,5 +13,6 @@ interface IShizukuTetheringService {
     int notifyCoreStartFailed(String syncToken, String detail) = 11;
     TetheringStatusSnapshot getStatus(boolean includeIpv6) = 14;
     void setStatusListener(ITetheringStatusListener listener) = 15;
+    int retireXHTTPClients(String syncToken) = 16;
     void destroy() = 16777114;
 }

@@ -76,10 +76,6 @@ fun MainBottomBar(
     }
 
     val isTelevision = isTelevisionDevice()
-    val statusDescription = listOf(displayText, testDisplayText)
-        .filter { it.isNotBlank() }
-        .joinToString(". ")
-
     if (isTelevision) {
         Column(modifier = Modifier.fillMaxWidth()) {
             AppDivider()
@@ -95,12 +91,14 @@ fun MainBottomBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 48.dp)
+                        .dpadFocusOutline()
                         .semantics(mergeDescendants = true) { contentDescription = accessibilityText }
                         .then(connectionActionModifier),
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
                         text = displayText,
+                        modifier = Modifier.semantics { hideFromAccessibility() },
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -108,6 +106,7 @@ fun MainBottomBar(
                     if (testDisplayText.isNotBlank()) {
                         Text(
                             text = testDisplayText,
+                            modifier = Modifier.semantics { hideFromAccessibility() },
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

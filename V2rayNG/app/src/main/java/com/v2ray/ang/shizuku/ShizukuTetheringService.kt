@@ -71,6 +71,7 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
     private var routingDetail = ""
     private var routingProfileName = ""
     private var routingSession: RoutingSession? = null
+    private var freshUserService = true
     private var testNetworkHandle: TestNetworkHandle? = null
     private var upstreamMonitor: TetheringUpstreamMonitor? = null
     private var statusListener: ITetheringStatusListener? = null
@@ -290,6 +291,7 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
             routingDetail = "Tethering synchronization token is empty"
             return RESULT_INVALID_SESSION
         }
+        freshUserService = false
         val activeTypes = getActiveTetheringTypes()
         if (activeTypes < 0) {
             setRoutingError("Unable to determine active tethering before enabling its protected route")
@@ -387,6 +389,7 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
 
     @Synchronized
     override fun stopRouting(): Int {
+        freshUserService = false
         val result = shutdownRoutingLocked()
         notifyStatusChangedLocked()
         return result
@@ -477,7 +480,9 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         coreLease: ICoreTetheringLease,
     ): Int {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return RESULT_ROUTING_FAILED
-        val session = findRoutingSession(token) ?: return RESULT_INVALID_SESSION
+        val sessionResult = routingSyncSessionResult(token, routingSession?.token, freshUserService)
+        if (sessionResult != RESULT_OK) return sessionResult
+        val session = checkNotNull(routingSession)
         val result = runCatching {
             val launchConfig = HotspotRoutingLaunchConfig(
                 engine = HotspotRoutingEngineConfig(useHev, profileName, readEngineConfig(coreLease)),
@@ -505,6 +510,21 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         )
         notifyStatusChangedLocked()
         return RESULT_OK
+    }
+
+    /** Retires the secondary core's transport cache with the primary core after device idle. */
+    @Synchronized
+    override fun retireXHTTPClients(token: String): Int {
+        findRoutingSession(token) ?: return RESULT_INVALID_SESSION
+        val controller = nativeController ?: return RESULT_OK
+        return runCatching {
+            val retired = controller.retireXHTTPClients()
+            Log.i(TAG, "Retired $retired cached tethering XHTTP clients after device idle")
+            RESULT_OK
+        }.getOrElse {
+            Log.e(TAG, "Unable to retire cached tethering XHTTP clients", it)
+            RESULT_ROUTING_FAILED
+        }
     }
 
     private fun findRoutingSession(token: String): RoutingSession? {
@@ -1141,6 +1161,7 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         val controller = Libv2ray.newCoreController(object : CoreCallbackHandler {
             override fun startup(): Long = 0
             override fun shutdown(): Long = 0
+            override fun onBalancerTargetChanged(balancerTag: String?, target: String?): Long = 0
             override fun onEmitStatus(code: Long, status: String?): Long {
                 Log.i(TAG, "Hotspot Xray status $code: ${status.orEmpty()}")
                 return 0
@@ -1192,7 +1213,7 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         // Shizuku UserServices can outlive an APK update. Bump this whenever the service
         // implementation or its AIDL contract changes so an incompatible shell process is
         // replaced even when a locally rebuilt APK keeps the same Android versionCode.
-        const val USER_SERVICE_VERSION = 20_260_759
+        const val USER_SERVICE_VERSION = 20_260_761
         private const val TETHERING_SERVICE = "tethering"
         private const val TEST_NETWORK_SERVICE = "test_network"
         private val TETHERING_IPV6_PREFIX = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1234,6 +1255,16 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         const val RESULT_INVALID_SESSION = -4
         const val RESULT_ALREADY_ACTIVE = -5
         const val RESULT_UNPROTECTED_UPSTREAM = -6
+        const val RESULT_RECOVERY_REQUIRED = -7
+
+        // Only a newly created UserService may recover a lost session. An in-flight warm reset
+        // must not recreate a session explicitly stopped by the user or failed-hotspot cleanup.
+        internal fun routingSyncSessionResult(token: String, activeToken: String?, freshUserService: Boolean): Int = when {
+            token.isBlank() -> RESULT_INVALID_SESSION
+            activeToken == token -> RESULT_OK
+            activeToken == null && freshUserService -> RESULT_RECOVERY_REQUIRED
+            else -> RESULT_INVALID_SESSION
+        }
 
         internal fun createUserServiceArgs() = Shizuku.UserServiceArgs(
             ComponentName(BuildConfig.APPLICATION_ID, ShizukuTetheringService::class.java.name)

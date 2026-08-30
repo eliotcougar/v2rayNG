@@ -72,9 +72,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -149,7 +146,7 @@ internal fun AppTopBar(
 
     Column {
         TopAppBar(
-            modifier = Modifier.accessibilityTraversalGroup(),
+            modifier = Modifier.accessibilityTraversalGroup().tvSafeAreaPadding(horizontal = 48.dp, vertical = 12.dp),
             title = {
                 if (isSearchActive) {
                     SearchInputField(
@@ -206,8 +203,7 @@ internal fun AppTopBar(
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
                 navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
                 actionIconContentColor = MaterialTheme.colorScheme.onSurface
-            ),
-            modifier = Modifier.tvSafeAreaPadding(horizontal = 48.dp, vertical = 12.dp)
+            )
         )
         AnimatedVisibility(
             visible = isLoading,
@@ -323,7 +319,8 @@ fun AppRowSwitch(
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
     label: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    accessibilityDescription: String? = label
 ) {
     var isFocused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(24.dp)
@@ -336,15 +333,15 @@ fun AppRowSwitch(
             .onFocusChanged { isFocused = it.isFocused }
             .clip(shape)
             .semantics(mergeDescendants = true) {
-                role = Role.Switch
-                toggleableState = ToggleableState(checked)
+                accessibilityDescription?.let { contentDescription = it }
             }
-            .clickable(
+            .toggleable(
+                value = checked,
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
                 role = Role.Switch,
-                onClick = { onCheckedChange(!checked) }
+                onValueChange = onCheckedChange
             )
             .padding(start = 4.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically

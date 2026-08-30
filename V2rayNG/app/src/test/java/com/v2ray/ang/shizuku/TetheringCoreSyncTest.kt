@@ -9,6 +9,15 @@ import org.junit.Test
 class TetheringCoreSyncTest {
 
     @Test
+    fun onlyFreshUserServiceMayRecreateAProtectedSession() {
+        assertEquals(ShizukuTetheringService.RESULT_RECOVERY_REQUIRED, ShizukuTetheringService.routingSyncSessionResult("session", null, true))
+        assertEquals(ShizukuTetheringService.RESULT_INVALID_SESSION, ShizukuTetheringService.routingSyncSessionResult("session", null, false))
+        assertEquals(ShizukuTetheringService.RESULT_INVALID_SESSION, ShizukuTetheringService.routingSyncSessionResult("stale", "current", false))
+        assertEquals(ShizukuTetheringService.RESULT_INVALID_SESSION, ShizukuTetheringService.routingSyncSessionResult("", null, true))
+        assertEquals(ShizukuTetheringService.RESULT_OK, ShizukuTetheringService.routingSyncSessionResult("current", "current", false))
+    }
+
+    @Test
     fun coreSyncHookNeverLeaksFeatureFailuresIntoThePrimaryCore() {
         var failure: Throwable? = null
         val expected = IllegalStateException("Shizuku unavailable")

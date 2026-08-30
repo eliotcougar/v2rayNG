@@ -47,10 +47,12 @@ internal object TetheringCoreSync {
         updateRecovery(TetheringRecoveryState::onBinderDied)
     }
 
+    @Synchronized
     fun onStarting() {
         safely("start-preparation") { clearCoreState() }
     }
 
+    @Synchronized
     fun onStarted(
         service: Service,
         profileId: String,
@@ -75,6 +77,7 @@ internal object TetheringCoreSync {
         }
     }
 
+    @Synchronized
     fun onStartFailed(service: Service, detail: String) {
         safely("start-failure") {
             try {
@@ -85,6 +88,36 @@ internal object TetheringCoreSync {
         }
     }
 
+    /** Pause the secondary engine without releasing its lease or protected TUN during warm recovery. */
+    @Synchronized
+    fun onNetworkResetStarting(context: Context): Boolean {
+        if (!snapshot.running) return false
+        return runCoreSyncHook(
+            action = { send(context, HotspotRoutingSync.EVENT_CORE_STOPPING) },
+            onFailure = { logFailure("network-reset-start", activeProfileId, it) },
+        )
+    }
+
+    /** Publish the rebuilt config only while the same main-core session still owns the lease. */
+    @Synchronized
+    fun onNetworkResetSucceeded(context: Context, refreshedCoreConfig: String?) {
+        safely("network-reset-complete") {
+            val currentSnapshot = snapshot.takeIf { it.running } ?: return@safely
+            refreshedCoreConfig?.let(coreLease::updateEngineConfig)
+            send(context, HotspotRoutingSync.EVENT_CORE_STARTED, currentSnapshot)
+        }
+    }
+
+    fun retireXHTTPClientsAfterDeviceIdle(context: Context) {
+        safely("device-idle-refresh") {
+            val currentSnapshot = snapshot
+            if (currentSnapshot.running && !currentSnapshot.useHev) {
+                send(context, HotspotRoutingSync.EVENT_RETIRE_XHTTP_CLIENTS)
+            }
+        }
+    }
+
+    @Synchronized
     fun onStopping(service: Service) {
         safely("stop") {
             try {
@@ -95,6 +128,7 @@ internal object TetheringCoreSync {
         }
     }
 
+    @Synchronized
     fun clear() {
         safely("clear") { clearCoreState() }
     }
@@ -259,6 +293,11 @@ private class CoreTetheringLease : ICoreTetheringLease.Stub() {
         coreConfig = null
         assetDirectory = null
         configDirectory = null
+    }
+
+    @Synchronized
+    fun updateEngineConfig(coreConfig: String) {
+        this.coreConfig = coreConfig
     }
 
     @Synchronized

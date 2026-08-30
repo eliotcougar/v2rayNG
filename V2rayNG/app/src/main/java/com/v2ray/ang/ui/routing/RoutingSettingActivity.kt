@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -50,6 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.enums.RoutingType
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
@@ -379,40 +381,20 @@ fun RoutingSettingScreen(
                         ) else Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .then(
-                                    if (isTelevision) {
-                                        Modifier
-                                            .padding(vertical = 8.dp)
-                                            .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
-                                            .dpadFocusOutline(
-                                                focusRequester = focusTargets.row,
-                                                cornerRadius = 16.dp,
-                                                showFocus = !isMoving
-                                            )
-                                            .dpadOrderedFocusNavigation(
-                                                current = focusTargets.row,
-                                                order = actionFocusOrder,
-                                                onBeforeFirst = { navigationFocusRequester.requestFocus() }
-                                            )
-                                            .dpadVerticalFocusNavigation(
-                                                onMoveUp = {
-                                                    previousTargets?.row?.requestFocus()
-                                                        ?: domainStrategyFocusRequester.requestFocus()
-                                                },
-                                                onMoveDown = {
-                                                    nextTargets?.row?.requestFocus() ?: true
-                                                }
-                                            )
-                                            .dpadLongPressToMove(
-                                                enabled = isTelevision,
-                                                item = dpadReorderItem,
-                                                onClick = { onEditRule(ruleset.id) }
-                                            )
-                                            .padding(horizontal = 24.dp, vertical = 16.dp)
-                                    } else {
-                                        Modifier.padding(horizontal = 16.dp)
-                                    }
-                                ),
+                                .padding(vertical = 8.dp)
+                                .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
+                                .dpadFocusOutline(focusRequester = focusTargets.row, cornerRadius = 16.dp, showFocus = !isMoving)
+                                .dpadOrderedFocusNavigation(
+                                    current = focusTargets.row,
+                                    order = actionFocusOrder,
+                                    onBeforeFirst = { navigationFocusRequester.requestFocus() }
+                                )
+                                .dpadVerticalFocusNavigation(
+                                    onMoveUp = { previousTargets?.row?.requestFocus() ?: domainStrategyFocusRequester.requestFocus() },
+                                    onMoveDown = { nextTargets?.row?.requestFocus() ?: true }
+                                )
+                                .dpadLongPressToMove(enabled = true, item = dpadReorderItem, onClick = { onEditRule(ruleset.id) })
+                                .padding(horizontal = 24.dp, vertical = 16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -451,70 +433,50 @@ fun RoutingSettingScreen(
                                 }
                             }
 
-                            if (isTelevision) {
-                                Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    AppIconButton(
-                                        icon = painterResource(R.drawable.ic_edit_24dp),
-                                        label = stringResource(R.string.action_edit),
-                                        focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.edit,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.edit,
-                                            nextRow = nextTargets?.edit
-                                        ),
-                                        onClick = { onEditRule(ruleset.id) }
-                                    )
-                                    AppIconButton(
-                                        icon = painterResource(R.drawable.ic_delete_24dp),
-                                        label = stringResource(R.string.action_delete),
-                                        focusRequester = focusTargets.delete,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.delete,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.delete,
-                                            nextRow = nextTargets?.delete
-                                        ),
-                                        onClick = { deleteRuleId = ruleset.id }
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    AppRowSwitch(
-                                        checked = ruleset.enabled,
-                                        onCheckedChange = { checked ->
-                                            val updated = ruleset.copy(enabled = checked)
-                                            viewModel.update(ruleset.id, updated)
-                                        },
-                                        label = stringResource(R.string.routing_settings_enable_rule),
-                                        focusRequester = focusTargets.toggle,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.toggle,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.toggle,
-                                            nextRow = nextTargets?.toggle
-                                        )
-                                    )
-                                }
-                            } else {
-                                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
+                            Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                 AppIconButton(
                                     icon = painterResource(R.drawable.ic_edit_24dp),
                                     label = stringResource(R.string.action_edit),
+                                    contentDescription = stringResource(R.string.acc_edit_routing_rule_named, ruleset.remarks.orEmpty()),
+                                    focusRequester = focusTargets.edit,
+                                    modifier = Modifier.dpadRowActionNavigation(
+                                        current = focusTargets.edit,
+                                        order = actionFocusOrder,
+                                        previousRow = previousTargets?.edit,
+                                        nextRow = nextTargets?.edit
+                                    ),
                                     onClick = { onEditRule(ruleset.id) }
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Switch(
+                                AppIconButton(
+                                    icon = painterResource(R.drawable.ic_delete_24dp),
+                                    label = stringResource(R.string.action_delete),
+                                    contentDescription = stringResource(R.string.acc_delete_routing_rule_named, ruleset.remarks.orEmpty()),
+                                    focusRequester = focusTargets.delete,
+                                    modifier = Modifier.dpadRowActionNavigation(
+                                        current = focusTargets.delete,
+                                        order = actionFocusOrder,
+                                        previousRow = previousTargets?.delete,
+                                        nextRow = nextTargets?.delete
+                                    ),
+                                    onClick = { deleteRuleId = ruleset.id }
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                AppRowSwitch(
                                     checked = ruleset.enabled,
                                     onCheckedChange = { checked ->
                                         val updated = ruleset.copy(enabled = checked)
                                         viewModel.update(ruleset.id, updated)
                                     },
-                                    modifier = Modifier.scale(0.7f),
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                        checkedTrackColor = MaterialTheme.colorScheme.secondary
+                                    label = stringResource(R.string.routing_settings_enable_rule),
+                                    accessibilityDescription = stringResource(R.string.acc_routing_rule_switch_label, ruleset.remarks.orEmpty()),
+                                    focusRequester = focusTargets.toggle,
+                                    modifier = Modifier.dpadRowActionNavigation(
+                                        current = focusTargets.toggle,
+                                        order = actionFocusOrder,
+                                        previousRow = previousTargets?.toggle,
+                                        nextRow = nextTargets?.toggle
                                     )
                                 )
-                                }
                             }
                         }
                     }
