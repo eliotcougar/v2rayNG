@@ -535,7 +535,7 @@
     <string name="acc_edit_asset_named">تعديل %1$s</string>
     <string name="acc_delete_asset_named">حذف %1$s</string>
     <string name="acc_qr_code">رمز QR</string>
-    <string name="acc_copy_log">نسخ السجل</string>
+    <string name="acc_copy_log">نسخ السجل إلى الحافظة</string>
     <string name="acc_clear_log">مسح السجل</string>
     <string name="acc_add_rule">إضافة قاعدة توجيه</string>
     <string name="acc_routing_rule_summary">%1$s، %2$s</string>
@@ -551,6 +551,7 @@
     <string name="acc_stop">إيقاف الخدمة</string>
     <string name="acc_back">رجوع</string>
     <string name="acc_search">بحث</string>
+    <string name="acc_clear_search">مسح البحث</string>
     <string name="acc_add">إضافة تكوين</string>
     <string name="acc_more">المزيد من الخيارات</string>
     <string name="acc_selected_server">Selected</string>
