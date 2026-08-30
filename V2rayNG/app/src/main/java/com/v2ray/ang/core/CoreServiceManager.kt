@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
+import android.os.ResultReceiver
 import android.system.OsConstants
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
@@ -18,12 +19,16 @@ import com.v2ray.ang.contracts.IDialerService
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.ConfigResult
+import com.v2ray.ang.dto.CoreUrlDownloadRequest
 import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BrowserDialerMode
+import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.AppLocaleManager
+import com.v2ray.ang.extension.serializable
+import com.v2ray.ang.handler.CoreDownloadManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
@@ -42,6 +47,8 @@ import kotlinx.coroutines.Dispatchers
 import com.v2ray.ang.extension.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -65,6 +72,7 @@ object CoreServiceManager {
     private val mMsgReceive = ReceiveMessageHandler()
     private val tetheringMsgReceive = TetheringMessageHandler()
     private val mSystemEventReceive = SystemEventHandler()
+    private var urlDownloadScope: CoroutineScope? = null
     private var currentConfig: ProfileItem? = null
     private var currentProfileId = ""
     private var processFinder: XrayProcessFinder? = null
@@ -417,6 +425,8 @@ object CoreServiceManager {
     @Throws(Exception::class)
     private fun doStartCoreLoop(service: Service, vpnInterface: ParcelFileDescriptor?) {
         registerCoreReceivers(service)
+        urlDownloadScope?.cancel()
+        urlDownloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         launchCore(service, vpnInterface)
         startNetworkMonitor(service)
@@ -511,6 +521,8 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        urlDownloadScope?.cancel()
+        urlDownloadScope = null
         stopActiveOutboundPolling()
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
@@ -588,6 +600,8 @@ object CoreServiceManager {
     }
 
     private fun cleanupFailedStart(service: Service) {
+        urlDownloadScope?.cancel()
+        urlDownloadScope = null
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
         stopActiveOutboundPolling()
@@ -818,6 +832,64 @@ object CoreServiceManager {
                 ipAddress = endpoint?.ipAddress,
             )
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
+
+            // Only fetch IP info if the delay test was successful
+            if (time >= 0) {
+                val fetchViaCore = if (SettingsManager.isVpnMode() && !SettingsManager.isUsingHevTun()) {
+                    { url: String ->
+                        coreController.getUrlContent(url, currentOutboundTag())
+                    }
+                } else {
+                    null
+                }
+                SpeedtestManager.getRemoteIPInfo(fetchViaCore)?.let { ip ->
+                    MessageHelper.sendMsg2UI(
+                        service,
+                        AppConfig.MSG_MEASURE_DELAY_RESULT,
+                        result.copy(
+                            country = ip.country,
+                            ipAddress = ip.ipAddress,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun currentOutboundTag(): String =
+        if (currentConfig?.configType == EConfigType.POLICYGROUP) {
+            coreController.getBalancerPrincipleTarget(AppConfig.TAG_BALANCER)
+        } else {
+            AppConfig.TAG_PROXY
+        }
+
+    private fun downloadUrlThroughCore(request: CoreUrlDownloadRequest): Int {
+        if (
+            !isRunning() ||
+            !SettingsManager.isVpnMode() ||
+            SettingsManager.isUsingHevTun() ||
+            MmkvManager.decodeSettingsBool(AppConfig.PREF_ENABLE_LOCAL_PROXY, true)
+        ) {
+            return Activity.RESULT_CANCELED
+        }
+        val service = getService() ?: return Activity.RESULT_CANCELED
+        val targetFile = CoreDownloadManager.targetFile(service, request.requestId)
+            ?: return CoreDownloadManager.RESULT_FAILED
+        targetFile.delete()
+
+        return try {
+            coreController.downloadUrlToFile(
+                request.url,
+                currentOutboundTag(),
+                request.headersJson,
+                targetFile.absolutePath,
+                request.timeoutMillis,
+            )
+            if (targetFile.isFile) Activity.RESULT_OK else CoreDownloadManager.RESULT_FAILED
+        } catch (e: Exception) {
+            targetFile.delete()
+            LogUtil.e(AppConfig.TAG, "Failed to download URL through core", e)
+            CoreDownloadManager.RESULT_FAILED
         }
     }
 
@@ -965,8 +1037,27 @@ object CoreServiceManager {
                     measureV2rayDelay()
                 }
 
+                AppConfig.MSG_DOWNLOAD_URL -> {
+                    if (!isOrderedBroadcast) return
+                    val scope = urlDownloadScope ?: return
+                    val request = intent.serializable<CoreUrlDownloadRequest>("content") ?: return
+                    val resultReceiver = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(
+                            CoreUrlDownloadRequest.EXTRA_RESULT_RECEIVER,
+                            ResultReceiver::class.java,
+                        )
+                    } else {
+                        @Suppress("DEPRECATION")
+                        intent.getParcelableExtra(CoreUrlDownloadRequest.EXTRA_RESULT_RECEIVER)
+                    } ?: return
+                    resultCode = Activity.RESULT_OK
+                    scope.launch {
+                        val result = downloadUrlThroughCore(request)
+                        ensureActive()
+                        resultReceiver.send(result, null)
+                    }
+                }
             }
-
         }
     }
 

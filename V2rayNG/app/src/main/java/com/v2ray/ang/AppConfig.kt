@@ -197,6 +197,7 @@ object AppConfig {
     const val MSG_SUB_UPDATE_CANCEL = 81
     const val MSG_SUB_UPDATE_DATA_CHANGED = 82
     const val MSG_ACTIVE_OUTBOUND_CHANGED = 76
+    const val MSG_DOWNLOAD_URL = 9
 
     /** Notification channel IDs. */
     // Use a new ID because Android does not let an app raise an existing channel's importance.
