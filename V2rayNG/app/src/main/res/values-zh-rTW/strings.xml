@@ -24,6 +24,10 @@
     <string name="acc_service_started_connected_to">服務已成功啟動。現在已連線至%1$s。</string>
     <string name="toast_services_failure">啟動服務失敗</string>
 
+    <plurals name="acc_group_tab">
+        <item quantity="other">%1$s。包含%2$d個伺服器</item>
+    </plurals>
+
     <!--ServerActivity-->
     <string name="title_server">設定檔</string>
     <string name="menu_item_add_config">新增設定</string>

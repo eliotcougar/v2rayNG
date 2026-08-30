@@ -24,6 +24,11 @@
     <string name="acc_service_started_connected_to">সার্ভিস সফলভাবে শুরু হয়েছে। এখন %1$s-এর সাথে সংযুক্ত।</string>
     <string name="toast_services_failure">সার্ভিস শুরু হতে ব্যর্থ হয়েছে</string>
 
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s। এতে %2$dটি সার্ভার রয়েছে</item>
+        <item quantity="other">%1$s। এতে %2$dটি সার্ভার রয়েছে</item>
+    </plurals>
+
     <!--ServerActivity-->
     <string name="title_server">কনফিগারেশন ফাইল</string>
     <string name="menu_item_add_config">কনফিগারেশন যোগ করুন</string>
