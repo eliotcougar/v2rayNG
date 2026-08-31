@@ -15,6 +15,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -52,6 +54,7 @@ fun CollapsiblePreferenceGroupHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .dpadFocusOutline()
             .clickable { onExpandedChange(!expanded) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -81,6 +84,7 @@ private fun SettingsItemRow(
     enabled: Boolean,
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null,
     trailing: @Composable (() -> Unit)? = null
 ) {
     val titleColor = if (enabled) MaterialTheme.colorScheme.onSurface
@@ -91,6 +95,7 @@ private fun SettingsItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .dpadFocusOutline(focusRequester)
             .then(if (onClick != null) Modifier.clickable(enabled = enabled, onClick = onClick) else Modifier)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -134,7 +139,10 @@ fun SettingsEditItem(
     isPassword: Boolean = false,
     keyboardNumber: Boolean = false
 ) {
+    val isTelevision = isTelevisionDevice()
     var showDialog by remember { mutableStateOf(false) }
+    var restoreFocus by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
     val description = if (isPassword) {
         if (value.isEmpty()) null else "******"
     } else {
@@ -149,8 +157,16 @@ fun SettingsEditItem(
         onClick = if (enabled) {
             { showDialog = true }
         } else null,
-        modifier = modifier
+        modifier = modifier,
+        focusRequester = focusRequester
     )
+
+    LaunchedEffect(showDialog, restoreFocus) {
+        if (!showDialog && restoreFocus) {
+            requestFocusWhenReady(focusRequester)
+            restoreFocus = false
+        }
+    }
 
     if (showDialog) {
         var text by remember { mutableStateOf(value) }
@@ -166,8 +182,8 @@ fun SettingsEditItem(
             onFieldChange = { _, v -> text = v },
             confirmText = stringResource(R.string.action_ok),
             dismissText = stringResource(R.string.action_cancel),
-            onConfirm = { showDialog = false; onValueChanged(text) },
-            onDismiss = { showDialog = false }
+            onConfirm = { showDialog = false; restoreFocus = isTelevision; onValueChanged(text) },
+            onDismiss = { showDialog = false; restoreFocus = isTelevision }
         )
     }
 }
@@ -183,7 +199,10 @@ fun SettingsListItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val isTelevision = isTelevisionDevice()
     var showDialog by remember { mutableStateOf(false) }
+    var restoreFocus by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
     val options = entries.zip(values)
     val selectedOption = options.find { it.second == selectedValue } ?: options.firstOrNull()
     val summary = selectedOption?.first.orEmpty()
@@ -196,8 +215,16 @@ fun SettingsListItem(
         onClick = if (enabled) {
             { showDialog = true }
         } else null,
-        modifier = modifier
+        modifier = modifier,
+        focusRequester = focusRequester
     )
+
+    LaunchedEffect(showDialog, restoreFocus) {
+        if (!showDialog && restoreFocus) {
+            requestFocusWhenReady(focusRequester)
+            restoreFocus = false
+        }
+    }
 
     if (showDialog) {
         SelectListDialog(
@@ -207,9 +234,10 @@ fun SettingsListItem(
             selectedOption = selectedOption,
             onSelected = { option ->
                 showDialog = false
+                restoreFocus = isTelevision
                 onSelected(option.second)
             },
-            onDismiss = { showDialog = false },
+            onDismiss = { showDialog = false; restoreFocus = isTelevision },
             showRadio = true
         )
     }
@@ -243,6 +271,7 @@ fun SettingsSwitchItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
+    val isTelevision = isTelevisionDevice()
     SettingsItemRow(
         icon = icon,
         title = title,
@@ -255,7 +284,7 @@ fun SettingsSwitchItem(
         trailing = {
             Switch(
                 checked = checked,
-                onCheckedChange = if (enabled) onCheckedChange else null,
+                onCheckedChange = if (enabled && !isTelevision) onCheckedChange else null,
                 modifier = Modifier.scale(0.8f),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,

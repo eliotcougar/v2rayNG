@@ -23,13 +23,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -52,6 +58,10 @@ fun MainScreen(
     val isDarkTheme = LocalDarkTheme.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val serverFocusRequester = remember { FocusRequester() }
+    val serviceFocusRequester = rememberDpadFocusRequester()
+    val isTelevision = isTelevisionDevice()
+    val isWindowFocused = LocalWindowInfo.current.isWindowFocused
     var showSearch by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showDelAllConfirm by remember { mutableStateOf(false) }
@@ -71,6 +81,16 @@ fun MainScreen(
 
     val lazyListStates = remember { mutableStateMapOf<String, LazyListState>() }
     val lazyGridStates = remember { mutableStateMapOf<String, LazyGridState>() }
+
+    LaunchedEffect(isTelevision, isWindowFocused) {
+        if (isTelevision && isWindowFocused) requestFocusWhenReady(serviceFocusRequester)
+    }
+    LaunchedEffect(isTelevision, isRunning) {
+        if (isTelevision) {
+            repeat(2) { withFrameNanos { } }
+            requestFocusWhenReady(serviceFocusRequester)
+        }
+    }
 
     LaunchedEffect(groups) {
         val validGroupIds = groups.map { it.id }.toSet()
@@ -160,6 +180,7 @@ fun MainScreen(
                     },
                     onSearchToggle = { show: Boolean -> showSearch = show },
                     onMenuClick = { scope.launch { drawerState.open() } },
+                    onMoveDown = { serverFocusRequester.requestFocus() },
                     onAction = onAction,
                     onMoreMenuAction = { action ->
                         when (action) {
@@ -182,7 +203,9 @@ fun MainScreen(
                     displayText = displayText,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
-                    onAction = onAction
+                    onAction = onAction,
+                    focusRequester = serviceFocusRequester,
+                    onMoveUp = { serverFocusRequester.requestFocus() }
                 )
             },
             floatingActionButton = {},
@@ -227,6 +250,8 @@ fun MainScreen(
                             locateTarget = uiState.locateTarget,
                             doubleColumnDisplay = doubleColumnDisplay,
                             searchQuery = searchQuery,
+                            isActivePage = page == pagerState.currentPage,
+                            serverFocusRequester = serverFocusRequester,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
@@ -238,6 +263,8 @@ fun MainScreen(
                                 shareTarget = Triple(guid, profile, true)
                             },
                             onRemoveServer = removeServer,
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
+                            onMoveToService = { serviceFocusRequester.requestFocus() },
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,

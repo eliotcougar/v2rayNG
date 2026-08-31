@@ -25,6 +25,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 @Composable
@@ -36,6 +38,7 @@ fun MainTopBar(
     onSearchClose: () -> Unit,
     onSearchToggle: (Boolean) -> Unit,
     onMenuClick: () -> Unit,
+    onMoveDown: () -> Boolean,
     onAction: (MainAction) -> Unit,
     onMoreMenuAction: (MainMoreMenuAction) -> Unit
 ) {
@@ -58,23 +61,31 @@ fun MainTopBar(
         searchPlaceholder = stringResource(R.string.menu_item_search),
         navigationIcon = {
             if (showSearch) {
-                IconButton(onClick = onSearchClose) {
+                IconButton(
+                    onClick = onSearchClose,
+                    modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)
+                        .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
+                ) {
                     Icon(painterResource(R.drawable.ic_arrow_back_24dp), contentDescription = stringResource(R.string.acc_back))
                 }
             } else {
-                IconButton(onClick = onMenuClick) {
+                IconButton(
+                    onClick = onMenuClick,
+                    modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)
+                        .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
+                ) {
                     Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = stringResource(R.string.acc_open_menu))
                 }
             }
         },
         actions = {
             if (!showSearch) {
-                IconButton(onClick = { onSearchToggle(true) }) {
+                IconButton(onClick = { onSearchToggle(true) }, modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)) {
                     Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
                 }
             }
             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                IconButton(onClick = { showImportMenu = true }) {
+                IconButton(onClick = { showImportMenu = true }, modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)) {
                     Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add))
                 }
                 DropdownMenu(
@@ -95,7 +106,7 @@ fun MainTopBar(
                 }
             }
             Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                IconButton(onClick = { showMenu = true }) {
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)) {
                     Icon(painterResource(R.drawable.ic_more_vert_24dp), contentDescription = stringResource(R.string.acc_more))
                 }
                 DropdownMenu(

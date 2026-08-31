@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,7 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.AlertDialog
@@ -124,6 +125,8 @@ fun InputDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
+    val firstFieldFocusRequester = rememberDpadFocusRequester(requestFocus = fields.isNotEmpty())
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -133,24 +136,38 @@ fun InputDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 fields.forEachIndexed { index, field ->
-                    OutlinedTextField(
-                        value = field.value,
-                        onValueChange = { onFieldChange(index, it) },
-                        label = { Text(field.label) },
-                        singleLine = false,
-                        maxLines = 5,
-                        visualTransformation = field.visualTransformation,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            cursorColor = MaterialTheme.colorScheme.secondary,
-                            selectionColors = TextSelectionColors(
-                                handleColor = MaterialTheme.colorScheme.secondary,
-                                backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                            )
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    val tvFieldState = if (isTelevision) {
+                        rememberTvTextFieldState(if (index == 0) firstFieldFocusRequester else null)
+                    } else null
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .dpadFocusOutline()
+                            .tvAwareTextFieldFocus(tvFieldState, enabled = true) { tvFieldState?.beginEditing() }
+                    ) {
+                        OutlinedTextField(
+                            value = field.value,
+                            onValueChange = { onFieldChange(index, it) },
+                            label = { Text(field.label) },
+                            readOnly = tvFieldState != null && !tvFieldState.isEditing,
+                            singleLine = false,
+                            maxLines = 5,
+                            visualTransformation = field.visualTransformation,
+                            interactionSource = tvFieldState?.interactionSource,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                cursorColor = MaterialTheme.colorScheme.secondary,
+                                selectionColors = TextSelectionColors(
+                                    handleColor = MaterialTheme.colorScheme.secondary,
+                                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
+                                )
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(tvFieldState?.let { Modifier.tvTextFieldEditorFocus(it) } ?: Modifier)
+                        )
+                    }
                 }
             }
         },
@@ -203,16 +220,19 @@ fun <T> SelectListDialog(
     selectedOption: T? = null,
     showRadio: Boolean = false
 ) {
+    val selectedIndex = options.indexOf(selectedOption).takeIf { it >= 0 } ?: 0
+    val selectedFocusRequester = rememberDpadFocusRequester(requestFocus = options.isNotEmpty(), requestKey = selectedIndex)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
         text = {
             LazyColumn {
-                items(options) { option ->
+                itemsIndexed(options) { index, option ->
                     val isSelected = option == selectedOption
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .dpadFocusOutline(if (index == selectedIndex) selectedFocusRequester else null)
                             .then(
                                 if (showRadio) Modifier.selectable(
                                     selected = isSelected,

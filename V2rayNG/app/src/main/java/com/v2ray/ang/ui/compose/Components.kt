@@ -75,6 +75,7 @@ fun AppTopBar(
     navigationIcon: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    val backFocusRequester = rememberDpadFocusRequester(requestFocus = navigationIcon == null && !isSearchActive)
     Column {
         TopAppBar(
             title = {
@@ -92,7 +93,10 @@ fun AppTopBar(
                 if (navigationIcon != null) {
                     navigationIcon()
                 } else {
-                    IconButton(onClick = if (isSearchActive) onSearchClose else onBackClick) {
+                    IconButton(
+                        onClick = if (isSearchActive) onSearchClose else onBackClick,
+                        modifier = Modifier.dpadFocusOutline(backFocusRequester, 20.dp)
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back_24dp),
                             contentDescription = stringResource(R.string.acc_back)

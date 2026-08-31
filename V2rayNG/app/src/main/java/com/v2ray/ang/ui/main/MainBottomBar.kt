@@ -22,6 +22,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -33,13 +34,17 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 
 @Composable
 fun MainBottomBar(
     displayText: String,
     isRunning: Boolean,
     isDarkTheme: Boolean,
-    onAction: (MainAction) -> Unit
+    onAction: (MainAction) -> Unit,
+    focusRequester: FocusRequester? = null,
+    onMoveUp: () -> Boolean = { false }
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -73,7 +78,9 @@ fun MainBottomBar(
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .dpadFocusOutline(focusRequester, 28.dp)
+                .dpadVerticalFocusNavigation(onMoveUp = onMoveUp, onMoveDown = { true }),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight

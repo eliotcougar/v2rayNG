@@ -33,9 +33,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -55,6 +59,9 @@ import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
+import com.v2ray.ang.ui.compose.dpadBackNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
@@ -69,6 +76,8 @@ fun GroupPagerPage(
     locateTarget: LocateTarget?,
     doubleColumnDisplay: Boolean,
     searchQuery: String,
+    isActivePage: Boolean,
+    serverFocusRequester: FocusRequester,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
     onSelectServer: (String) -> Unit,
@@ -76,6 +85,8 @@ fun GroupPagerPage(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onOpenDrawer: () -> Unit,
+    onMoveToService: () -> Unit,
     contentPadding: PaddingValues
 ) {
     val groupStateFlow = remember(groupId) {
@@ -89,6 +100,8 @@ fun GroupPagerPage(
         onShareServer,
         onMoreServer,
         onRemoveServer,
+        onOpenDrawer,
+        onMoveToService,
     ) {
         ServerRowActions(
             select = onSelectServer,
@@ -96,11 +109,15 @@ fun GroupPagerPage(
             share = onShareServer,
             more = onMoreServer,
             remove = onRemoveServer,
+            openDrawer = onOpenDrawer,
+            moveToService = onMoveToService,
         )
     }
     ServerListPage(
         rows = groupState.rows,
         selectedGuid = selectedGuid,
+        isActivePage = isActivePage,
+        serverFocusRequester = serverFocusRequester,
         locateTarget = locateTarget?.takeIf { it.groupId == groupId },
         canReorder = canReorder,
         doubleColumnDisplay = doubleColumnDisplay,
@@ -122,12 +139,16 @@ private class ServerRowActions(
     val share: (String, ProfileItem) -> Unit,
     val more: (String, ProfileItem) -> Unit,
     val remove: (String) -> Unit,
+    val openDrawer: () -> Unit,
+    val moveToService: () -> Unit,
 )
 
 @Composable
 private fun ServerListPage(
     rows: List<ServerRowUiModel>,
     selectedGuid: String?,
+    isActivePage: Boolean,
+    serverFocusRequester: FocusRequester,
     locateTarget: LocateTarget?,
     canReorder: Boolean,
     doubleColumnDisplay: Boolean,
@@ -139,6 +160,9 @@ private fun ServerListPage(
     onMoveServer: (Int, Int) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val focusGuid = if (isActivePage) {
+        selectedGuid?.takeIf { selected -> rows.any { it.guid == selected } } ?: rows.firstOrNull()?.guid
+    } else null
     if (doubleColumnDisplay) {
         val gridState = remember(groupId) {
             lazyGridStates.getOrPut(groupId) { LazyGridState() }
@@ -165,7 +189,8 @@ private fun ServerListPage(
                         row = row,
                         isSelected = row.guid == selectedGuid,
                         doubleColumnDisplay = true,
-                        actions = actions
+                        actions = actions,
+                        focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
@@ -215,7 +240,8 @@ private fun ServerListPage(
                             ServerItemRow(
                                 row = row,
                                 isSelected = row.guid == selectedGuid,
-                                actions = actions
+                                actions = actions,
+                                focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
                             )
                         }
                         ItemDivider()
@@ -224,7 +250,8 @@ private fun ServerListPage(
                     ServerItemRow(
                         row = row,
                         isSelected = row.guid == selectedGuid,
-                        actions = actions
+                        actions = actions,
+                        focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
                     )
                     ItemDivider()
                 }
@@ -269,13 +296,15 @@ private fun LocateTargetEffect(
 private fun ServerItemRow(
     row: ServerRowUiModel,
     isSelected: Boolean,
-    actions: ServerRowActions
+    actions: ServerRowActions,
+    focusRequester: FocusRequester?
 ) {
     ServerListItem(
         row = row,
         isSelected = isSelected,
         doubleColumnDisplay = false,
-        actions = actions
+        actions = actions,
+        focusRequester = focusRequester
     )
 }
 
@@ -284,14 +313,16 @@ private fun ServerItemColumn(
     row: ServerRowUiModel,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
-    actions: ServerRowActions
+    actions: ServerRowActions,
+    focusRequester: FocusRequester?
 ) {
     Column {
         ServerListItem(
             row = row,
             isSelected = isSelected,
             doubleColumnDisplay = doubleColumnDisplay,
-            actions = actions
+            actions = actions,
+            focusRequester = focusRequester
         )
         ItemDivider()
     }
@@ -302,8 +333,10 @@ private fun ServerListItem(
     row: ServerRowUiModel,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
-    actions: ServerRowActions
+    actions: ServerRowActions,
+    focusRequester: FocusRequester?
 ) {
+    var rowFocused by remember(row.guid) { mutableStateOf(false) }
     val testResult = if (row.testDelayMillis == 0L) {
         ""
     } else {
@@ -318,6 +351,10 @@ private fun ServerListItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
+            .dpadFocusOutline(focusRequester)
+            .onFocusChanged { rowFocused = it.isFocused }
+            .dpadMovePreviousNavigation(enabled = rowFocused, onMovePrevious = actions.openDrawer)
+            .dpadBackNavigation(actions.moveToService)
             .semantics {
                 if (selectedStateDescription != null) {
                     stateDescription = selectedStateDescription
@@ -352,7 +389,10 @@ private fun ServerListItem(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(row.remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (doubleColumnDisplay) {
-                    IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(36.dp)) {
+                    IconButton(
+                        onClick = { actions.more(row.guid, row.profile) },
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_more_vert_24dp),
                             stringResource(R.string.acc_more),
@@ -360,21 +400,30 @@ private fun ServerListItem(
                         )
                     }
                 } else {
-                    IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(36.dp)) {
+                    IconButton(
+                        onClick = { actions.share(row.guid, row.profile) },
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_share_24dp),
                             stringResource(R.string.title_configuration_share),
                             Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(36.dp)) {
+                    IconButton(
+                        onClick = { actions.edit(row.guid, row.profile) },
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_edit_24dp),
                             stringResource(R.string.acc_edit),
                             Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = { actions.remove(row.guid) }, Modifier.size(36.dp)) {
+                    IconButton(
+                        onClick = { actions.remove(row.guid) },
+                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_delete_24dp),
                             stringResource(R.string.acc_delete),

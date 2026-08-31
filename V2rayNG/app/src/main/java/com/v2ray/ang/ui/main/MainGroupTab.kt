@@ -19,6 +19,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ServersCache
+import com.v2ray.ang.ui.compose.dpadFocusOutline
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -76,7 +77,8 @@ private fun GroupTabItem(
         onClick = onClick,
         modifier = Modifier
             .widthIn(min = 56.dp)
-            .heightIn(min = 48.dp),
+            .heightIn(min = 48.dp)
+            .dpadFocusOutline(),
         text = {
             Text(
                 text = text,

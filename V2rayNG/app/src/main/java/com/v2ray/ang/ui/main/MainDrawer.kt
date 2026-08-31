@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -32,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
@@ -66,6 +69,10 @@ private val drawerItems = primaryDrawerItems + listOf(
 @Composable
 fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
     val drawerScrollState = rememberScrollState()
+    val firstItemFocusRequester = rememberDpadFocusRequester(
+        requestFocus = drawerState.targetValue == DrawerValue.Open,
+        requestKey = drawerState.targetValue
+    )
 
     ModalDrawerSheet(
         drawerState = drawerState,
@@ -114,7 +121,9 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     selected = false,
                     onClick = { onNavigate(item) },
                     icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                    modifier = Modifier
+                        .padding(NavigationDrawerItemDefaults.ItemPadding)
+                        .dpadFocusOutline(if (index == 0) firstItemFocusRequester else null)
                 )
             }
         }
