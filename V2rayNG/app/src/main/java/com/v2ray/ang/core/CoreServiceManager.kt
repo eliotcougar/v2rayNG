@@ -17,7 +17,6 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.contracts.IDialerService
 import com.v2ray.ang.contracts.ServiceControl
-import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.ConfigResult
 import com.v2ray.ang.dto.CoreUrlDownloadRequest
 import com.v2ray.ang.dto.OutboundTrafficStat
@@ -852,17 +851,8 @@ object CoreServiceManager {
                 }
             }
 
-            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
-            val result = ConnectionTestResult(
-                delayMillis = time,
-                errorMessage = errorStr,
-                country = endpoint?.country,
-                ipAddress = endpoint?.ipAddress,
-            )
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
-
-            // Only fetch IP info if the delay test was successful
-            if (time >= 0) {
+            ensureActive()
+            val result = SpeedtestManager.buildConnectionTestResult(time, errorStr) {
                 val fetchViaCore = if (SettingsManager.isVpnMode() && !SettingsManager.isUsingHevTun()) {
                     { url: String ->
                         coreController.getUrlContent(url, currentOutboundTag())
@@ -870,17 +860,10 @@ object CoreServiceManager {
                 } else {
                     null
                 }
-                SpeedtestManager.getRemoteIPInfo(fetchViaCore)?.let { ip ->
-                    MessageHelper.sendMsg2UI(
-                        service,
-                        AppConfig.MSG_MEASURE_DELAY_RESULT,
-                        result.copy(
-                            country = ip.country,
-                            ipAddress = ip.ipAddress,
-                        ),
-                    )
-                }
+                SpeedtestManager.getRemoteIPInfo(fetchViaCore)
             }
+            ensureActive()
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
         }
     }
 
