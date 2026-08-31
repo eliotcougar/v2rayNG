@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
@@ -72,6 +73,7 @@ fun MainTopBar(
                 IconButton(
                     onClick = onMenuClick,
                     modifier = Modifier.dpadFocusOutline(cornerRadius = 20.dp)
+                        .dpadMovePreviousNavigation(onMovePrevious = onMenuClick)
                         .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
                 ) {
                     Icon(painterResource(R.drawable.ic_menu_24dp), contentDescription = stringResource(R.string.acc_open_menu))

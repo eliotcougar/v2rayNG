@@ -35,6 +35,7 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 
 @Composable
@@ -44,6 +45,7 @@ fun MainBottomBar(
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit,
     focusRequester: FocusRequester? = null,
+    onMovePrevious: () -> Unit,
     onMoveUp: () -> Boolean = { false }
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -80,6 +82,7 @@ fun MainBottomBar(
                 .offset(y = (-28).dp)
                 .navigationBarsPadding()
                 .dpadFocusOutline(focusRequester, 28.dp)
+                .dpadMovePreviousNavigation(onMovePrevious = onMovePrevious)
                 .dpadVerticalFocusNavigation(onMoveUp = onMoveUp, onMoveDown = { true }),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark

@@ -30,6 +30,8 @@ import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.VersionInfoBlock
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 
@@ -64,6 +66,7 @@ fun CheckUpdateScreen(
 
     val libVersion = CoreNativeManager.getLibVersion()
     val versionText = "v${BuildConfig.VERSION_NAME} ($libVersion)"
+    val backFocusRequester = rememberDpadFocusRequester()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -71,7 +74,8 @@ fun CheckUpdateScreen(
             AppTopBar(
                 title = stringResource(R.string.update_check_for_update),
                 onBackClick = onBackClick,
-                isLoading = isLoading
+                isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester
             )
         }
     ) { innerPadding ->
@@ -85,11 +89,13 @@ fun CheckUpdateScreen(
                 icon = painterResource(R.drawable.ic_source_code_24dp),
                 title = stringResource(R.string.update_check_pre_release),
                 checked = checkPreRelease,
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onCheckedChange = { viewModel.toggleCheckPreRelease(it) }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_check_update_24dp),
                 title = stringResource(R.string.update_check_for_update),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { viewModel.checkForUpdates() }
             )
             VersionInfoBlock(versionText = versionText)

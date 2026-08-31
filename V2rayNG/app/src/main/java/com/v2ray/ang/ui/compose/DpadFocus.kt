@@ -2,6 +2,8 @@ package com.v2ray.ang.ui.compose
 
 import android.content.res.Configuration
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -90,6 +92,21 @@ internal fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMove
             true
         } else false
     }
+}
+
+/** Makes a TV list item's primary area focusable without intercepting sibling action controls. */
+@Composable
+internal fun Modifier.dpadListItemNavigation(
+    onMovePrevious: () -> Unit,
+    onClick: (() -> Unit)? = null
+): Modifier {
+    if (!isTelevisionDevice()) return this
+    var rowFocused by remember { mutableStateOf(false) }
+    return this
+        .dpadFocusOutline()
+        .onFocusChanged { rowFocused = it.isFocused }
+        .dpadMovePreviousNavigation(enabled = rowFocused, onMovePrevious = onMovePrevious)
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier.focusable())
 }
 
 /** Handles Back inside a focused TV subtree before the activity fallback. */

@@ -205,6 +205,7 @@ fun MainScreen(
                     isDarkTheme = isDarkTheme,
                     onAction = onAction,
                     focusRequester = serviceFocusRequester,
+                    onMovePrevious = { scope.launch { drawerState.open() } },
                     onMoveUp = { serverFocusRequester.requestFocus() }
                 )
             },
@@ -223,6 +224,7 @@ fun MainScreen(
                             groups = groups,
                             selectedTabIndex = pagerState.currentPage.coerceIn(0, groups.lastIndex),
                             mainViewModel = mainViewModel,
+                            onOpenDrawer = { scope.launch { drawerState.open() } },
                             onTabClick = { targetIndex ->
                                 scope.launch {
                                     pagerState.navigateToPageOptimized(

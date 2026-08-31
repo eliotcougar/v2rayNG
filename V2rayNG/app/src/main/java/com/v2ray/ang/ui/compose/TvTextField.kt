@@ -110,7 +110,14 @@ internal fun Modifier.tvAwareTextFieldFocus(
             else -> false
         }
     }
-        .dpadLogicalHorizontalNavigation(navigation.onMovePrevious, navigation.onMoveNext)
+        .dpadLogicalHorizontalNavigation(
+            onMovePrevious = navigation.onMovePrevious?.let { callback ->
+                { !state.isEditing && callback() }
+            },
+            onMoveNext = navigation.onMoveNext?.let { callback ->
+                { !state.isEditing && callback() }
+            }
+        )
         .focusRequester(state.passiveFocusRequester)
         .focusProperties { canFocus = enabled }
         .focusable(enabled = enabled, interactionSource = state.interactionSource)

@@ -36,6 +36,8 @@ import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.VersionInfoBlock
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.util.Utils
 
 class AboutActivity : BaseComponentActivity() {
@@ -66,13 +68,15 @@ fun AboutScreen(
     val libVersion = CoreNativeManager.getLibVersion()
     val versionText = "v${BuildConfig.VERSION_NAME} ($libVersion)"
     val appIdText = BuildConfig.APPLICATION_ID
+    val backFocusRequester = rememberDpadFocusRequester()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.title_about),
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester
             )
         }
     ) { innerPadding ->
@@ -85,31 +89,37 @@ fun AboutScreen(
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_source_code_24dp),
                 title = stringResource(R.string.title_source_code),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { Utils.openUri(context, AppConfig.APP_URL) }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.license_24px),
                 title = stringResource(R.string.title_oss_license),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { showOssDialog = true }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_translate_24dp),
                 title = stringResource(R.string.title_translators),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = onTranslatorsClick
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_feedback_24dp),
                 title = stringResource(R.string.title_pref_feedback),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { Utils.openUri(context, AppConfig.APP_ISSUES_URL) }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_telegram_24dp),
                 title = stringResource(R.string.title_tg_channel),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { Utils.openUri(context, AppConfig.TG_CHANNEL_URL) }
             )
             SettingsMenuItem(
                 icon = painterResource(R.drawable.ic_privacy_24dp),
                 title = stringResource(R.string.title_privacy_policy),
+                modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() },
                 onClick = { Utils.openUri(context, AppConfig.APP_PRIVACY_POLICY) }
             )
             VersionInfoBlock(

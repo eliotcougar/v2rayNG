@@ -52,6 +52,8 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.dpadListItemNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
@@ -117,6 +119,7 @@ fun SubSettingScreen(
     var showUpdateDialog by remember { mutableStateOf(false) }
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
+    val backFocusRequester = rememberDpadFocusRequester()
 
     var shareTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -133,6 +136,7 @@ fun SubSettingScreen(
                 title = stringResource(R.string.title_sub_setting),
                 onBackClick = onBackClick,
                 isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     IconButton(onClick = onAddClick) {
                         Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
@@ -167,7 +171,14 @@ fun SubSettingScreen(
                                 .padding(horizontal = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .dpadListItemNavigation(
+                                        onMovePrevious = { backFocusRequester.requestFocus() },
+                                        onClick = { onEditSub(subCache.guid) }
+                                    )
+                            ) {
                                 Text(
                                     text = subCache.subscription.remarks,
                                     style = MaterialTheme.typography.bodyLarge,

@@ -58,6 +58,9 @@ import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsListItem
+import com.v2ray.ang.ui.compose.dpadListItemNavigation
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
@@ -258,6 +261,7 @@ internal fun UserAssetScreen(
     var showAddMenu by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<AssetDeleteTarget?>(null) }
     val listState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -266,6 +270,7 @@ internal fun UserAssetScreen(
                 title = stringResource(R.string.title_user_asset_setting),
                 onBackClick = onBackClick,
                 isLoading = isLoading,
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
                         IconButton(onClick = { showAddMenu = true }) {
@@ -309,7 +314,8 @@ internal fun UserAssetScreen(
                     entries = geoFilesSourcesList,
                     values = geoFilesSourcesList,
                     selectedValue = geoFilesSource,
-                    onSelected = { onGeoSourceSelected(it) }
+                    onSelected = { onGeoSourceSelected(it) },
+                    modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                 )
             }
             item {
@@ -324,6 +330,7 @@ internal fun UserAssetScreen(
                     item = item,
                     fileMetadata = uiState.fileMetadata[item.guid],
                     onEdit = { onEditAsset(item.guid) },
+                    onMovePrevious = { backFocusRequester.requestFocus() },
                     onDeleteClick = {
                         deleteTarget = AssetDeleteTarget(item.guid, item.assetUrl.remarks)
                     }
@@ -351,6 +358,7 @@ private fun UserAssetItem(
     item: AssetUrlCache,
     fileMetadata: AssetFileMetadata?,
     onEdit: () -> Unit,
+    onMovePrevious: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
     val propertiesText = if (fileMetadata != null) {
@@ -372,6 +380,10 @@ private fun UserAssetItem(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .dpadListItemNavigation(
+                    onMovePrevious = onMovePrevious,
+                    onClick = if (showEditButton) onEdit else null
+                )
                 .padding(8.dp)
         ) {
             Text(

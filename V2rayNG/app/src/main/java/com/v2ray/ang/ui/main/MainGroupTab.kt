@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -28,6 +29,7 @@ fun GroupTabBar(
     selectedTabIndex: Int,
     mainViewModel: MainViewModel,
     onTabClick: (Int) -> Unit,
+    onOpenDrawer: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val selectedIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
@@ -52,6 +54,7 @@ fun GroupTabBar(
                 group = group,
                 selected = index == selectedIndex,
                 serverFlow = serverFlow,
+                onMovePrevious = if (index == 0) onOpenDrawer else null,
                 onClick = { onTabClick(index) }
             )
         }
@@ -63,6 +66,7 @@ private fun GroupTabItem(
     group: GroupMapItem,
     selected: Boolean,
     serverFlow: StateFlow<List<ServersCache>>,
+    onMovePrevious: (() -> Unit)?,
     onClick: () -> Unit
 ) {
     val servers by serverFlow.collectAsStateWithLifecycle()
@@ -78,7 +82,11 @@ private fun GroupTabItem(
         modifier = Modifier
             .widthIn(min = 56.dp)
             .heightIn(min = 48.dp)
-            .dpadFocusOutline(),
+            .dpadFocusOutline()
+            .dpadMovePreviousNavigation(
+                enabled = onMovePrevious != null,
+                onMovePrevious = { onMovePrevious?.invoke() }
+            ),
         text = {
             Text(
                 text = text,

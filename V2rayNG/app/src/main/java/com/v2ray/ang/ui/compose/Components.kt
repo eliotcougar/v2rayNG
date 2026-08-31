@@ -72,10 +72,14 @@ fun AppTopBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
+    navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    val backFocusRequester = rememberDpadFocusRequester(requestFocus = navigationIcon == null && !isSearchActive)
+    val defaultBackFocusRequester = rememberDpadFocusRequester(
+        requestFocus = navigationFocusRequester == null && navigationIcon == null && !isSearchActive
+    )
+    val backFocusRequester = navigationFocusRequester ?: defaultBackFocusRequester
     Column {
         TopAppBar(
             title = {
@@ -174,6 +178,7 @@ fun AppListItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .dpadFocusOutline()
             .clickable { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -217,7 +222,7 @@ fun AppListItem(
         }
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
+            onCheckedChange = null,
             colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.secondary)
         )
     }

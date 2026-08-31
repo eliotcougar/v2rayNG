@@ -391,7 +391,10 @@ private fun ServerListItem(
                 if (doubleColumnDisplay) {
                     IconButton(
                         onClick = { actions.more(row.guid, row.profile) },
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                        modifier = Modifier
+                            .size(36.dp)
+                            .dpadFocusOutline(cornerRadius = 18.dp)
+                            .dpadMovePreviousNavigation(onMovePrevious = actions.openDrawer)
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_more_vert_24dp),
@@ -402,7 +405,10 @@ private fun ServerListItem(
                 } else {
                     IconButton(
                         onClick = { actions.share(row.guid, row.profile) },
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                        modifier = Modifier
+                            .size(36.dp)
+                            .dpadFocusOutline(cornerRadius = 18.dp)
+                            .dpadMovePreviousNavigation(onMovePrevious = actions.openDrawer)
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_share_24dp),

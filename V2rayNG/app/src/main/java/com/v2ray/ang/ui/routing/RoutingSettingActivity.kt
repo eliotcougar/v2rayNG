@@ -59,6 +59,9 @@ import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.colorConfigType
+import com.v2ray.ang.ui.compose.dpadListItemNavigation
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
@@ -205,6 +208,7 @@ fun RoutingSettingScreen(
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
     var showPresetDialog by remember { mutableStateOf(false) }
+    val backFocusRequester = rememberDpadFocusRequester()
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
@@ -221,6 +225,7 @@ fun RoutingSettingScreen(
             AppTopBar(
                 title = stringResource(R.string.routing_settings_title),
                 onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     IconButton(onClick = onAddRule) {
                         Icon(
@@ -269,7 +274,8 @@ fun RoutingSettingScreen(
                     entries = domainStrategies,
                     values = domainStrategies,
                     selectedValue = domainStrategy,
-                    onSelected = { onDomainStrategySelected(it) }
+                    onSelected = { onDomainStrategySelected(it) },
+                    modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                 )
             }
             item {
@@ -292,6 +298,7 @@ fun RoutingSettingScreen(
                         RoutingRulesetItem(
                             ruleset = ruleset,
                             onEdit = { onEditRule(ruleset.id) },
+                            onMovePrevious = { backFocusRequester.requestFocus() },
                             onEnabledChange = { checked ->
                                 val updated = ruleset.copy(enabled = checked)
                                 viewModel.update(index, updated)
@@ -323,6 +330,7 @@ fun RoutingSettingScreen(
 private fun RoutingRulesetItem(
     ruleset: RulesetItem,
     onEdit: () -> Unit,
+    onMovePrevious: () -> Unit,
     onEnabledChange: (Boolean) -> Unit
 ) {
     Row(
@@ -331,7 +339,11 @@ private fun RoutingRulesetItem(
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .dpadListItemNavigation(onMovePrevious = onMovePrevious, onClick = onEdit)
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = ruleset.remarks ?: "",

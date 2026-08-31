@@ -36,6 +36,9 @@ import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
 
@@ -125,12 +128,14 @@ fun TaskerScreen(
     onSave: () -> Unit
 ) {
     val listState = rememberLazyListState()
+    val backFocusRequester = rememberDpadFocusRequester()
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             AppTopBar(
                 title = "",
                 onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     IconButton(onClick = onSave) {
                         Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
@@ -143,6 +148,7 @@ fun TaskerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
         ) {
             SettingsSwitchItem(
                 title = stringResource(R.string.tasker_start_service),
@@ -160,13 +166,14 @@ fun TaskerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .dpadFocusOutline()
                             .clickable { selectedPosition.value = index }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
                             selected = selectedPosition.value == index,
-                            onClick = { selectedPosition.value = index }
+                            onClick = null
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(text = item.label, style = MaterialTheme.typography.bodyLarge)

@@ -50,6 +50,8 @@ import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
+import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.reorderableDragHandle
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
@@ -205,6 +207,10 @@ fun ProxyChainScreen(
     var showProfileDeleteConfirm by remember { mutableStateOf(false) }
     var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
+    val backFocusRequester = rememberDpadFocusRequester()
+    val previousToBackNavigation = TvTextFieldNavigation(
+        onMovePrevious = { backFocusRequester.requestFocus() }
+    )
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -227,6 +233,7 @@ fun ProxyChainScreen(
             AppTopBar(
                 title = EConfigType.PROXYCHAIN.toString(),
                 onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester,
                 actions = {
                     if (showDelete) {
                         IconButton(onClick = { showProfileDeleteConfirm = true }) {
@@ -272,7 +279,8 @@ fun ProxyChainScreen(
                 FormTextField(
                     label = stringResource(R.string.server_lab_remarks),
                     value = remarks,
-                    onValueChange = { remarks = it }
+                    onValueChange = { remarks = it },
+                    tvNavigation = previousToBackNavigation
                 )
             }
 
@@ -310,7 +318,8 @@ fun ProxyChainScreen(
                                     members = members.toMutableList().also { it[index] = newVal }
                                 },
                                 editable = true,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                tvNavigation = previousToBackNavigation
                             )
                             IconButton(onClick = {
                                 if (member.isBlank()) {
