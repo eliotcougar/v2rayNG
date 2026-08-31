@@ -231,7 +231,8 @@ fun RoutingSettingScreen(
     onExportClipboard: () -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
+    // Keep lazy content and its focus map on one snapshot: TalkBack can measure before recomposition.
+    val rulesets = viewModel.rulesetsFlow.collectAsStateWithLifecycle().value
     val rulesetIds = rulesets.map { it.id }
     val rowFocusTargets = remember(rulesetIds.toSet()) {
         rulesets.associate { it.id to RoutingRowFocusTargets() }
