@@ -256,7 +256,7 @@ fun ProxyChainScreen(
                 title = EConfigType.PROXYCHAIN.toString(),
                 onBackClick = onBackClick,
                 navigationFocusRequester = backFocusRequester,
-                customActionFocusRequesters = topBarFocusOrder.drop(1),
+                focusOrder = topBarFocusOrder,
                 onMoveDown = { remarksFocusRequester.requestFocus() },
                 navigationIcon = { requester ->
                     IconButton(

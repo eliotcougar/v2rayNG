@@ -26,7 +26,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 
-data class TvTextFieldNavigation(
+internal data class TvTextFieldNavigation(
     val focusRequester: FocusRequester? = null,
     val onMoveUp: (() -> Boolean)? = null,
     val onMoveDown: (() -> Boolean)? = null,

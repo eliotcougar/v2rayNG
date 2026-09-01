@@ -299,7 +299,7 @@ internal fun UserAssetScreen(
                 onBackClick = onBackClick,
                 isLoading = isLoading,
                 navigationFocusRequester = backFocusRequester,
-                customActionFocusRequesters = listOf(addFocusRequester, downloadFocusRequester),
+                focusOrder = topBarFocusOrder,
                 onMoveDown = geoSourceFocusRequester::requestFocus,
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
@@ -320,25 +320,22 @@ internal fun UserAssetScreen(
                             onDismissRequest = { showAddMenu = false },
                             containerColor = MaterialTheme.colorScheme.surface,
                             offset = DpOffset(x = 0.dp, y = 0.dp),
-                            modifier = Modifier.wrapContentWidth(Alignment.End)
-                        ) {
-                            AppDropdownMenuItems(
-                                items = AddAssetMenuAction.entries,
-                                labelRes = { it.labelRes },
-                                itemModifier = Modifier.dpadPopupHorizontalNavigation(
+                            modifier = Modifier
+                                .wrapContentWidth(Alignment.End)
+                                .dpadPopupHorizontalNavigation(
                                     onMovePrevious = {
                                         showAddMenu = false
-                                        scope.launch {
-                                            afterDpadPopupDismiss { backFocusRequester.requestFocus() }
-                                        }
+                                        scope.launch { afterDpadPopupDismiss { backFocusRequester.requestFocus() } }
                                     },
                                     onMoveNext = {
                                         showAddMenu = false
-                                        scope.launch {
-                                            afterDpadPopupDismiss { downloadFocusRequester.requestFocus() }
-                                        }
+                                        scope.launch { afterDpadPopupDismiss { downloadFocusRequester.requestFocus() } }
                                     }
                                 )
+                        ) {
+                            AppDropdownMenuItems(
+                                items = AddAssetMenuAction.entries,
+                                labelRes = { it.labelRes }
                             ) { action ->
                                 showAddMenu = false
                                 when (action) {

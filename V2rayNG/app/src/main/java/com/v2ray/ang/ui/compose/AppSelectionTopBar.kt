@@ -44,12 +44,21 @@ internal fun AppSelectionTopBar(
     val moreFocusRequester = remember { FocusRequester() }
     val hasSearchQuery = searchQuery.isNotEmpty()
     val focusOrder = remember(isSearchActive, hasSearchQuery) {
-        if (isSearchActive) buildList {
-            add(backFocusRequester)
-            add(searchInputFocusRequester)
-            if (hasSearchQuery) add(searchClearFocusRequester)
-            add(moreFocusRequester)
-        } else listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
+        appTopBarFocusOrder(
+            navigation = backFocusRequester,
+            actions = if (isSearchActive) listOf(moreFocusRequester) else listOf(searchFocusRequester, moreFocusRequester),
+            searchInput = searchInputFocusRequester.takeIf { isSearchActive },
+            searchClear = searchClearFocusRequester.takeIf { isSearchActive && hasSearchQuery }
+        )
+    }
+    val closeMenuAndMovePrevious: () -> Unit = {
+        showMenu = false
+        val target = when {
+            !isSearchActive -> searchFocusRequester
+            hasSearchQuery -> searchClearFocusRequester
+            else -> searchInputFocusRequester
+        }
+        scope.launch { afterDpadPopupDismiss { target.requestFocus() } }
     }
 
     AppTopBar(
@@ -64,8 +73,7 @@ internal fun AppSelectionTopBar(
         searchInputFocusRequester = searchInputFocusRequester,
         searchClearFocusRequester = searchClearFocusRequester,
         navigationFocusRequester = backFocusRequester,
-        customActionFocusRequesters = if (isSearchActive) listOf(moreFocusRequester)
-        else listOf(searchFocusRequester, moreFocusRequester),
+        focusOrder = focusOrder,
         onMoveDown = onMoveDown,
         actions = {
             if (!isSearchActive) {
@@ -91,23 +99,13 @@ internal fun AppSelectionTopBar(
                     expanded = showMenu,
                     onDismissRequest = { showMenu = false },
                     containerColor = MaterialTheme.colorScheme.surface,
-                    modifier = Modifier
+                    modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = closeMenuAndMovePrevious)
                 ) {
                     menuActions.forEach { action ->
-                        Box(modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
-                            showMenu = false
-                            val target = when {
-                                !isSearchActive -> searchFocusRequester
-                                hasSearchQuery -> searchClearFocusRequester
-                                else -> searchInputFocusRequester
-                            }
-                            scope.launch { afterDpadPopupDismiss { target.requestFocus() } }
-                        })) {
-                            DropdownMenuItem(
-                                text = { Text(action.label) },
-                                onClick = { showMenu = false; action.onClick() }
-                            )
-                        }
+                        DropdownMenuItem(
+                            text = { Text(action.label) },
+                            onClick = { showMenu = false; action.onClick() }
+                        )
                     }
                 }
             }

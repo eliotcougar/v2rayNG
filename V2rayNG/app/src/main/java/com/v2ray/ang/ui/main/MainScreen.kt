@@ -26,7 +26,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -39,7 +38,6 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.isTelevisionDevice
-import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -64,7 +62,7 @@ fun MainScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val serverFocusRequester = remember { FocusRequester() }
-    val serviceFocusRequester = rememberDpadFocusRequester()
+    val serviceFocusRequester = remember { FocusRequester() }
     val statusFocusRequester = remember { FocusRequester() }
     val isTelevision = isTelevisionDevice()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -75,8 +73,8 @@ fun MainScreen(
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
     var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
     var drawerFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
-    var focusGeneration by remember { mutableIntStateOf(0) }
-    val topBarFocusRequesters = rememberMainTopBarFocusRequesters(showSearch)
+    var resumeFocusGeneration by remember { mutableIntStateOf(-1) }
+    val topBarFocusRequesters = rememberMainTopBarFocusRequesters()
     val groupTabFocusRequesters = remember(groups.map { it.id }) {
         List(groups.size) { FocusRequester() }
     }
@@ -84,7 +82,6 @@ fun MainScreen(
         .takeIf { it >= 0 } ?: 0
     val openDrawerFrom: (FocusRequester) -> Unit = { focusRequester ->
         drawerFocusToRestore = focusRequester
-        focusGeneration++
         scope.launch { drawerState.open() }
     }
     val closeDrawerAndRestore: () -> Unit = {
@@ -99,6 +96,15 @@ fun MainScreen(
     val removeServer: (String) -> Unit = { guid ->
         if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
     }
+    val serverActions = ServerCollectionActions(
+        select = { guid -> onAction(MainAction.SelectServer(guid)) },
+        edit = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+        share = { guid, profile -> shareTarget = Triple(guid, profile, false) },
+        more = { guid, profile -> shareTarget = Triple(guid, profile, true) },
+        remove = removeServer,
+        openDrawer = openDrawerFrom,
+        moveToService = serviceFocusRequester::requestFocus
+    )
 
     val pagerState = rememberPagerState(
         initialPage = 0,
@@ -111,20 +117,16 @@ fun MainScreen(
     DisposableEffect(lifecycleOwner, isTelevision) {
         if (!isTelevision) return@DisposableEffect onDispose { }
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) focusGeneration++
+            if (event == Lifecycle.Event.ON_RESUME) resumeFocusGeneration++
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(isTelevision, focusGeneration, drawerState.targetValue) {
-        if (isTelevision && drawerState.targetValue == DrawerValue.Closed) {
+    LaunchedEffect(isTelevision, resumeFocusGeneration) {
+        if (isTelevision && resumeFocusGeneration >= 0 &&
+            drawerState.currentValue == DrawerValue.Closed && drawerState.targetValue == DrawerValue.Closed
+        ) {
             requestFocusWhenReady(drawerFocusToRestore ?: serviceFocusRequester, serviceFocusRequester)
-        }
-    }
-    LaunchedEffect(isTelevision, isRunning) {
-        if (isTelevision && drawerState.targetValue == DrawerValue.Closed) {
-            repeat(2) { withFrameNanos { } }
-            requestFocusWhenReady(serviceFocusRequester)
         }
     }
 
@@ -195,7 +197,7 @@ fun MainScreen(
         drawerContent = {
             MainDrawerContent(
                 drawerState = drawerState,
-                focusGeneration = focusGeneration,
+                focusGeneration = resumeFocusGeneration,
                 onClose = closeDrawerAndRestore,
                 onNavigate = { route ->
                     if (!isTelevision) scope.launch { drawerState.close() }
@@ -308,17 +310,7 @@ fun MainScreen(
                             serverFocusRequester = serverFocusRequester,
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
-                            onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
-                            onShareServer = { guid, profile ->
-                                shareTarget = Triple(guid, profile, false)
-                            },
-                            onMoreServer = { guid, profile ->
-                                shareTarget = Triple(guid, profile, true)
-                            },
-                            onRemoveServer = removeServer,
-                            onOpenDrawer = openDrawerFrom,
-                            onMoveToService = { serviceFocusRequester.requestFocus() },
+                            actions = serverActions,
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,

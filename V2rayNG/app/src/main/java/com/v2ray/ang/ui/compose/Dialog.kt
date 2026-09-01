@@ -110,7 +110,6 @@ fun DeleteConfirmDialog(
 data class InputField(
     val label: String,
     val value: String,
-    val singleLine: Boolean = true,
     val visualTransformation: VisualTransformation = VisualTransformation.None
 )
 

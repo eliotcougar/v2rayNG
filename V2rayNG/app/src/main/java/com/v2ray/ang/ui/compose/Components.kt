@@ -38,7 +38,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -62,16 +64,23 @@ import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 
-data class AppTopBarAction(
-    val icon: Painter,
-    val label: String,
-    val enabled: Boolean = true,
-    val onClick: () -> Unit
-)
+internal data class AppTopBarAction(val icon: Painter, val label: String, val onClick: () -> Unit)
+
+internal fun appTopBarFocusOrder(
+    navigation: FocusRequester,
+    actions: List<FocusRequester>,
+    searchInput: FocusRequester? = null,
+    searchClear: FocusRequester? = null
+): List<FocusRequester> = buildList {
+    add(navigation)
+    searchInput?.let(::add)
+    searchClear?.let(::add)
+    addAll(actions)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppTopBar(
+internal fun AppTopBar(
     title: String,
     onBackClick: () -> Unit,
     initialFocus: Boolean = true,
@@ -86,7 +95,7 @@ fun AppTopBar(
     navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
     actionItems: List<AppTopBarAction> = emptyList(),
-    customActionFocusRequesters: List<FocusRequester> = emptyList(),
+    focusOrder: List<FocusRequester>? = null,
     onMoveDown: (() -> Boolean)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -100,24 +109,20 @@ fun AppTopBar(
     val defaultSearchClearFocusRequester = remember { FocusRequester() }
     val resolvedSearchInputFocusRequester = searchInputFocusRequester ?: defaultSearchInputFocusRequester
     val resolvedSearchClearFocusRequester = searchClearFocusRequester ?: defaultSearchClearFocusRequester
-    val resolvedActionFocusRequesters = actionFocusRequesters + customActionFocusRequesters
     val hasSearchQuery = searchQuery.isNotEmpty()
-    val topBarFocusOrder = remember(
-        resolvedNavigationFocusRequester,
-        resolvedSearchInputFocusRequester,
-        resolvedSearchClearFocusRequester,
-        resolvedActionFocusRequesters,
-        isSearchActive,
-        hasSearchQuery
-    ) {
-        buildList {
-            add(resolvedNavigationFocusRequester)
-            if (isSearchActive) {
-                add(resolvedSearchInputFocusRequester)
-                if (hasSearchQuery) add(resolvedSearchClearFocusRequester)
-            }
-            addAll(resolvedActionFocusRequesters)
-        }
+    val topBarFocusOrder = focusOrder ?: remember(
+        resolvedNavigationFocusRequester, resolvedSearchInputFocusRequester,
+        resolvedSearchClearFocusRequester, actionFocusRequesters, isSearchActive, hasSearchQuery
+    ) { appTopBarFocusOrder(
+        navigation = resolvedNavigationFocusRequester,
+        actions = actionFocusRequesters,
+        searchInput = resolvedSearchInputFocusRequester.takeIf { isSearchActive },
+        searchClear = resolvedSearchClearFocusRequester.takeIf { isSearchActive && hasSearchQuery }
+    ) }
+    var previousSearchActive by remember { mutableStateOf(isSearchActive) }
+    LaunchedEffect(isSearchActive, resolvedNavigationFocusRequester) {
+        if (previousSearchActive && !isSearchActive) requestFocusWhenReady(resolvedNavigationFocusRequester)
+        previousSearchActive = isSearchActive
     }
     val navigationModifier = Modifier.dpadTopBarFocusNavigation(
         resolvedNavigationFocusRequester,
@@ -161,7 +166,6 @@ fun AppTopBar(
                     val focusRequester = actionFocusRequesters[index]
                     IconButton(
                         onClick = action.onClick,
-                        enabled = action.enabled,
                         modifier = Modifier
                             .dpadIconButtonFocusOutline(focusRequester)
                             .dpadTopBarFocusNavigation(

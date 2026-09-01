@@ -2,8 +2,6 @@ package com.v2ray.ang.ui.compose
 
 import android.content.res.Configuration
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
@@ -52,7 +50,11 @@ internal fun rememberDpadFocusRequester(requestFocus: Boolean = true, requestKey
     return requester
 }
 
-/** Lazy and popup content can attach after its surrounding composition, so retry by frame. */
+/**
+ * A FocusRequester can exist before its lazy-list or popup target is attached. Retry for a bounded
+ * number of frames so initial D-pad focus survives that Compose attachment delay. This can be
+ * removed when Compose offers an await-attached focus API or every caller owns an attachment signal.
+ */
 internal suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): Boolean {
     repeat(FocusAttachmentRetryFrames) {
         if (requesters.any { it.requestFocus() }) return true
@@ -61,7 +63,10 @@ internal suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): B
     return false
 }
 
-/** Popup disposal restores focus asynchronously, so wait for it before selecting an adjacent control. */
+/**
+ * Popup disposal and Material's focus restoration finish asynchronously. Keep this two-frame bridge
+ * until Compose exposes popup-dismiss completion; requesting immediately can focus the screen's Back button.
+ */
 internal suspend fun afterDpadPopupDismiss(action: () -> Unit) {
     repeat(2) { withFrameNanos { } }
     action()
@@ -119,11 +124,7 @@ internal fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizonta
     else -> null
 }
 
-internal fun adjacentDpadFocusIndex(
-    currentIndex: Int,
-    itemCount: Int,
-    direction: DpadHorizontalDirection
-): Int? {
+internal fun adjacentDpadFocusIndex(currentIndex: Int, itemCount: Int, direction: DpadHorizontalDirection): Int? {
     if (currentIndex !in 0 until itemCount) return null
     val targetIndex = when (direction) {
         DpadHorizontalDirection.Previous -> currentIndex - 1
@@ -156,21 +157,6 @@ internal fun Modifier.dpadMovePreviousNavigation(enabled: Boolean = true, onMove
     }
 }
 
-/** Makes a TV list item's primary area focusable without intercepting sibling action controls. */
-@Composable
-internal fun Modifier.dpadListItemNavigation(
-    onMovePrevious: () -> Unit,
-    onClick: (() -> Unit)? = null
-): Modifier {
-    if (!isTelevisionDevice()) return this
-    var rowFocused by remember { mutableStateOf(false) }
-    return this
-        .dpadFocusOutline()
-        .onFocusChanged { rowFocused = it.isFocused }
-        .dpadMovePreviousNavigation(enabled = rowFocused, onMovePrevious = onMovePrevious)
-        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier.focusable())
-}
-
 /** Handles Back inside a focused TV subtree before the activity fallback. */
 @Composable
 internal fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Modifier {
@@ -185,10 +171,7 @@ internal fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> 
 
 /** Adds explicit vertical exits where spatial focus search has no stable target. */
 @Composable
-internal fun Modifier.dpadVerticalFocusNavigation(
-    onMoveUp: () -> Boolean,
-    onMoveDown: () -> Boolean
-): Modifier {
+internal fun Modifier.dpadVerticalFocusNavigation(onMoveUp: () -> Boolean, onMoveDown: () -> Boolean): Modifier {
     if (!isTelevisionDevice()) return this
     return onKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
@@ -278,5 +261,6 @@ internal fun Modifier.dpadRowActionNavigation(
 ): Modifier = dpadOrderedFocusNavigation(current, order)
     .dpadVerticalFocusNavigation(
         onMoveUp = { previousRow?.requestFocus() ?: false },
+        // Consume Down at the final row so Compose cannot escape into an unrelated focus subtree.
         onMoveDown = { nextRow?.requestFocus() ?: onAfterLastRow?.invoke() ?: true }
     )

@@ -256,7 +256,7 @@ fun RoutingSettingScreen(
                 title = stringResource(R.string.routing_settings_title),
                 onBackClick = onBackClick,
                 navigationFocusRequester = backFocusRequester,
-                customActionFocusRequesters = listOf(addFocusRequester, moreFocusRequester),
+                focusOrder = topBarFocusOrder,
                 onMoveDown = domainStrategyFocusRequester::requestFocus,
                 actions = {
                     IconButton(
@@ -293,17 +293,15 @@ fun RoutingSettingScreen(
                         DropdownMenu(
                             expanded = showMenu,
                             onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                                showMenu = false
+                                scope.launch { afterDpadPopupDismiss { addFocusRequester.requestFocus() } }
+                            })
                         ) {
                             AppDropdownMenuItems(
                                 items = RoutingMenuAction.entries,
-                                labelRes = { it.labelRes },
-                                itemModifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
-                                    showMenu = false
-                                    scope.launch {
-                                        afterDpadPopupDismiss { addFocusRequester.requestFocus() }
-                                    }
-                                })
+                                labelRes = { it.labelRes }
                             ) { action ->
                                 showMenu = false
                                 when (action) {

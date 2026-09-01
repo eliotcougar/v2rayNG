@@ -71,7 +71,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.abs
 
 @Composable
-fun GroupPagerPage(
+internal fun GroupPagerPage(
     groupId: String,
     mainViewModel: MainViewModel,
     selectedGuid: String?,
@@ -82,13 +82,7 @@ fun GroupPagerPage(
     serverFocusRequester: FocusRequester,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
-    onSelectServer: (String) -> Unit,
-    onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem) -> Unit,
-    onMoreServer: (String, ProfileItem) -> Unit,
-    onRemoveServer: (String) -> Unit,
-    onOpenDrawer: (FocusRequester) -> Unit,
-    onMoveToService: () -> Boolean,
+    actions: ServerCollectionActions,
     contentPadding: PaddingValues
 ) {
     val groupStateFlow = remember(groupId) {
@@ -96,25 +90,6 @@ fun GroupPagerPage(
     }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
-    val actions = remember(
-        onSelectServer,
-        onEditServer,
-        onShareServer,
-        onMoreServer,
-        onRemoveServer,
-        onOpenDrawer,
-        onMoveToService,
-    ) {
-        ServerRowActions(
-            select = onSelectServer,
-            edit = onEditServer,
-            share = onShareServer,
-            more = onMoreServer,
-            remove = onRemoveServer,
-            openDrawer = onOpenDrawer,
-            moveToService = onMoveToService,
-        )
-    }
     ServerListPage(
         rows = groupState.rows,
         selectedGuid = selectedGuid,
@@ -135,7 +110,7 @@ fun GroupPagerPage(
     )
 }
 
-private class ServerRowActions(
+internal class ServerCollectionActions(
     val select: (String) -> Unit,
     val edit: (String, ProfileItem) -> Unit,
     val share: (String, ProfileItem) -> Unit,
@@ -195,7 +170,7 @@ private fun ServerListPage(
     groupId: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
-    actions: ServerRowActions,
+    actions: ServerCollectionActions,
     onLocateHandled: () -> Unit,
     onMoveServer: (Int, Int) -> Unit,
     contentPadding: PaddingValues
@@ -344,7 +319,7 @@ private fun LocateTargetEffect(
 private fun ServerItemRow(
     row: ServerRowUiModel,
     isSelected: Boolean,
-    actions: ServerRowActions,
+    actions: ServerCollectionActions,
     externalFocusRequester: FocusRequester?,
     focusTargets: ServerRowFocusTargets
 ) {
@@ -363,7 +338,7 @@ private fun ServerItemColumn(
     row: ServerRowUiModel,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
-    actions: ServerRowActions,
+    actions: ServerCollectionActions,
     externalFocusRequester: FocusRequester?,
     focusTargets: ServerRowFocusTargets
 ) {
@@ -390,7 +365,7 @@ private fun ServerListItem(
     row: ServerRowUiModel,
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
-    actions: ServerRowActions,
+    actions: ServerCollectionActions,
     externalFocusRequester: FocusRequester?,
     focusTargets: ServerRowFocusTargets
 ) {

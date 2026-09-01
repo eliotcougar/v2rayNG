@@ -26,19 +26,20 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.DpadHorizontalDirection
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.DpadHorizontalDirection
 import com.v2ray.ang.ui.compose.adjacentDpadFocusTarget
 import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
+import com.v2ray.ang.ui.compose.appTopBarFocusOrder
 import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
-import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import kotlinx.coroutines.launch
 
-internal class MainTopBarFocusRequesters(val navigation: FocusRequester) {
+internal class MainTopBarFocusRequesters {
+    val navigation = FocusRequester()
     val searchInput = FocusRequester()
     val searchClear = FocusRequester()
     val search = FocusRequester()
@@ -47,10 +48,7 @@ internal class MainTopBarFocusRequesters(val navigation: FocusRequester) {
 }
 
 @Composable
-internal fun rememberMainTopBarFocusRequesters(showSearch: Boolean): MainTopBarFocusRequesters {
-    val navigation = rememberDpadFocusRequester(requestFocus = false, requestKey = showSearch)
-    return remember(navigation) { MainTopBarFocusRequesters(navigation) }
-}
+internal fun rememberMainTopBarFocusRequesters(): MainTopBarFocusRequesters = remember { MainTopBarFocusRequesters() }
 
 @Composable
 internal fun MainTopBar(
@@ -77,15 +75,13 @@ internal fun MainTopBar(
     val maxMenuHeight = LocalConfiguration.current.screenHeightDp.dp - statusBarHeight - navBarHeight - 20.dp
     val hasSearchQuery = searchQuery.isNotEmpty()
     val focusOrder = remember(showSearch, hasSearchQuery, focusRequesters) {
-        buildList {
-            add(focusRequesters.navigation)
-            if (showSearch) {
-                add(focusRequesters.searchInput)
-                if (hasSearchQuery) add(focusRequesters.searchClear)
-            } else add(focusRequesters.search)
-            add(focusRequesters.add)
-            add(focusRequesters.more)
-        }
+        appTopBarFocusOrder(
+            navigation = focusRequesters.navigation,
+            actions = if (showSearch) listOf(focusRequesters.add, focusRequesters.more)
+            else listOf(focusRequesters.search, focusRequesters.add, focusRequesters.more),
+            searchInput = focusRequesters.searchInput.takeIf { showSearch },
+            searchClear = focusRequesters.searchClear.takeIf { showSearch && hasSearchQuery }
+        )
     }
     fun closeMenuAndMove(current: FocusRequester, direction: DpadHorizontalDirection) {
         showImportMenu = false
@@ -121,8 +117,7 @@ internal fun MainTopBar(
         searchInputFocusRequester = focusRequesters.searchInput,
         searchClearFocusRequester = focusRequesters.searchClear,
         navigationFocusRequester = focusRequesters.navigation,
-        customActionFocusRequesters = if (showSearch) listOf(focusRequesters.add, focusRequesters.more)
-        else listOf(focusRequesters.search, focusRequesters.add, focusRequesters.more),
+        focusOrder = focusOrder,
         onMoveDown = onMoveDown,
         navigationIcon = { navigationFocusRequester ->
             if (showSearch) {
@@ -168,16 +163,16 @@ internal fun MainTopBar(
                     modifier = Modifier
                         .heightIn(max = maxMenuHeight)
                         .verticalScrollbar(importMenuScrollState)
-                ) {
-                    ImportMenuContent(
-                        itemModifier = Modifier.dpadPopupHorizontalNavigation(
+                        .dpadPopupHorizontalNavigation(
                             onMovePrevious = {
                                 closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Previous)
                             },
                             onMoveNext = {
                                 closeMenuAndMove(focusRequesters.add, DpadHorizontalDirection.Next)
                             }
-                        ),
+                        )
+                ) {
+                    ImportMenuContent(
                         onAction = { action ->
                             showImportMenu = false
                             onAction(action)
@@ -203,9 +198,7 @@ internal fun MainTopBar(
                     modifier = Modifier
                         .heightIn(max = maxMenuHeight)
                         .verticalScrollbar(moreMenuScrollState)
-                ) {
-                    MoreMenuContent(
-                        itemModifier = Modifier.dpadPopupHorizontalNavigation(
+                        .dpadPopupHorizontalNavigation(
                             onMovePrevious = {
                                 closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Previous)
                             },
@@ -213,7 +206,8 @@ internal fun MainTopBar(
                                 closeMenuAndMove(focusRequesters.more, DpadHorizontalDirection.Next)
                             }
                         )
-                    ) { action ->
+                ) {
+                    MoreMenuContent { action ->
                         showMenu = false
                         onMoreMenuAction(action)
                     }

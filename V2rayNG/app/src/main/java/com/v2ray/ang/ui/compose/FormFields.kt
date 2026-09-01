@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun FormTextField(
+internal fun FormTextField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
@@ -81,7 +81,7 @@ fun FormTextField(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormDropdownField(
+internal fun FormDropdownField(
     label: String,
     value: String,
     options: List<String>,
