@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.main
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -59,16 +60,18 @@ internal fun serverMenuActions(
 }
 
 @Composable
-fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
+fun ImportMenuContent(itemModifier: Modifier = Modifier, onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
     items = ImportMenuAction.entries,
     labelRes = { it.labelRes },
+    itemModifier = itemModifier,
     onSelected = { onAction(it.action) }
 )
 
 @Composable
-fun MoreMenuContent(onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
+fun MoreMenuContent(itemModifier: Modifier = Modifier, onSelected: (MainMoreMenuAction) -> Unit) = AppDropdownMenuItems(
     items = MainMoreMenuAction.entries,
     labelRes = { it.labelRes },
+    itemModifier = itemModifier,
     onSelected = onSelected
 )
 

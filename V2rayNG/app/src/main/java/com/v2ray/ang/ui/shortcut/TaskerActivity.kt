@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -34,6 +32,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.dpadFocusOutline
@@ -136,11 +135,9 @@ fun TaskerScreen(
                 title = "",
                 onBackClick = onBackClick,
                 navigationFocusRequester = backFocusRequester,
-                actions = {
-                    IconButton(onClick = onSave) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
-                }
+                actionItems = listOf(AppTopBarAction(
+                    painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save), onClick = onSave
+                ))
             )
         }
     ) { innerPadding ->

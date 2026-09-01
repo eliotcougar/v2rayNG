@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +47,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
@@ -52,7 +55,11 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
-import com.v2ray.ang.ui.compose.dpadListItemNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.QRCodeDecoder
@@ -63,6 +70,14 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 private enum class SubscriptionShareAction(@StringRes val labelRes: Int) {
     QRCode(R.string.share_subscription_qrcode),
     Clipboard(R.string.share_subscription_clipboard)
+}
+
+private class SubscriptionRowFocusTargets {
+    val row = FocusRequester()
+    val share = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+    val toggle = FocusRequester()
 }
 
 class SubSettingActivity : BaseComponentActivity() {
@@ -116,10 +131,17 @@ fun SubSettingScreen(
     onShareClipboard: (String) -> Unit
 ) {
     val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
+    val isTelevision = isTelevisionDevice()
+    val rowFocusTargets = remember(subscriptions.map { it.guid }.toSet()) {
+        subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
+    }
     var showUpdateDialog by remember { mutableStateOf(false) }
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
     val backFocusRequester = rememberDpadFocusRequester()
+    val focusFirstRow = {
+        subscriptions.firstOrNull()?.let { rowFocusTargets[it.guid]?.row?.requestFocus() } ?: false
+    }
 
     var shareTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
@@ -137,14 +159,19 @@ fun SubSettingScreen(
                 onBackClick = onBackClick,
                 isLoading = isLoading,
                 navigationFocusRequester = backFocusRequester,
-                actions = {
-                    IconButton(onClick = onAddClick) {
-                        Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_subscription))
-                    }
-                    IconButton(onClick = { showUpdateDialog = true }) {
-                        Icon(painterResource(R.drawable.ic_restore_24dp), contentDescription = stringResource(R.string.acc_update_subscriptions))
-                    }
-                }
+                onMoveDown = focusFirstRow,
+                actionItems = listOf(
+                    AppTopBarAction(
+                        painterResource(R.drawable.ic_add_24dp),
+                        stringResource(R.string.acc_add_subscription),
+                        onClick = onAddClick
+                    ),
+                    AppTopBarAction(
+                        painterResource(R.drawable.ic_restore_24dp),
+                        stringResource(R.string.acc_update_subscriptions),
+                        onClick = { showUpdateDialog = true }
+                    )
+                )
             )
         }
     ) { innerPadding ->
@@ -159,7 +186,21 @@ fun SubSettingScreen(
             itemsIndexed(
                 items = subscriptions,
                 key = { _, item -> item.guid }
-            ) { _, subCache ->
+            ) { index, subCache ->
+                val focusTargets = rowFocusTargets.getValue(subCache.guid)
+                val previousSub = subscriptions.getOrNull(index - 1)
+                val nextSub = subscriptions.getOrNull(index + 1)
+                val previousFocusTargets = previousSub?.let { rowFocusTargets[it.guid] }
+                val nextFocusTargets = nextSub?.let { rowFocusTargets[it.guid] }
+                val actionFocusOrder = remember(focusTargets, subCache.subscription.url) {
+                    buildList {
+                        add(focusTargets.row)
+                        if (subCache.subscription.url.isNotEmpty()) add(focusTargets.share)
+                        add(focusTargets.edit)
+                        add(focusTargets.delete)
+                        add(focusTargets.toggle)
+                    }
+                }
                 ReorderableItem(reorderableState, key = subCache.guid) { isDragging ->
                     ReorderableListItem(
                         scope = this,
@@ -174,9 +215,25 @@ fun SubSettingScreen(
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .dpadListItemNavigation(
-                                        onMovePrevious = { backFocusRequester.requestFocus() },
-                                        onClick = { onEditSub(subCache.guid) }
+                                    .then(
+                                        if (isTelevision) Modifier
+                                            .dpadFocusOutline(focusTargets.row)
+                                            .dpadOrderedFocusNavigation(
+                                                focusTargets.row,
+                                                actionFocusOrder,
+                                                onBeforeFirst = { backFocusRequester.requestFocus() }
+                                            )
+                                            .dpadVerticalFocusNavigation(
+                                                onMoveUp = {
+                                                    previousFocusTargets?.row?.requestFocus()
+                                                        ?: backFocusRequester.requestFocus()
+                                                },
+                                                onMoveDown = {
+                                                    nextFocusTargets?.row?.requestFocus() ?: true
+                                                }
+                                            )
+                                            .clickable { onEditSub(subCache.guid) }
+                                        else Modifier
                                     )
                             ) {
                                 Text(
@@ -209,25 +266,59 @@ fun SubSettingScreen(
                             ) {
                                 Row {
                                     if (subCache.subscription.url.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                        }) {
+                                        IconButton(
+                                            onClick = {
+                                                shareTarget = Pair(subCache.guid, subCache.subscription.url)
+                                            },
+                                            modifier = Modifier
+                                                .dpadFocusOutline(focusTargets.share, 20.dp)
+                                                .dpadRowActionNavigation(
+                                                    focusTargets.share,
+                                                    actionFocusOrder,
+                                                    if (previousSub?.subscription?.url?.isNotEmpty() == true) {
+                                                        previousFocusTargets?.share
+                                                    } else previousFocusTargets?.edit,
+                                                    if (nextSub?.subscription?.url?.isNotEmpty() == true) {
+                                                        nextFocusTargets?.share
+                                                    } else nextFocusTargets?.edit
+                                                )
+                                        ) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_share_24dp),
                                                 contentDescription = stringResource(R.string.acc_share_subscription)
                                             )
                                         }
                                     }
-                                    IconButton(onClick = { onEditSub(subCache.guid) }) {
+                                    IconButton(
+                                        onClick = { onEditSub(subCache.guid) },
+                                        modifier = Modifier
+                                            .dpadFocusOutline(focusTargets.edit, 20.dp)
+                                            .dpadRowActionNavigation(
+                                                focusTargets.edit,
+                                                actionFocusOrder,
+                                                previousFocusTargets?.edit,
+                                                nextFocusTargets?.edit
+                                            )
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_edit_24dp),
                                             contentDescription = stringResource(R.string.acc_edit)
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        if (confirmRemove) removeTarget = subCache.guid
-                                        else onRemoveSub(subCache.guid)
-                                    }) {
+                                    IconButton(
+                                        onClick = {
+                                            if (confirmRemove) removeTarget = subCache.guid
+                                            else onRemoveSub(subCache.guid)
+                                        },
+                                        modifier = Modifier
+                                            .dpadFocusOutline(focusTargets.delete, 20.dp)
+                                            .dpadRowActionNavigation(
+                                                focusTargets.delete,
+                                                actionFocusOrder,
+                                                previousFocusTargets?.delete,
+                                                nextFocusTargets?.delete
+                                            )
+                                    ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_delete_24dp),
                                             contentDescription = stringResource(R.string.acc_delete)
@@ -242,7 +333,15 @@ fun SubSettingScreen(
                                         updated.enabled = checked
                                         viewModel.update(subCache.guid, updated)
                                     },
-                                    modifier = Modifier.scale(0.7f),
+                                    modifier = Modifier
+                                        .scale(0.7f)
+                                        .dpadFocusOutline(focusTargets.toggle, 18.dp)
+                                        .dpadRowActionNavigation(
+                                            focusTargets.toggle,
+                                            actionFocusOrder,
+                                            previousFocusTargets?.toggle,
+                                            nextFocusTargets?.toggle
+                                        ),
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                         checkedTrackColor = MaterialTheme.colorScheme.secondary

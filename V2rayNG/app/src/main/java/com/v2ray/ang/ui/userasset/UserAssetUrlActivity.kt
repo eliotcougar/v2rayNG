@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,6 +24,7 @@ import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
@@ -148,21 +147,13 @@ fun UserAssetUrlScreen(
             AppTopBar(
                 title = stringResource(R.string.title_user_asset_add_url),
                 onBackClick = onBackClick,
-                actions = {
-                    if (editAssetId.isNotEmpty()) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(remarks, url) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
-                        )
-                    }
+                actionItems = buildList {
+                    if (editAssetId.isNotEmpty()) add(AppTopBarAction(
+                        painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete)
+                    ) { showDeleteConfirm = true })
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save)
+                    ) { onSave(remarks, url) })
                 }
             )
         }

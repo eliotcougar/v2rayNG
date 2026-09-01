@@ -33,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -51,12 +52,22 @@ import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.reorderableDragHandle
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.util.UUID
+
+private class ProxyChainMemberFocusTargets {
+    val field = FocusRequester()
+    val remove = FocusRequester()
+}
 
 class ServerProxyChainActivity : BaseComponentActivity() {
 
@@ -208,9 +219,19 @@ fun ProxyChainScreen(
     var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
     val backFocusRequester = rememberDpadFocusRequester()
-    val previousToBackNavigation = TvTextFieldNavigation(
-        onMovePrevious = { backFocusRequester.requestFocus() }
-    )
+    val remarksFocusRequester = remember { FocusRequester() }
+    val deleteConfigFocusRequester = remember { FocusRequester() }
+    val saveFocusRequester = remember { FocusRequester() }
+    val addFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember(showDelete) {
+        buildList {
+            add(backFocusRequester)
+            if (showDelete) add(deleteConfigFocusRequester)
+            add(saveFocusRequester)
+        }
+    }
+    val focusTargetStore = remember { mutableMapOf<String, ProxyChainMemberFocusTargets>() }
+    val memberFocusTargets = memberKeys.associateWith { key -> focusTargetStore.getOrPut(key) { ProxyChainMemberFocusTargets() } }
 
     val lazyListState = rememberLazyListState()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
@@ -234,13 +255,39 @@ fun ProxyChainScreen(
                 title = EConfigType.PROXYCHAIN.toString(),
                 onBackClick = onBackClick,
                 navigationFocusRequester = backFocusRequester,
+                customActionFocusRequesters = topBarFocusOrder.drop(1),
+                onMoveDown = { remarksFocusRequester.requestFocus() },
+                navigationIcon = { requester ->
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier
+                            .dpadFocusOutline(requester, 20.dp)
+                            .dpadTopBarFocusNavigation(requester, topBarFocusOrder) { remarksFocusRequester.requestFocus() }
+                    ) {
+                        Icon(painterResource(R.drawable.ic_arrow_back_24dp), stringResource(R.string.acc_back))
+                    }
+                },
                 actions = {
                     if (showDelete) {
-                        IconButton(onClick = { showProfileDeleteConfirm = true }) {
+                        IconButton(
+                            onClick = { showProfileDeleteConfirm = true },
+                            modifier = Modifier
+                                .dpadFocusOutline(deleteConfigFocusRequester, 20.dp)
+                                .dpadTopBarFocusNavigation(deleteConfigFocusRequester, topBarFocusOrder) {
+                                    remarksFocusRequester.requestFocus()
+                                }
+                        ) {
                             Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
                         }
                     }
-                    IconButton(onClick = { onSave(remarks, members) }) {
+                    IconButton(
+                        onClick = { onSave(remarks, members) },
+                        modifier = Modifier
+                            .dpadFocusOutline(saveFocusRequester, 20.dp)
+                            .dpadTopBarFocusNavigation(saveFocusRequester, topBarFocusOrder) {
+                                remarksFocusRequester.requestFocus()
+                            }
+                    ) {
                         Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
                     }
                 }
@@ -255,6 +302,14 @@ fun ProxyChainScreen(
                 modifier = Modifier
                     .offset(y = -20.dp)
                     .navigationBarsPadding()
+                    .dpadFocusOutline(addFocusRequester, 28.dp)
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = {
+                            memberKeys.lastOrNull()?.let { memberFocusTargets[it]?.field?.requestFocus() }
+                                ?: remarksFocusRequester.requestFocus()
+                        },
+                        onMoveDown = { true }
+                    )
             ) {
                 Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_member))
             }
@@ -280,7 +335,15 @@ fun ProxyChainScreen(
                     label = stringResource(R.string.server_lab_remarks),
                     value = remarks,
                     onValueChange = { remarks = it },
-                    tvNavigation = previousToBackNavigation
+                    tvNavigation = TvTextFieldNavigation(
+                        focusRequester = remarksFocusRequester,
+                        onMoveUp = { backFocusRequester.requestFocus() },
+                        onMoveDown = {
+                            memberKeys.firstOrNull()?.let { memberFocusTargets[it]?.field?.requestFocus() }
+                                ?: addFocusRequester.requestFocus()
+                        },
+                        onMovePrevious = { backFocusRequester.requestFocus() }
+                    )
                 )
             }
 
@@ -293,6 +356,10 @@ fun ProxyChainScreen(
             }
 
             itemsIndexed(items = members, key = { index, _ -> memberKeys[index] }) { index, member ->
+                val focusTargets = memberFocusTargets.getValue(memberKeys[index])
+                val previousTargets = memberKeys.getOrNull(index - 1)?.let(memberFocusTargets::get)
+                val nextTargets = memberKeys.getOrNull(index + 1)?.let(memberFocusTargets::get)
+                val actionFocusOrder = remember(focusTargets) { listOf(focusTargets.field, focusTargets.remove) }
                 ReorderableItem(reorderableState, key = memberKeys[index]) { isDragging ->
                     val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                     Surface(shadowElevation = elevation) {
@@ -300,6 +367,7 @@ fun ProxyChainScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .then(with(this) { reorderableDragHandle() })
+                                .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                                 .padding(horizontal = 4.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -318,17 +386,44 @@ fun ProxyChainScreen(
                                     members = members.toMutableList().also { it[index] = newVal }
                                 },
                                 editable = true,
-                                modifier = Modifier.weight(1f),
-                                tvNavigation = previousToBackNavigation
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .dpadOrderedFocusNavigation(
+                                        current = focusTargets.field,
+                                        order = actionFocusOrder,
+                                        onBeforeFirst = { backFocusRequester.requestFocus() }
+                                    ),
+                                tvNavigation = TvTextFieldNavigation(
+                                    focusRequester = focusTargets.field,
+                                    onMoveUp = {
+                                        previousTargets?.field?.requestFocus() ?: remarksFocusRequester.requestFocus()
+                                    },
+                                    onMoveDown = {
+                                        nextTargets?.field?.requestFocus() ?: addFocusRequester.requestFocus()
+                                    }
+                                )
                             )
-                            IconButton(onClick = {
-                                if (member.isBlank()) {
-                                    members = members.toMutableList().also { it.removeAt(index) }
-                                    memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
-                                } else {
-                                    memberToDeleteIndex = index
-                                }
-                            }) {
+                            IconButton(
+                                onClick = {
+                                    if (member.isBlank()) {
+                                        members = members.toMutableList().also { it.removeAt(index) }
+                                        memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
+                                    } else {
+                                        memberToDeleteIndex = index
+                                    }
+                                },
+                                modifier = Modifier
+                                    .dpadFocusOutline(focusTargets.remove, 20.dp)
+                                    .dpadOrderedFocusNavigation(focusTargets.remove, actionFocusOrder)
+                                    .dpadVerticalFocusNavigation(
+                                        onMoveUp = {
+                                            previousTargets?.remove?.requestFocus() ?: saveFocusRequester.requestFocus()
+                                        },
+                                        onMoveDown = {
+                                            nextTargets?.remove?.requestFocus() ?: addFocusRequester.requestFocus()
+                                        }
+                                    )
+                            ) {
                                 Icon(
                                     painterResource(R.drawable.ic_delete_24dp),
                                     contentDescription = stringResource(R.string.acc_remove)

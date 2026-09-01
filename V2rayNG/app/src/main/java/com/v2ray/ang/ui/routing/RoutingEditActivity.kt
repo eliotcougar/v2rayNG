@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -43,6 +42,7 @@ import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.apppicker.AppPickerActivity
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
@@ -188,21 +188,13 @@ fun RoutingEditScreen(
             AppTopBar(
                 title = stringResource(R.string.routing_settings_rule_title),
                 onBackClick = onBackClick,
-                actions = {
-                    if (initial != null) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_delete_24dp),
-                                contentDescription = stringResource(R.string.acc_delete)
-                            )
-                        }
-                    }
-                    IconButton(onClick = { onSave(buildRuleset()) }) {
-                        Icon(
-                            painterResource(R.drawable.ic_fab_check),
-                            contentDescription = stringResource(R.string.acc_save)
-                        )
-                    }
+                actionItems = buildList {
+                    if (initial != null) add(AppTopBarAction(
+                        painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete)
+                    ) { showDeleteConfirm = true })
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save)
+                    ) { onSave(buildRuleset()) })
                 }
             )
         }

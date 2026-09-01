@@ -2,9 +2,8 @@ package com.v2ray.ang.ui.perappproxy
 
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,9 +13,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,23 +44,19 @@ import com.v2ray.ang.extension.toastInfo
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDivider
-import com.v2ray.ang.ui.compose.AppDropdownMenuItems
 import com.v2ray.ang.ui.compose.AppListItem
-import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppSelectionMenuAction
+import com.v2ray.ang.ui.compose.AppSelectionTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
+import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
-
-private enum class PerAppMenuAction(@StringRes val labelRes: Int) {
-    SelectAll(R.string.menu_item_select_all),
-    InvertSelection(R.string.menu_item_invert_selection),
-    SelectProxyApps(R.string.menu_item_select_proxy_app),
-    ImportSelection(R.string.menu_item_import_proxy_app),
-    ExportSelection(R.string.menu_item_export_proxy_app)
-}
 
 class PerAppProxyActivity : BaseComponentActivity() {
 
@@ -131,9 +126,16 @@ fun PerAppProxyScreen(
 ) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var showMenu by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
+    val isTelevision = isTelevisionDevice()
+    val perAppFocusRequester = remember { FocusRequester() }
+    val bypassFocusRequester = remember { FocusRequester() }
+    val infoFocusRequester = remember { FocusRequester() }
+    val modeFocusOrder = remember { listOf(perAppFocusRequester, bypassFocusRequester, infoFocusRequester) }
+    val packageNames = apps.map { it.packageName }
+    val rowFocusRequesters = remember(packageNames) { packageNames.associateWith { FocusRequester() } }
+    val focusFirstApp = { apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: true }
 
     LaunchedEffect(Unit) {
         onSearch(searchQuery)
@@ -142,9 +144,8 @@ fun PerAppProxyScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            AppTopBar(
+            AppSelectionTopBar(
                 title = stringResource(R.string.per_app_proxy_settings),
-                onBackClick = onBackClick,
                 isLoading = isLoading,
                 isSearchActive = showSearch,
                 searchQuery = searchQuery,
@@ -157,42 +158,17 @@ fun PerAppProxyScreen(
                     onSearch("")
                     showSearch = false
                 },
-                searchPlaceholder = stringResource(R.string.menu_item_search),
-                navigationFocusRequester = backFocusRequester,
-                actions = {
-                    if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_more_vert_24dp),
-                                contentDescription = stringResource(R.string.acc_more)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ) {
-                            AppDropdownMenuItems(PerAppMenuAction.entries, { it.labelRes }) { action ->
-                                showMenu = false
-                                when (action) {
-                                    PerAppMenuAction.SelectAll -> onSelectAll()
-                                    PerAppMenuAction.InvertSelection -> onInvertSelection()
-                                    PerAppMenuAction.SelectProxyApps -> onSelectProxyAuto()
-                                    PerAppMenuAction.ImportSelection -> onImportProxyApp()
-                                    PerAppMenuAction.ExportSelection -> onExportProxyApp()
-                                }
-                            }
-                        }
-                    }
-                }
+                onSearchOpen = { showSearch = true },
+                onBackClick = onBackClick,
+                backFocusRequester = backFocusRequester,
+                onMoveDown = { perAppFocusRequester.requestFocus() },
+                menuActions = listOf(
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_select_all), onSelectAll),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_invert_selection), onInvertSelection),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_select_proxy_app), onSelectProxyAuto),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_import_proxy_app), onImportProxyApp),
+                    AppSelectionMenuAction(stringResource(R.string.menu_item_export_proxy_app), onExportProxyApp)
+                )
             )
         }
     ) { innerPadding ->
@@ -212,48 +188,49 @@ fun PerAppProxyScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.per_app_proxy_settings_enable),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = perAppProxyEnabled,
-                            modifier = Modifier.scale(0.65f),
-                            onCheckedChange = onPerAppProxyChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    PerAppModeToggle(
+                        label = stringResource(R.string.per_app_proxy_settings_enable),
+                        checked = perAppProxyEnabled,
+                        isTelevision = isTelevision,
+                        onCheckedChange = onPerAppProxyChanged,
+                        modifier = Modifier
+                            .weight(1f)
+                            .dpadFocusOutline(perAppFocusRequester, 16.dp)
+                            .dpadOrderedFocusNavigation(
+                                perAppFocusRequester,
+                                modeFocusOrder,
+                                onBeforeFirst = { backFocusRequester.requestFocus() }
                             )
-                        )
-                    }
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { backFocusRequester.requestFocus() },
+                                onMoveDown = focusFirstApp
+                            )
+                    )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.switch_bypass_apps_mode),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Switch(
-                            checked = bypassApps,
-                            modifier = Modifier.scale(0.65f),
-                            onCheckedChange = onBypassAppsChanged,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                checkedTrackColor = MaterialTheme.colorScheme.secondary
+                    PerAppModeToggle(
+                        label = stringResource(R.string.switch_bypass_apps_mode),
+                        checked = bypassApps,
+                        isTelevision = isTelevision,
+                        onCheckedChange = onBypassAppsChanged,
+                        modifier = Modifier
+                            .weight(1f)
+                            .dpadFocusOutline(bypassFocusRequester, 16.dp)
+                            .dpadOrderedFocusNavigation(bypassFocusRequester, modeFocusOrder)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { backFocusRequester.requestFocus() },
+                                onMoveDown = focusFirstApp
                             )
-                        )
-                    }
-                    IconButton(onClick = onInfoClick) {
+                    )
+                    IconButton(
+                        onClick = onInfoClick,
+                        modifier = Modifier
+                            .dpadFocusOutline(infoFocusRequester, 20.dp)
+                            .dpadOrderedFocusNavigation(infoFocusRequester, modeFocusOrder)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { backFocusRequester.requestFocus() },
+                                onMoveDown = focusFirstApp
+                            )
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_about_24dp),
                             contentDescription = stringResource(R.string.acc_per_app_proxy_information),
@@ -272,18 +249,57 @@ fun PerAppProxyScreen(
                     .verticalScrollbar(listState),
                 contentPadding = NavigationBarsBottomPadding()
             ) {
-                items(items = apps, key = { it.packageName }) { app ->
+                itemsIndexed(items = apps, key = { _, app -> app.packageName }) { index, app ->
                     val checked = blacklist.contains(app.packageName)
+                    val focusRequester = rowFocusRequesters.getValue(app.packageName)
                     AppListItem(
                         appName = app.appName,
                         packageName = app.packageName,
                         icon = null,
                         checked = checked,
-                        onCheckedChange = { onToggleApp(app.packageName) }
+                        onCheckedChange = { onToggleApp(app.packageName) },
+                        focusRequester = focusRequester,
+                        modifier = Modifier.dpadVerticalFocusNavigation(
+                            onMoveUp = {
+                                apps.getOrNull(index - 1)?.let { rowFocusRequesters[it.packageName]?.requestFocus() }
+                                    ?: perAppFocusRequester.requestFocus()
+                            },
+                            onMoveDown = {
+                                apps.getOrNull(index + 1)?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: true
+                            }
+                        )
                     )
                     ItemDivider()
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PerAppModeToggle(
+    label: String,
+    checked: Boolean,
+    isTelevision: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .then(if (isTelevision) Modifier.clickable { onCheckedChange(!checked) } else Modifier)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(modifier = Modifier.width(8.dp))
+        Switch(
+            checked = checked,
+            modifier = Modifier.scale(0.65f),
+            onCheckedChange = if (isTelevision) null else onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                checkedTrackColor = MaterialTheme.colorScheme.secondary
+            )
+        )
     }
 }

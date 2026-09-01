@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -20,7 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import kotlinx.coroutines.flow.StateFlow
 
 @Composable
@@ -29,7 +32,9 @@ fun GroupTabBar(
     selectedTabIndex: Int,
     mainViewModel: MainViewModel,
     onTabClick: (Int) -> Unit,
-    onOpenDrawer: () -> Unit,
+    tabFocusRequesters: List<FocusRequester>,
+    onOpenDrawer: (FocusRequester) -> Unit,
+    onMoveUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val selectedIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
@@ -54,7 +59,20 @@ fun GroupTabBar(
                 group = group,
                 selected = index == selectedIndex,
                 serverFlow = serverFlow,
-                onMovePrevious = if (index == 0) onOpenDrawer else null,
+                modifier = Modifier
+                    .dpadFocusOutline(tabFocusRequesters[index])
+                    .onFocusChanged {
+                        if (it.isFocused && index != selectedIndex) onTabClick(index)
+                    }
+                    .dpadOrderedFocusNavigation(
+                        current = tabFocusRequesters[index],
+                        order = tabFocusRequesters,
+                        onBeforeFirst = { onOpenDrawer(tabFocusRequesters[index]) }
+                    )
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = { onMoveUp(); true },
+                        onMoveDown = { false }
+                    ),
                 onClick = { onTabClick(index) }
             )
         }
@@ -66,7 +84,7 @@ private fun GroupTabItem(
     group: GroupMapItem,
     selected: Boolean,
     serverFlow: StateFlow<List<ServersCache>>,
-    onMovePrevious: (() -> Unit)?,
+    modifier: Modifier,
     onClick: () -> Unit
 ) {
     val servers by serverFlow.collectAsStateWithLifecycle()
@@ -79,14 +97,9 @@ private fun GroupTabItem(
     Tab(
         selected = selected,
         onClick = onClick,
-        modifier = Modifier
+        modifier = modifier
             .widthIn(min = 56.dp)
-            .heightIn(min = 48.dp)
-            .dpadFocusOutline()
-            .dpadMovePreviousNavigation(
-                enabled = onMovePrevious != null,
-                onMovePrevious = { onMovePrevious?.invoke() }
-            ),
+            .heightIn(min = 48.dp),
         text = {
             Text(
                 text = text,

@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +41,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -158,35 +158,23 @@ fun LogcatScreen(
                     showSearch = false
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
-                actions = {
+                actionItems = buildList {
                     if (!showSearch) {
-                        IconButton(onClick = { showSearch = true }) {
-                            Icon(
-                                painterResource(R.drawable.ic_search_24dp),
-                                contentDescription = stringResource(R.string.acc_search)
-                            )
-                        }
+                        add(AppTopBarAction(
+                            painterResource(R.drawable.ic_search_24dp), stringResource(R.string.acc_search)
+                        ) { showSearch = true })
                     }
-                    IconButton(onClick = { viewModel.copyLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_copy),
-                            contentDescription = stringResource(R.string.acc_copy_log)
-                        )
-                    }
-                    IconButton(onClick = { onShareLogcat() }) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            contentDescription = stringResource(R.string.acc_share_log)
-                        )
-                    }
-                    IconButton(onClick = {
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_copy), stringResource(R.string.acc_copy_log)
+                    ) { viewModel.copyLogcat() })
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_share_24dp), stringResource(R.string.acc_share_log), onClick = onShareLogcat
+                    ))
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_clear_log)
+                    ) {
                         scope.launch(Dispatchers.IO) { viewModel.clearLogcat() }
-                    }) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            contentDescription = stringResource(R.string.acc_clear_log)
-                        )
-                    }
+                    })
                 }
             )
         },

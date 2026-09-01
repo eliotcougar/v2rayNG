@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,9 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,8 +62,14 @@ import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsListItem
-import com.v2ray.ang.ui.compose.dpadListItemNavigation
-import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
@@ -79,6 +89,12 @@ private enum class AddAssetMenuAction(@StringRes val labelRes: Int) {
 }
 
 private data class AssetDeleteTarget(val guid: String, val name: String)
+
+private class UserAssetRowFocusTargets {
+    val row = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+}
 
 class UserAssetActivity : HelperBaseComponentActivity() {
 
@@ -259,9 +275,20 @@ internal fun UserAssetScreen(
     onRemoveAsset: (String, String) -> Unit
 ) {
     var showAddMenu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var deleteTarget by remember { mutableStateOf<AssetDeleteTarget?>(null) }
     val listState = rememberLazyListState()
+    val isTelevision = isTelevisionDevice()
     val backFocusRequester = rememberDpadFocusRequester()
+    val addFocusRequester = remember { FocusRequester() }
+    val downloadFocusRequester = remember { FocusRequester() }
+    val geoSourceFocusRequester = remember { FocusRequester() }
+    val rowFocusTargets = remember(uiState.assets.map { it.guid }.toSet()) {
+        uiState.assets.associate { it.guid to UserAssetRowFocusTargets() }
+    }
+    val topBarFocusOrder = remember {
+        listOf(backFocusRequester, addFocusRequester, downloadFocusRequester)
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -271,9 +298,20 @@ internal fun UserAssetScreen(
                 onBackClick = onBackClick,
                 isLoading = isLoading,
                 navigationFocusRequester = backFocusRequester,
+                customActionFocusRequesters = listOf(addFocusRequester, downloadFocusRequester),
+                onMoveDown = geoSourceFocusRequester::requestFocus,
                 actions = {
                     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                        IconButton(onClick = { showAddMenu = true }) {
+                        IconButton(
+                            onClick = { showAddMenu = true },
+                            modifier = Modifier
+                                .dpadFocusOutline(addFocusRequester, 20.dp)
+                                .dpadTopBarFocusNavigation(
+                                    addFocusRequester,
+                                    topBarFocusOrder,
+                                    geoSourceFocusRequester::requestFocus
+                                )
+                        ) {
                             Icon(painterResource(R.drawable.ic_add_24dp), contentDescription = stringResource(R.string.acc_add_asset))
                         }
                         DropdownMenu(
@@ -283,7 +321,24 @@ internal fun UserAssetScreen(
                             offset = DpOffset(x = 0.dp, y = 0.dp),
                             modifier = Modifier.wrapContentWidth(Alignment.End)
                         ) {
-                            AppDropdownMenuItems(AddAssetMenuAction.entries, { it.labelRes }) { action ->
+                            AppDropdownMenuItems(
+                                items = AddAssetMenuAction.entries,
+                                labelRes = { it.labelRes },
+                                itemModifier = Modifier.dpadPopupHorizontalNavigation(
+                                    onMovePrevious = {
+                                        showAddMenu = false
+                                        scope.launch {
+                                            afterDpadPopupDismiss { backFocusRequester.requestFocus() }
+                                        }
+                                    },
+                                    onMoveNext = {
+                                        showAddMenu = false
+                                        scope.launch {
+                                            afterDpadPopupDismiss { downloadFocusRequester.requestFocus() }
+                                        }
+                                    }
+                                )
+                            ) { action ->
                                 showAddMenu = false
                                 when (action) {
                                     AddAssetMenuAction.File -> onAddFileClick()
@@ -293,7 +348,16 @@ internal fun UserAssetScreen(
                             }
                         }
                     }
-                    IconButton(onClick = onDownloadClick) {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier
+                            .dpadFocusOutline(downloadFocusRequester, 20.dp)
+                            .dpadTopBarFocusNavigation(
+                                downloadFocusRequester,
+                                topBarFocusOrder,
+                                geoSourceFocusRequester::requestFocus
+                            )
+                    ) {
                         Icon(painterResource(R.drawable.ic_cloud_download_24dp), contentDescription = stringResource(R.string.acc_download_file))
                     }
                 }
@@ -315,7 +379,21 @@ internal fun UserAssetScreen(
                     values = geoFilesSourcesList,
                     selectedValue = geoFilesSource,
                     onSelected = { onGeoSourceSelected(it) },
-                    modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
+                    focusRequester = geoSourceFocusRequester,
+                    modifier = Modifier
+                        .dpadOrderedFocusNavigation(
+                            geoSourceFocusRequester,
+                            listOf(geoSourceFocusRequester),
+                            onBeforeFirst = { backFocusRequester.requestFocus() }
+                        )
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = { backFocusRequester.requestFocus() },
+                            onMoveDown = {
+                                uiState.assets.firstOrNull()?.let {
+                                    rowFocusTargets[it.guid]?.row?.requestFocus()
+                                } ?: true
+                            }
+                        )
                 )
             }
             item {
@@ -325,12 +403,20 @@ internal fun UserAssetScreen(
                     modifier = Modifier.padding(16.dp)
                 )
             }
-            itemsIndexed(items = uiState.assets, key = { _, item -> item.guid }) { _, item ->
+            itemsIndexed(items = uiState.assets, key = { _, item -> item.guid }) { index, item ->
                 UserAssetItem(
                     item = item,
                     fileMetadata = uiState.fileMetadata[item.guid],
                     onEdit = { onEditAsset(item.guid) },
-                    onMovePrevious = { backFocusRequester.requestFocus() },
+                    focusTargets = rowFocusTargets.getValue(item.guid),
+                    previousFocusTargets = uiState.assets.getOrNull(index - 1)?.let {
+                        rowFocusTargets[it.guid]
+                    },
+                    nextFocusTargets = uiState.assets.getOrNull(index + 1)?.let {
+                        rowFocusTargets[it.guid]
+                    },
+                    firstRowPreviousFocusRequester = geoSourceFocusRequester.takeIf { index == 0 },
+                    backFocusRequester = backFocusRequester,
                     onDeleteClick = {
                         deleteTarget = AssetDeleteTarget(item.guid, item.assetUrl.remarks)
                     }
@@ -358,7 +444,11 @@ private fun UserAssetItem(
     item: AssetUrlCache,
     fileMetadata: AssetFileMetadata?,
     onEdit: () -> Unit,
-    onMovePrevious: () -> Unit,
+    focusTargets: UserAssetRowFocusTargets,
+    previousFocusTargets: UserAssetRowFocusTargets?,
+    nextFocusTargets: UserAssetRowFocusTargets?,
+    firstRowPreviousFocusRequester: FocusRequester?,
+    backFocusRequester: FocusRequester,
     onDeleteClick: () -> Unit
 ) {
     val propertiesText = if (fileMetadata != null) {
@@ -370,6 +460,14 @@ private fun UserAssetItem(
         stringResource(R.string.msg_file_not_found)
     }
     val showEditButton = item.assetUrl.locked != true && item.assetUrl.url != "file"
+    val isTelevision = isTelevisionDevice()
+    val actionFocusOrder = remember(focusTargets, showEditButton) {
+        buildList {
+            add(focusTargets.row)
+            if (showEditButton) add(focusTargets.edit)
+            add(focusTargets.delete)
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -380,9 +478,24 @@ private fun UserAssetItem(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .dpadListItemNavigation(
-                    onMovePrevious = onMovePrevious,
-                    onClick = if (showEditButton) onEdit else null
+                .then(
+                    if (isTelevision) Modifier
+                        .dpadFocusOutline(focusTargets.row)
+                        .dpadOrderedFocusNavigation(
+                            focusTargets.row,
+                            actionFocusOrder,
+                            onBeforeFirst = { backFocusRequester.requestFocus() }
+                        )
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = {
+                                previousFocusTargets?.row?.requestFocus()
+                                    ?: firstRowPreviousFocusRequester?.requestFocus()
+                                    ?: false
+                            },
+                            onMoveDown = { nextFocusTargets?.row?.requestFocus() ?: true }
+                        )
+                        .then(if (showEditButton) Modifier.clickable(onClick = onEdit) else Modifier.focusable())
+                    else Modifier
                 )
                 .padding(8.dp)
         ) {
@@ -401,7 +514,18 @@ private fun UserAssetItem(
             )
         }
         if (showEditButton) {
-            IconButton(onClick = onEdit) {
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier
+                    .dpadFocusOutline(focusTargets.edit, 20.dp)
+                    .dpadRowActionNavigation(
+                        focusTargets.edit,
+                        actionFocusOrder,
+                        previousFocusTargets?.edit ?: previousFocusTargets?.delete
+                            ?: firstRowPreviousFocusRequester,
+                        nextFocusTargets?.edit ?: nextFocusTargets?.delete
+                    )
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_edit_24dp),
                     contentDescription = stringResource(R.string.acc_edit),
@@ -409,7 +533,17 @@ private fun UserAssetItem(
                 )
             }
         }
-        IconButton(onClick = onDeleteClick) {
+        IconButton(
+            onClick = onDeleteClick,
+            modifier = Modifier
+                .dpadFocusOutline(focusTargets.delete, 20.dp)
+                .dpadRowActionNavigation(
+                    focusTargets.delete,
+                    actionFocusOrder,
+                    previousFocusTargets?.delete ?: firstRowPreviousFocusRequester,
+                    nextFocusTargets?.delete
+                )
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_delete_24dp),
                 contentDescription = stringResource(R.string.acc_delete),

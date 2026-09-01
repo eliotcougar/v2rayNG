@@ -23,4 +23,12 @@ class DpadFocusTest {
     fun nonHorizontalKeysAreIgnored() {
         assertNull(logicalHorizontalDirection(Key.DirectionDown, false))
     }
+
+    @Test
+    fun adjacentFocusIndexStopsAtBothEdges() {
+        assertNull(adjacentDpadFocusIndex(0, 3, DpadHorizontalDirection.Previous))
+        assertEquals(1, adjacentDpadFocusIndex(0, 3, DpadHorizontalDirection.Next))
+        assertEquals(1, adjacentDpadFocusIndex(2, 3, DpadHorizontalDirection.Previous))
+        assertNull(adjacentDpadFocusIndex(2, 3, DpadHorizontalDirection.Next))
+    }
 }

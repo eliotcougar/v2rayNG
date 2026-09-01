@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +45,7 @@ import com.v2ray.ang.handler.CertificateFingerprintManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
@@ -346,17 +345,13 @@ fun ServerScreen(
             AppTopBar(
                 title = configType.toString(),
                 onBackClick = onBackClick,
-                actions = {
-                    if (guid.isNotEmpty() && !isRunning) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete))
-                        }
-                    }
-                    IconButton(onClick = {
-                        onSave(buildProfileItem())
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save))
-                    }
+                actionItems = buildList {
+                    if (guid.isNotEmpty() && !isRunning) add(AppTopBarAction(
+                        painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete)
+                    ) { showDeleteDialog = true })
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save)
+                    ) { onSave(buildProfileItem()) })
                 }
             )
         }

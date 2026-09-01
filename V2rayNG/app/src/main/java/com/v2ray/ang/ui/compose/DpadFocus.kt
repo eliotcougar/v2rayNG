@@ -54,6 +54,12 @@ internal suspend fun requestFocusWhenReady(vararg requesters: FocusRequester): B
     return false
 }
 
+/** Popup disposal restores focus asynchronously, so wait for it before selecting an adjacent control. */
+internal suspend fun afterDpadPopupDismiss(action: () -> Unit) {
+    repeat(2) { withFrameNanos { } }
+    action()
+}
+
 /** Adds focus visibility to existing controls without changing their size or touch behavior. */
 @Composable
 internal fun Modifier.dpadFocusOutline(
@@ -77,6 +83,28 @@ internal fun logicalHorizontalDirection(key: Key, isRtl: Boolean): DpadHorizonta
     Key.DirectionLeft -> if (isRtl) DpadHorizontalDirection.Next else DpadHorizontalDirection.Previous
     Key.DirectionRight -> if (isRtl) DpadHorizontalDirection.Previous else DpadHorizontalDirection.Next
     else -> null
+}
+
+internal fun adjacentDpadFocusIndex(
+    currentIndex: Int,
+    itemCount: Int,
+    direction: DpadHorizontalDirection
+): Int? {
+    if (currentIndex !in 0 until itemCount) return null
+    val targetIndex = when (direction) {
+        DpadHorizontalDirection.Previous -> currentIndex - 1
+        DpadHorizontalDirection.Next -> currentIndex + 1
+    }
+    return targetIndex.takeIf { it in 0 until itemCount }
+}
+
+internal fun adjacentDpadFocusTarget(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    direction: DpadHorizontalDirection
+): FocusRequester? {
+    val currentIndex = order.indexOfFirst { it === current }
+    return adjacentDpadFocusIndex(currentIndex, order.size, direction)?.let(order::get)
 }
 
 /** Leaves a focused row through its logical leading edge; child actions receive the event first. */
@@ -111,8 +139,8 @@ internal fun Modifier.dpadListItemNavigation(
 
 /** Handles Back inside a focused TV subtree before the activity fallback. */
 @Composable
-internal fun Modifier.dpadBackNavigation(onBack: () -> Unit): Modifier {
-    if (!isTelevisionDevice()) return this
+internal fun Modifier.dpadBackNavigation(enabled: Boolean = true, onBack: () -> Unit): Modifier {
+    if (!isTelevisionDevice() || !enabled) return this
     return onPreviewKeyEvent { event ->
         if (event.type == KeyEventType.KeyDown && event.key == Key.Back) {
             onBack()
@@ -146,8 +174,8 @@ internal fun Modifier.dpadLogicalHorizontalNavigation(
 ): Modifier {
     if (!isTelevisionDevice()) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    return onPreviewKeyEvent { event ->
-        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+    return onKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
         when (logicalHorizontalDirection(event.key, isRtl)) {
             DpadHorizontalDirection.Previous -> onMovePrevious?.invoke() ?: false
             DpadHorizontalDirection.Next -> onMoveNext?.invoke() ?: false
@@ -155,3 +183,65 @@ internal fun Modifier.dpadLogicalHorizontalNavigation(
         }
     }
 }
+
+/** Moves within one logical TV focus chain without pairwise neighbor wiring. */
+@Composable
+internal fun Modifier.dpadOrderedFocusNavigation(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    onBeforeFirst: (() -> Unit)? = null,
+    onAfterLast: (() -> Unit)? = null
+): Modifier {
+    fun move(direction: DpadHorizontalDirection, onEdge: (() -> Unit)?): Boolean {
+        val target = adjacentDpadFocusTarget(current, order, direction)
+        if (target != null) target.requestFocus() else onEdge?.invoke() ?: current.requestFocus()
+        return true
+    }
+    return dpadLogicalHorizontalNavigation(
+        onMovePrevious = { move(DpadHorizontalDirection.Previous, onBeforeFirst) },
+        onMoveNext = { move(DpadHorizontalDirection.Next, onAfterLast) }
+    )
+}
+
+/** Popup contents consume D-pad events, so handle their horizontal exits during preview. */
+@Composable
+internal fun Modifier.dpadPopupHorizontalNavigation(
+    onMovePrevious: () -> Unit,
+    onMoveNext: (() -> Unit)? = null
+): Modifier {
+    if (!isTelevisionDevice()) return this
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    return onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        when (logicalHorizontalDirection(event.key, isRtl)) {
+            DpadHorizontalDirection.Previous -> {
+                onMovePrevious()
+                true
+            }
+            DpadHorizontalDirection.Next -> onMoveNext?.let { it(); true } ?: false
+            null -> false
+        }
+    }
+}
+
+/** Applies the shared logical and vertical navigation policy to one top-bar control. */
+@Composable
+internal fun Modifier.dpadTopBarFocusNavigation(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    onMoveDown: () -> Boolean
+): Modifier = dpadOrderedFocusNavigation(current, order)
+    .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
+
+/** Keeps a list action in its horizontal row and vertical action column. */
+@Composable
+internal fun Modifier.dpadRowActionNavigation(
+    current: FocusRequester,
+    order: List<FocusRequester>,
+    previousRow: FocusRequester?,
+    nextRow: FocusRequester?
+): Modifier = dpadOrderedFocusNavigation(current, order)
+    .dpadVerticalFocusNavigation(
+        onMoveUp = { previousRow?.requestFocus() ?: false },
+        onMoveDown = { nextRow?.requestFocus() ?: true }
+    )

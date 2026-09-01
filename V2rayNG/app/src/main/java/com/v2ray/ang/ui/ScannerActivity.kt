@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -67,6 +66,7 @@ import com.v2ray.ang.enums.PermissionType
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import java.nio.ByteBuffer
@@ -160,9 +160,11 @@ fun ScannerScreen(
             AppTopBar(
                 title = stringResource(R.string.menu_item_import_config_qrcode),
                 onBackClick = onBackClick,
-                actions = {
-                    IconButton(
-                        onClick = {
+                actionItems = buildList {
+                    add(AppTopBarAction(
+                        painterResource(if (isScanning) R.drawable.ic_stop_24dp else R.drawable.ic_scan_24dp),
+                        stringResource(if (isScanning) R.string.acc_stop_scanner else R.string.acc_start_scanner)
+                    ) {
                             if (isScanning) {
                                 if (torchEnabled) {
                                     torchEnabled = false
@@ -172,43 +174,19 @@ fun ScannerScreen(
                             } else {
                                 onStartScan()
                             }
-                        }
-                    ) {
-                        Icon(
-                            painterResource(
-                                if (isScanning) R.drawable.ic_stop_24dp
-                                else R.drawable.ic_scan_24dp
-                            ),
-                            contentDescription = stringResource(
-                                if (isScanning) R.string.acc_stop_scanner else R.string.acc_start_scanner
-                            )
-                        )
-                    }
+                    })
                     if (isScanning && hasTorch) {
-                        IconButton(
-                            onClick = {
+                        add(AppTopBarAction(
+                            painterResource(if (torchEnabled) R.drawable.ic_flash_on_24dp else R.drawable.ic_flash_off_24dp),
+                            stringResource(if (torchEnabled) R.string.acc_turn_torch_off else R.string.acc_turn_torch_on)
+                        ) {
                                 torchEnabled = !torchEnabled
                                 cameraControl?.enableTorch(torchEnabled)
-                            }
-                        ) {
-                            Icon(
-                                painterResource(
-                                    if (torchEnabled) R.drawable.ic_flash_on_24dp
-                                    else R.drawable.ic_flash_off_24dp
-                                ),
-                                contentDescription = stringResource(
-                                    if (torchEnabled) R.string.acc_turn_torch_off
-                                    else R.string.acc_turn_torch_on
-                                )
-                            )
-                        }
+                        })
                     }
-                    IconButton(onClick = onSelectPhoto) {
-                        Icon(
-                            painterResource(R.drawable.ic_image_24dp),
-                            contentDescription = stringResource(R.string.acc_select_image)
-                        )
-                    }
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_image_24dp), stringResource(R.string.acc_select_image), onClick = onSelectPhoto
+                    ))
                 }
             )
         }

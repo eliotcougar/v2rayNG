@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,25 +62,68 @@ import com.v2ray.ang.R
 import com.v2ray.ang.util.AppIconFetcher
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 
+data class AppTopBarAction(
+    val icon: Painter,
+    val label: String,
+    val enabled: Boolean = true,
+    val onClick: () -> Unit
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
     title: String,
     onBackClick: () -> Unit,
+    initialFocus: Boolean = true,
     isLoading: Boolean = false,
     isSearchActive: Boolean = false,
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
+    searchInputFocusRequester: FocusRequester? = null,
+    searchClearFocusRequester: FocusRequester? = null,
     navigationFocusRequester: FocusRequester? = null,
-    navigationIcon: @Composable (() -> Unit)? = null,
+    navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
+    actionItems: List<AppTopBarAction> = emptyList(),
+    customActionFocusRequesters: List<FocusRequester> = emptyList(),
+    onMoveDown: (() -> Boolean)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
-    val defaultBackFocusRequester = rememberDpadFocusRequester(
-        requestFocus = navigationFocusRequester == null && navigationIcon == null && !isSearchActive
+    val defaultNavigationFocusRequester = rememberDpadFocusRequester(
+        requestFocus = navigationFocusRequester == null && initialFocus && !isSearchActive,
+        requestKey = isSearchActive
     )
-    val backFocusRequester = navigationFocusRequester ?: defaultBackFocusRequester
+    val resolvedNavigationFocusRequester = navigationFocusRequester ?: defaultNavigationFocusRequester
+    val actionFocusRequesters = remember(actionItems.size) { List(actionItems.size) { FocusRequester() } }
+    val defaultSearchInputFocusRequester = remember { FocusRequester() }
+    val defaultSearchClearFocusRequester = remember { FocusRequester() }
+    val resolvedSearchInputFocusRequester = searchInputFocusRequester ?: defaultSearchInputFocusRequester
+    val resolvedSearchClearFocusRequester = searchClearFocusRequester ?: defaultSearchClearFocusRequester
+    val resolvedActionFocusRequesters = actionFocusRequesters + customActionFocusRequesters
+    val hasSearchQuery = searchQuery.isNotEmpty()
+    val topBarFocusOrder = remember(
+        resolvedNavigationFocusRequester,
+        resolvedSearchInputFocusRequester,
+        resolvedSearchClearFocusRequester,
+        resolvedActionFocusRequesters,
+        isSearchActive,
+        hasSearchQuery
+    ) {
+        buildList {
+            add(resolvedNavigationFocusRequester)
+            if (isSearchActive) {
+                add(resolvedSearchInputFocusRequester)
+                if (hasSearchQuery) add(resolvedSearchClearFocusRequester)
+            }
+            addAll(resolvedActionFocusRequesters)
+        }
+    }
+    val navigationModifier = Modifier.dpadTopBarFocusNavigation(
+        resolvedNavigationFocusRequester,
+        topBarFocusOrder,
+        onMoveDown = { onMoveDown?.invoke() ?: false }
+    )
     Column {
         TopAppBar(
             title = {
@@ -87,7 +131,11 @@ fun AppTopBar(
                     SearchInputField(
                         query = searchQuery,
                         onQueryChange = onSearchQueryChange,
-                        placeholder = searchPlaceholder
+                        placeholder = searchPlaceholder,
+                        focusRequester = resolvedSearchInputFocusRequester,
+                        clearFocusRequester = resolvedSearchClearFocusRequester,
+                        focusOrder = topBarFocusOrder,
+                        onMoveDown = { onMoveDown?.invoke() ?: false }
                     )
                 } else {
                     Text(text = title)
@@ -95,11 +143,11 @@ fun AppTopBar(
             },
             navigationIcon = {
                 if (navigationIcon != null) {
-                    navigationIcon()
+                    navigationIcon(resolvedNavigationFocusRequester)
                 } else {
                     IconButton(
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        modifier = Modifier.dpadFocusOutline(backFocusRequester, 20.dp)
+                        modifier = navigationModifier.dpadFocusOutline(resolvedNavigationFocusRequester, 20.dp)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back_24dp),
@@ -108,7 +156,25 @@ fun AppTopBar(
                     }
                 }
             },
-            actions = actions,
+            actions = {
+                actionItems.forEachIndexed { index, action ->
+                    val focusRequester = actionFocusRequesters[index]
+                    IconButton(
+                        onClick = action.onClick,
+                        enabled = action.enabled,
+                        modifier = Modifier
+                            .dpadFocusOutline(focusRequester, 20.dp)
+                            .dpadTopBarFocusNavigation(
+                                focusRequester,
+                                topBarFocusOrder,
+                                onMoveDown = { onMoveDown?.invoke() ?: false }
+                            )
+                    ) {
+                        Icon(action.icon, contentDescription = action.label)
+                    }
+                }
+                actions()
+            },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -130,36 +196,72 @@ fun AppTopBar(
 private fun SearchInputField(
     query: String,
     onQueryChange: (String) -> Unit,
-    placeholder: String?
+    placeholder: String?,
+    focusRequester: FocusRequester,
+    clearFocusRequester: FocusRequester,
+    focusOrder: List<FocusRequester>,
+    onMoveDown: () -> Boolean
 ) {
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    val tvFieldState = if (isTelevisionDevice()) rememberTvTextFieldState(focusRequester) else null
+    fun moveFocus(direction: DpadHorizontalDirection): Boolean =
+        (adjacentDpadFocusTarget(focusRequester, focusOrder, direction) ?: focusRequester).requestFocus()
+    LaunchedEffect(tvFieldState, focusRequester) {
+        if (tvFieldState == null) requestFocusWhenReady(focusRequester) else tvFieldState.beginEditing()
+    }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            singleLine = true,
-            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
-            placeholder = { if (placeholder != null) Text(placeholder, style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)) },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent,
-                focusedBorderColor = Color.Transparent,
-                unfocusedBorderColor = Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.secondary,
-                selectionColors = TextSelectionColors(
-                    handleColor = MaterialTheme.colorScheme.secondary,
-                    backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
-                )
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        Row(
             modifier = Modifier
                 .weight(1f)
-                .focusRequester(focusRequester)
-        )
+                .tvAwareTextFieldFocus(
+                    state = tvFieldState,
+                    enabled = true,
+                    navigation = TvTextFieldNavigation(
+                        focusRequester = focusRequester,
+                        onMoveUp = { true },
+                        onMoveDown = onMoveDown,
+                        onMovePrevious = { moveFocus(DpadHorizontalDirection.Previous) },
+                        onMoveNext = { moveFocus(DpadHorizontalDirection.Next) }
+                    ),
+                    onActivate = { tvFieldState?.beginEditing() }
+                )
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                readOnly = tvFieldState != null && !tvFieldState.isEditing,
+                singleLine = true,
+                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp),
+                placeholder = { if (placeholder != null) Text(placeholder, style = TextStyle(color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp)) },
+                interactionSource = tvFieldState?.interactionSource,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.secondary,
+                    selectionColors = TextSelectionColors(
+                        handleColor = MaterialTheme.colorScheme.secondary,
+                        backgroundColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.4f)
+                    )
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(tvFieldState?.let { Modifier.tvTextFieldEditorFocus(it) }
+                        ?: Modifier.focusRequester(focusRequester))
+            )
+        }
         if (query.isNotEmpty()) {
-            IconButton(onClick = { onQueryChange("") }) {
-                Icon(painterResource(android.R.drawable.ic_menu_close_clear_cancel), "Clear")
+            IconButton(
+                onClick = { onQueryChange(""); focusRequester.requestFocus() },
+                modifier = Modifier
+                    .dpadFocusOutline(clearFocusRequester, 20.dp)
+                    .dpadTopBarFocusNavigation(clearFocusRequester, focusOrder, onMoveDown)
+            ) {
+                Icon(
+                    painterResource(android.R.drawable.ic_menu_close_clear_cancel),
+                    stringResource(R.string.logcat_clear)
+                )
             }
         }
     }
@@ -172,13 +274,14 @@ fun AppListItem(
     icon: Any?,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    focusRequester: FocusRequester? = null
 ) {
     val context = LocalContext.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .dpadFocusOutline()
+            .dpadFocusOutline(focusRequester)
             .clickable { onCheckedChange(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically

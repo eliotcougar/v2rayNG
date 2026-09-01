@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,10 +32,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -59,8 +62,14 @@ import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.colorConfigType
-import com.v2ray.ang.ui.compose.dpadListItemNavigation
-import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.JsonUtil
@@ -86,6 +95,12 @@ private enum class RoutingPreset(val type: RoutingType, @StringRes val labelRes:
     Global(RoutingType.GLOBAL, R.string.routing_preset_global),
     IranWhitelist(RoutingType.WHITE_IRAN, R.string.routing_preset_iran_whitelist),
     RussiaWhitelist(RoutingType.WHITE_RUSSIA, R.string.routing_preset_russia_whitelist)
+}
+
+private class RoutingRowFocusTargets {
+    val row = FocusRequester()
+    val edit = FocusRequester()
+    val toggle = FocusRequester()
 }
 
 class RoutingSettingActivity : HelperBaseComponentActivity() {
@@ -205,10 +220,24 @@ fun RoutingSettingScreen(
     onExportClipboard: () -> Unit
 ) {
     val rulesets by viewModel.rulesetsFlow.collectAsStateWithLifecycle()
+    val isTelevision = isTelevisionDevice()
+    val rowFocusTargets = remember(rulesets.map { it.id }.toSet()) {
+        rulesets.associate { it.id to RoutingRowFocusTargets() }
+    }
     val domainStrategy by domainStrategyState.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var showPresetDialog by remember { mutableStateOf(false) }
     val backFocusRequester = rememberDpadFocusRequester()
+    val addFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
+    val domainStrategyFocusRequester = remember { FocusRequester() }
+    val topBarFocusOrder = remember {
+        listOf(backFocusRequester, addFocusRequester, moreFocusRequester)
+    }
+    val focusFirstRule = {
+        rulesets.firstOrNull()?.let { rowFocusTargets[it.id]?.row?.requestFocus() } ?: false
+    }
 
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
     val lazyListState = rememberLazyListState()
@@ -226,15 +255,35 @@ fun RoutingSettingScreen(
                 title = stringResource(R.string.routing_settings_title),
                 onBackClick = onBackClick,
                 navigationFocusRequester = backFocusRequester,
+                customActionFocusRequesters = listOf(addFocusRequester, moreFocusRequester),
+                onMoveDown = domainStrategyFocusRequester::requestFocus,
                 actions = {
-                    IconButton(onClick = onAddRule) {
+                    IconButton(
+                        onClick = onAddRule,
+                        modifier = Modifier
+                            .dpadFocusOutline(addFocusRequester, 20.dp)
+                            .dpadTopBarFocusNavigation(
+                                addFocusRequester,
+                                topBarFocusOrder,
+                                domainStrategyFocusRequester::requestFocus
+                            )
+                    ) {
                         Icon(
                             painterResource(R.drawable.ic_add_24dp),
                             contentDescription = stringResource(R.string.acc_add_rule)
                         )
                     }
                     Box {
-                        IconButton(onClick = { showMenu = true }) {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier
+                                .dpadFocusOutline(moreFocusRequester, 20.dp)
+                                .dpadTopBarFocusNavigation(
+                                    moreFocusRequester,
+                                    topBarFocusOrder,
+                                    domainStrategyFocusRequester::requestFocus
+                                )
+                        ) {
                             Icon(
                                 painterResource(R.drawable.ic_more_vert_24dp),
                                 contentDescription = stringResource(R.string.acc_more)
@@ -245,7 +294,16 @@ fun RoutingSettingScreen(
                             onDismissRequest = { showMenu = false },
                             containerColor = MaterialTheme.colorScheme.surface
                         ) {
-                            AppDropdownMenuItems(RoutingMenuAction.entries, { it.labelRes }) { action ->
+                            AppDropdownMenuItems(
+                                items = RoutingMenuAction.entries,
+                                labelRes = { it.labelRes },
+                                itemModifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                                    showMenu = false
+                                    scope.launch {
+                                        afterDpadPopupDismiss { addFocusRequester.requestFocus() }
+                                    }
+                                })
+                            ) { action ->
                                 showMenu = false
                                 when (action) {
                                     RoutingMenuAction.ImportPredefined -> showPresetDialog = true
@@ -275,7 +333,17 @@ fun RoutingSettingScreen(
                     values = domainStrategies,
                     selectedValue = domainStrategy,
                     onSelected = { onDomainStrategySelected(it) },
-                    modifier = Modifier.dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
+                    focusRequester = domainStrategyFocusRequester,
+                    modifier = Modifier
+                        .dpadOrderedFocusNavigation(
+                            domainStrategyFocusRequester,
+                            listOf(domainStrategyFocusRequester),
+                            onBeforeFirst = { backFocusRequester.requestFocus() }
+                        )
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = { backFocusRequester.requestFocus() },
+                            onMoveDown = focusFirstRule
+                        )
                 )
             }
             item {
@@ -298,7 +366,15 @@ fun RoutingSettingScreen(
                         RoutingRulesetItem(
                             ruleset = ruleset,
                             onEdit = { onEditRule(ruleset.id) },
-                            onMovePrevious = { backFocusRequester.requestFocus() },
+                            focusTargets = rowFocusTargets.getValue(ruleset.id),
+                            previousFocusTargets = rulesets.getOrNull(index - 1)?.let {
+                                rowFocusTargets[it.id]
+                            },
+                            nextFocusTargets = rulesets.getOrNull(index + 1)?.let {
+                                rowFocusTargets[it.id]
+                            },
+                            firstRowPreviousFocusRequester = domainStrategyFocusRequester.takeIf { index == 0 },
+                            backFocusRequester = backFocusRequester,
                             onEnabledChange = { checked ->
                                 val updated = ruleset.copy(enabled = checked)
                                 viewModel.update(index, updated)
@@ -330,9 +406,17 @@ fun RoutingSettingScreen(
 private fun RoutingRulesetItem(
     ruleset: RulesetItem,
     onEdit: () -> Unit,
-    onMovePrevious: () -> Unit,
+    focusTargets: RoutingRowFocusTargets,
+    previousFocusTargets: RoutingRowFocusTargets?,
+    nextFocusTargets: RoutingRowFocusTargets?,
+    firstRowPreviousFocusRequester: FocusRequester?,
+    backFocusRequester: FocusRequester,
     onEnabledChange: (Boolean) -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
+    val actionFocusOrder = remember(focusTargets) {
+        listOf(focusTargets.row, focusTargets.edit, focusTargets.toggle)
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -342,7 +426,25 @@ private fun RoutingRulesetItem(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .dpadListItemNavigation(onMovePrevious = onMovePrevious, onClick = onEdit)
+                .then(
+                    if (isTelevision) Modifier
+                        .dpadFocusOutline(focusTargets.row)
+                        .dpadOrderedFocusNavigation(
+                            focusTargets.row,
+                            actionFocusOrder,
+                            onBeforeFirst = { backFocusRequester.requestFocus() }
+                        )
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = {
+                                previousFocusTargets?.row?.requestFocus()
+                                    ?: firstRowPreviousFocusRequester?.requestFocus()
+                                    ?: false
+                            },
+                            onMoveDown = { nextFocusTargets?.row?.requestFocus() ?: true }
+                        )
+                        .clickable(onClick = onEdit)
+                    else Modifier
+                )
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -386,7 +488,17 @@ private fun RoutingRulesetItem(
             horizontalAlignment = Alignment.End,
             modifier = Modifier.padding(start = 8.dp)
         ) {
-            IconButton(onClick = onEdit) {
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier
+                    .dpadFocusOutline(focusTargets.edit, 20.dp)
+                    .dpadRowActionNavigation(
+                        focusTargets.edit,
+                        actionFocusOrder,
+                        previousFocusTargets?.edit ?: firstRowPreviousFocusRequester,
+                        nextFocusTargets?.edit
+                    )
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_edit_24dp),
                     contentDescription = stringResource(R.string.acc_edit)
@@ -394,9 +506,17 @@ private fun RoutingRulesetItem(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Switch(
-                checked = ruleset.enabled ?: false,
+                checked = ruleset.enabled,
                 onCheckedChange = onEnabledChange,
-                modifier = Modifier.scale(0.7f),
+                modifier = Modifier
+                    .scale(0.7f)
+                    .dpadFocusOutline(focusTargets.toggle, 18.dp)
+                    .dpadRowActionNavigation(
+                        focusTargets.toggle,
+                        actionFocusOrder,
+                        previousFocusTargets?.toggle ?: firstRowPreviousFocusRequester,
+                        nextFocusTargets?.toggle
+                    ),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                     checkedTrackColor = MaterialTheme.colorScheme.secondary

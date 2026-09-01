@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +34,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
@@ -243,19 +242,17 @@ fun ServerGroupScreen(
             AppTopBar(
                 title = EConfigType.POLICYGROUP.toString(),
                 onBackClick = onBackClick,
-                actions = {
-                    if (showDelete) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(painterResource(R.drawable.ic_delete_24dp), contentDescription = stringResource(R.string.acc_delete))
-                        }
-                    }
-                    IconButton(onClick = {
+                actionItems = buildList {
+                    if (showDelete) add(AppTopBarAction(
+                        painterResource(R.drawable.ic_delete_24dp), stringResource(R.string.acc_delete)
+                    ) { showDeleteConfirm = true })
+                    add(AppTopBarAction(
+                        painterResource(R.drawable.ic_fab_check), stringResource(R.string.acc_save)
+                    ) {
                         val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
                         val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
                         onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
-                    }) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
+                    })
                 }
             )
         }

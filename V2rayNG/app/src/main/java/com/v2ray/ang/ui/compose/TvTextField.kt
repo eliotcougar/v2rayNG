@@ -2,6 +2,9 @@ package com.v2ray.ang.ui.compose
 
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,9 +43,12 @@ internal class TvTextFieldState(
     var isEditing by mutableStateOf(false)
         private set
     internal var editorHadFocus = false
+    internal var imeWasVisible = false
     internal var restorePassiveFocus by mutableStateOf(false)
 
     fun beginEditing() {
+        editorHadFocus = false
+        imeWasVisible = false
         restorePassiveFocus = false
         isEditing = true
     }
@@ -50,12 +56,14 @@ internal class TvTextFieldState(
     fun finishEditing(restoreFocus: Boolean = false) {
         isEditing = false
         editorHadFocus = false
+        imeWasVisible = false
         restorePassiveFocus = restoreFocus
         hideKeyboard()
     }
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = null): TvTextFieldState {
     val defaultRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -65,6 +73,13 @@ internal fun rememberTvTextFieldState(passiveFocusRequester: FocusRequester? = n
             passiveFocusRequester = passiveFocusRequester ?: defaultRequester,
             hideKeyboard = { currentKeyboardController.value?.hide() }
         )
+    }
+    val isImeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(state.isEditing, state.editorHadFocus, isImeVisible) {
+        if (state.isEditing && state.editorHadFocus) {
+            if (isImeVisible) state.imeWasVisible = true
+            else if (state.imeWasVisible) state.finishEditing(restoreFocus = true)
+        }
     }
     LaunchedEffect(state.isEditing, state.restorePassiveFocus) {
         when {

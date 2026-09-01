@@ -197,12 +197,14 @@ fun SettingsListItem(
     selectedValue: String,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    focusRequester: FocusRequester? = null
 ) {
     val isTelevision = isTelevisionDevice()
     var showDialog by remember { mutableStateOf(false) }
     var restoreFocus by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
+    val defaultFocusRequester = remember { FocusRequester() }
+    val resolvedFocusRequester = focusRequester ?: defaultFocusRequester
     val options = entries.zip(values)
     val selectedOption = options.find { it.second == selectedValue } ?: options.firstOrNull()
     val summary = selectedOption?.first.orEmpty()
@@ -216,12 +218,12 @@ fun SettingsListItem(
             { showDialog = true }
         } else null,
         modifier = modifier,
-        focusRequester = focusRequester
+        focusRequester = resolvedFocusRequester
     )
 
     LaunchedEffect(showDialog, restoreFocus) {
         if (!showDialog && restoreFocus) {
-            requestFocusWhenReady(focusRequester)
+            requestFocusWhenReady(resolvedFocusRequester)
             restoreFocus = false
         }
     }

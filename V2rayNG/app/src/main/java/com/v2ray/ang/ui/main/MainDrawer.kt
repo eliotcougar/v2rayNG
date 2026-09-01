@@ -22,8 +22,15 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -34,7 +41,9 @@ import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.requestFocusWhenReady
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
@@ -67,12 +76,21 @@ private val drawerItems = primaryDrawerItems + listOf(
 )
 
 @Composable
-fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
+fun MainDrawerContent(
+    drawerState: DrawerState,
+    focusGeneration: Int,
+    onClose: () -> Unit,
+    onNavigate: (MainDestination) -> Unit
+) {
     val drawerScrollState = rememberScrollState()
-    val firstItemFocusRequester = rememberDpadFocusRequester(
-        requestFocus = drawerState.targetValue == DrawerValue.Open,
-        requestKey = drawerState.targetValue
-    )
+    val focusRequesters = remember { List(drawerItems.size) { FocusRequester() } }
+    var focusedIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(drawerState.targetValue, focusGeneration) {
+        if (drawerState.targetValue == DrawerValue.Open) {
+            requestFocusWhenReady(focusRequesters[focusedIndex], focusRequesters.first())
+        }
+    }
 
     ModalDrawerSheet(
         drawerState = drawerState,
@@ -123,7 +141,17 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
-                        .dpadFocusOutline(if (index == 0) firstItemFocusRequester else null)
+                        .dpadFocusOutline(focusRequesters[index])
+                        .onFocusChanged { if (it.isFocused) focusedIndex = index }
+                        .dpadLogicalHorizontalNavigation(onMoveNext = { onClose(); true })
+                        .dpadVerticalFocusNavigation(
+                            onMoveUp = {
+                                focusRequesters[(index - 1).coerceAtLeast(0)].requestFocus()
+                            },
+                            onMoveDown = {
+                                focusRequesters[(index + 1).coerceAtMost(focusRequesters.lastIndex)].requestFocus()
+                            }
+                        )
                 )
             }
         }

@@ -33,13 +33,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -61,7 +59,9 @@ import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.dpadBackNavigation
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
@@ -85,7 +85,7 @@ fun GroupPagerPage(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
-    onOpenDrawer: () -> Unit,
+    onOpenDrawer: (FocusRequester) -> Unit,
     onMoveToService: () -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -139,9 +139,47 @@ private class ServerRowActions(
     val share: (String, ProfileItem) -> Unit,
     val more: (String, ProfileItem) -> Unit,
     val remove: (String) -> Unit,
-    val openDrawer: () -> Unit,
+    val openDrawer: (FocusRequester) -> Unit,
     val moveToService: () -> Unit,
 )
+
+private class ServerRowFocusRequesters {
+    val row = FocusRequester()
+    val more = FocusRequester()
+    val share = FocusRequester()
+    val edit = FocusRequester()
+    val delete = FocusRequester()
+}
+
+private data class ServerRowFocusTargets(
+    val current: ServerRowFocusRequesters,
+    val previous: ServerRowFocusRequesters?,
+    val next: ServerRowFocusRequesters?,
+    val previousColumn: ServerRowFocusRequesters?,
+    val adjacentColumn: ServerRowFocusRequesters?,
+    val twoColumn: Boolean
+)
+
+private fun serverRowFocusTargets(
+    index: Int,
+    rows: List<ServerRowUiModel>,
+    requesters: Map<String, ServerRowFocusRequesters>,
+    twoColumn: Boolean
+): ServerRowFocusTargets {
+    val stride = if (twoColumn) 2 else 1
+    return ServerRowFocusTargets(
+        current = requesters.getValue(rows[index].guid),
+        previous = rows.getOrNull(index - stride)?.let { requesters[it.guid] },
+        next = rows.getOrNull(index + stride)?.let { requesters[it.guid] },
+        previousColumn = if (twoColumn && index % 2 == 1) {
+            rows.getOrNull(index - 1)?.let { requesters[it.guid] }
+        } else null,
+        adjacentColumn = if (twoColumn && index % 2 == 0) {
+            rows.getOrNull(index + 1)?.let { requesters[it.guid] }
+        } else null,
+        twoColumn = twoColumn
+    )
+}
 
 @Composable
 private fun ServerListPage(
@@ -163,6 +201,10 @@ private fun ServerListPage(
     val focusGuid = if (isActivePage) {
         selectedGuid?.takeIf { selected -> rows.any { it.guid == selected } } ?: rows.firstOrNull()?.guid
     } else null
+    val serverGuids = rows.map { it.guid }.toSet()
+    val rowFocusRequesters = remember(groupId, serverGuids) {
+        rows.associate { it.guid to ServerRowFocusRequesters() }
+    }
     if (doubleColumnDisplay) {
         val gridState = remember(groupId) {
             lazyGridStates.getOrPut(groupId) { LazyGridState() }
@@ -183,14 +225,15 @@ private fun ServerListPage(
                 .verticalScrollbar(gridState),
             contentPadding = contentPadding
         ) {
-            itemsIndexed(items = rows, key = { _, item -> item.guid }) { _, row ->
+            itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
                 val content: @Composable () -> Unit = {
                     ServerItemColumn(
                         row = row,
                         isSelected = row.guid == selectedGuid,
                         doubleColumnDisplay = true,
                         actions = actions,
-                        focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
+                        externalFocusRequester = serverFocusRequester.takeIf { row.guid == focusGuid },
+                        focusTargets = serverRowFocusTargets(index, rows, rowFocusRequesters, true)
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
@@ -227,7 +270,8 @@ private fun ServerListPage(
                 .verticalScrollbar(listState),
             contentPadding = contentPadding
         ) {
-            itemsIndexed(items = rows, key = { _, item -> item.guid }) { _, row ->
+            itemsIndexed(items = rows, key = { _, item -> item.guid }) { index, row ->
+                val focusTargets = serverRowFocusTargets(index, rows, rowFocusRequesters, false)
                 if (canReorder && reorderableState != null) {
                     ReorderableItem(
                         reorderableState,
@@ -241,7 +285,8 @@ private fun ServerListPage(
                                 row = row,
                                 isSelected = row.guid == selectedGuid,
                                 actions = actions,
-                                focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
+                                externalFocusRequester = serverFocusRequester.takeIf { row.guid == focusGuid },
+                                focusTargets = focusTargets
                             )
                         }
                         ItemDivider()
@@ -251,7 +296,8 @@ private fun ServerListPage(
                         row = row,
                         isSelected = row.guid == selectedGuid,
                         actions = actions,
-                        focusRequester = serverFocusRequester.takeIf { row.guid == focusGuid }
+                        externalFocusRequester = serverFocusRequester.takeIf { row.guid == focusGuid },
+                        focusTargets = focusTargets
                     )
                     ItemDivider()
                 }
@@ -297,14 +343,16 @@ private fun ServerItemRow(
     row: ServerRowUiModel,
     isSelected: Boolean,
     actions: ServerRowActions,
-    focusRequester: FocusRequester?
+    externalFocusRequester: FocusRequester?,
+    focusTargets: ServerRowFocusTargets
 ) {
     ServerListItem(
         row = row,
         isSelected = isSelected,
         doubleColumnDisplay = false,
         actions = actions,
-        focusRequester = focusRequester
+        externalFocusRequester = externalFocusRequester,
+        focusTargets = focusTargets
     )
 }
 
@@ -314,7 +362,8 @@ private fun ServerItemColumn(
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
     actions: ServerRowActions,
-    focusRequester: FocusRequester?
+    externalFocusRequester: FocusRequester?,
+    focusTargets: ServerRowFocusTargets
 ) {
     Column {
         ServerListItem(
@@ -322,7 +371,8 @@ private fun ServerItemColumn(
             isSelected = isSelected,
             doubleColumnDisplay = doubleColumnDisplay,
             actions = actions,
-            focusRequester = focusRequester
+            externalFocusRequester = externalFocusRequester,
+            focusTargets = focusTargets
         )
         ItemDivider()
     }
@@ -334,9 +384,16 @@ private fun ServerListItem(
     isSelected: Boolean,
     doubleColumnDisplay: Boolean,
     actions: ServerRowActions,
-    focusRequester: FocusRequester?
+    externalFocusRequester: FocusRequester?,
+    focusTargets: ServerRowFocusTargets
 ) {
-    var rowFocused by remember(row.guid) { mutableStateOf(false) }
+    val currentFocus = focusTargets.current
+    val previousFocus = focusTargets.previous
+    val nextFocus = focusTargets.next
+    val actionFocusOrder = remember(currentFocus, focusTargets.twoColumn) {
+        if (focusTargets.twoColumn) listOf(currentFocus.row, currentFocus.more)
+        else listOf(currentFocus.row, currentFocus.share, currentFocus.edit, currentFocus.delete)
+    }
     val testResult = if (row.testDelayMillis == 0L) {
         ""
     } else {
@@ -351,10 +408,21 @@ private fun ServerListItem(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .dpadFocusOutline(focusRequester)
-            .onFocusChanged { rowFocused = it.isFocused }
-            .dpadMovePreviousNavigation(enabled = rowFocused, onMovePrevious = actions.openDrawer)
-            .dpadBackNavigation(actions.moveToService)
+            .then(if (externalFocusRequester != null) Modifier.focusRequester(externalFocusRequester) else Modifier)
+            .dpadFocusOutline(currentFocus.row)
+            .dpadOrderedFocusNavigation(
+                current = currentFocus.row,
+                order = actionFocusOrder,
+                onBeforeFirst = {
+                    focusTargets.previousColumn?.more?.requestFocus()
+                        ?: actions.openDrawer(currentFocus.row)
+                }
+            )
+            .dpadVerticalFocusNavigation(
+                onMoveUp = { previousFocus?.row?.requestFocus() ?: false },
+                onMoveDown = { nextFocus?.row?.requestFocus() ?: true }
+            )
+            .dpadBackNavigation(onBack = actions.moveToService)
             .semantics {
                 if (selectedStateDescription != null) {
                     stateDescription = selectedStateDescription
@@ -393,8 +461,19 @@ private fun ServerListItem(
                         onClick = { actions.more(row.guid, row.profile) },
                         modifier = Modifier
                             .size(36.dp)
-                            .dpadFocusOutline(cornerRadius = 18.dp)
-                            .dpadMovePreviousNavigation(onMovePrevious = actions.openDrawer)
+                            .dpadFocusOutline(currentFocus.more, 18.dp)
+                            .dpadOrderedFocusNavigation(
+                                current = currentFocus.more,
+                                order = actionFocusOrder,
+                                onAfterLast = {
+                                    focusTargets.adjacentColumn?.row?.requestFocus()
+                                        ?: currentFocus.more.requestFocus()
+                                }
+                            )
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = { previousFocus?.more?.requestFocus() ?: false },
+                                onMoveDown = { nextFocus?.more?.requestFocus() ?: true }
+                            )
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_more_vert_24dp),
@@ -405,10 +484,12 @@ private fun ServerListItem(
                 } else {
                     IconButton(
                         onClick = { actions.share(row.guid, row.profile) },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .dpadFocusOutline(cornerRadius = 18.dp)
-                            .dpadMovePreviousNavigation(onMovePrevious = actions.openDrawer)
+                        modifier = Modifier.size(36.dp)
+                            .dpadFocusOutline(currentFocus.share, 18.dp)
+                            .dpadRowActionNavigation(
+                                currentFocus.share, actionFocusOrder,
+                                previousFocus?.share, nextFocus?.share
+                            )
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_share_24dp),
@@ -418,7 +499,12 @@ private fun ServerListItem(
                     }
                     IconButton(
                         onClick = { actions.edit(row.guid, row.profile) },
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                        modifier = Modifier.size(36.dp)
+                            .dpadFocusOutline(currentFocus.edit, 18.dp)
+                            .dpadRowActionNavigation(
+                                currentFocus.edit, actionFocusOrder,
+                                previousFocus?.edit, nextFocus?.edit
+                            )
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_edit_24dp),
@@ -428,7 +514,12 @@ private fun ServerListItem(
                     }
                     IconButton(
                         onClick = { actions.remove(row.guid) },
-                        modifier = Modifier.size(36.dp).dpadFocusOutline(cornerRadius = 18.dp)
+                        modifier = Modifier.size(36.dp)
+                            .dpadFocusOutline(currentFocus.delete, 18.dp)
+                            .dpadRowActionNavigation(
+                                currentFocus.delete, actionFocusOrder,
+                                previousFocus?.delete, nextFocus?.delete
+                            )
                     ) {
                         Icon(
                             painterResource(R.drawable.ic_delete_24dp),
