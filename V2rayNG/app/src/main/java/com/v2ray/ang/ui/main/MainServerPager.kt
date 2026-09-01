@@ -86,7 +86,7 @@ fun GroupPagerPage(
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
     onOpenDrawer: (FocusRequester) -> Unit,
-    onMoveToService: () -> Unit,
+    onMoveToService: () -> Boolean,
     contentPadding: PaddingValues
 ) {
     val groupStateFlow = remember(groupId) {
@@ -140,7 +140,7 @@ private class ServerRowActions(
     val more: (String, ProfileItem) -> Unit,
     val remove: (String) -> Unit,
     val openDrawer: (FocusRequester) -> Unit,
-    val moveToService: () -> Unit,
+    val moveToService: () -> Boolean,
 )
 
 private class ServerRowFocusRequesters {
@@ -420,9 +420,9 @@ private fun ServerListItem(
             )
             .dpadVerticalFocusNavigation(
                 onMoveUp = { previousFocus?.row?.requestFocus() ?: false },
-                onMoveDown = { nextFocus?.row?.requestFocus() ?: true }
+                onMoveDown = { nextFocus?.row?.requestFocus() ?: actions.moveToService() }
             )
-            .dpadBackNavigation(onBack = actions.moveToService)
+            .dpadBackNavigation(onBack = { actions.moveToService() })
             .semantics {
                 if (selectedStateDescription != null) {
                     stateDescription = selectedStateDescription
@@ -472,7 +472,7 @@ private fun ServerListItem(
                             )
                             .dpadVerticalFocusNavigation(
                                 onMoveUp = { previousFocus?.more?.requestFocus() ?: false },
-                                onMoveDown = { nextFocus?.more?.requestFocus() ?: true }
+                                onMoveDown = { nextFocus?.more?.requestFocus() ?: actions.moveToService() }
                             )
                     ) {
                         Icon(
@@ -488,7 +488,8 @@ private fun ServerListItem(
                             .dpadFocusOutline(currentFocus.share, 18.dp)
                             .dpadRowActionNavigation(
                                 currentFocus.share, actionFocusOrder,
-                                previousFocus?.share, nextFocus?.share
+                                previousFocus?.share, nextFocus?.share,
+                                onAfterLastRow = actions.moveToService
                             )
                     ) {
                         Icon(
@@ -503,7 +504,8 @@ private fun ServerListItem(
                             .dpadFocusOutline(currentFocus.edit, 18.dp)
                             .dpadRowActionNavigation(
                                 currentFocus.edit, actionFocusOrder,
-                                previousFocus?.edit, nextFocus?.edit
+                                previousFocus?.edit, nextFocus?.edit,
+                                onAfterLastRow = actions.moveToService
                             )
                     ) {
                         Icon(
@@ -518,7 +520,8 @@ private fun ServerListItem(
                             .dpadFocusOutline(currentFocus.delete, 18.dp)
                             .dpadRowActionNavigation(
                                 currentFocus.delete, actionFocusOrder,
-                                previousFocus?.delete, nextFocus?.delete
+                                previousFocus?.delete, nextFocus?.delete,
+                                onAfterLastRow = actions.moveToService
                             )
                     ) {
                         Icon(

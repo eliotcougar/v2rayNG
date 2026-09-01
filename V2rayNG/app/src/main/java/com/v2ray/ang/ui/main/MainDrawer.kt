@@ -86,7 +86,8 @@ fun MainDrawerContent(
     val focusRequesters = remember { List(drawerItems.size) { FocusRequester() } }
     var focusedIndex by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(drawerState.targetValue, focusGeneration) {
+    // Drawer focus targets may attach only after the opening animation settles, so retry at both states.
+    LaunchedEffect(drawerState.currentValue, drawerState.targetValue, focusGeneration) {
         if (drawerState.targetValue == DrawerValue.Open) {
             requestFocusWhenReady(focusRequesters[focusedIndex], focusRequesters.first())
         }
@@ -143,7 +144,7 @@ fun MainDrawerContent(
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
                         .dpadFocusOutline(focusRequesters[index])
                         .onFocusChanged { if (it.isFocused) focusedIndex = index }
-                        .dpadLogicalHorizontalNavigation(onMoveNext = { onClose(); true })
+                        .dpadLogicalHorizontalNavigation(onMovePrevious = { true }, onMoveNext = { onClose(); true })
                         .dpadVerticalFocusNavigation(
                             onMoveUp = {
                                 focusRequesters[(index - 1).coerceAtLeast(0)].requestFocus()

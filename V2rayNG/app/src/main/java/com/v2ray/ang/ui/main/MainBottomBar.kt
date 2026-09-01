@@ -35,7 +35,7 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import com.v2ray.ang.ui.compose.dpadFocusOutline
-import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 
 @Composable
@@ -45,7 +45,9 @@ fun MainBottomBar(
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit,
     focusRequester: FocusRequester? = null,
+    statusFocusRequester: FocusRequester? = null,
     onMovePrevious: () -> Unit,
+    onStatusMovePrevious: () -> Unit,
     onMoveUp: () -> Boolean = { false }
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -53,6 +55,15 @@ fun MainBottomBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
+                .dpadFocusOutline(statusFocusRequester)
+                .dpadLogicalHorizontalNavigation(
+                    onMovePrevious = { onStatusMovePrevious(); true },
+                    onMoveNext = { focusRequester?.requestFocus() ?: false }
+                )
+                .dpadVerticalFocusNavigation(
+                    onMoveUp = { focusRequester?.requestFocus() ?: false },
+                    onMoveDown = { true }
+                )
                 .clickable(onClick = { onAction(MainAction.TestCurrentServer) })
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
@@ -82,8 +93,14 @@ fun MainBottomBar(
                 .offset(y = (-28).dp)
                 .navigationBarsPadding()
                 .dpadFocusOutline(focusRequester, 28.dp)
-                .dpadMovePreviousNavigation(onMovePrevious = onMovePrevious)
-                .dpadVerticalFocusNavigation(onMoveUp = onMoveUp, onMoveDown = { true }),
+                .dpadLogicalHorizontalNavigation(
+                    onMovePrevious = { onMovePrevious(); true },
+                    onMoveNext = { statusFocusRequester?.requestFocus() ?: false }
+                )
+                .dpadVerticalFocusNavigation(
+                    onMoveUp = onMoveUp,
+                    onMoveDown = { statusFocusRequester?.requestFocus() ?: false }
+                ),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
