@@ -64,6 +64,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
@@ -305,7 +306,7 @@ internal fun UserAssetScreen(
                         IconButton(
                             onClick = { showAddMenu = true },
                             modifier = Modifier
-                                .dpadFocusOutline(addFocusRequester, 20.dp)
+                                .dpadIconButtonFocusOutline(addFocusRequester)
                                 .dpadTopBarFocusNavigation(
                                     addFocusRequester,
                                     topBarFocusOrder,
@@ -351,7 +352,7 @@ internal fun UserAssetScreen(
                     IconButton(
                         onClick = onDownloadClick,
                         modifier = Modifier
-                            .dpadFocusOutline(downloadFocusRequester, 20.dp)
+                            .dpadIconButtonFocusOutline(downloadFocusRequester)
                             .dpadTopBarFocusNavigation(
                                 downloadFocusRequester,
                                 topBarFocusOrder,
@@ -517,7 +518,7 @@ private fun UserAssetItem(
             IconButton(
                 onClick = onEdit,
                 modifier = Modifier
-                    .dpadFocusOutline(focusTargets.edit, 20.dp)
+                    .dpadIconButtonFocusOutline(focusTargets.edit)
                     .dpadRowActionNavigation(
                         focusTargets.edit,
                         actionFocusOrder,
@@ -536,7 +537,7 @@ private fun UserAssetItem(
         IconButton(
             onClick = onDeleteClick,
             modifier = Modifier
-                .dpadFocusOutline(focusTargets.delete, 20.dp)
+                .dpadIconButtonFocusOutline(focusTargets.delete)
                 .dpadRowActionNavigation(
                     focusTargets.delete,
                     actionFocusOrder,

@@ -41,6 +41,7 @@ import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +131,8 @@ fun SubEditScreen(
     onDelete: () -> Unit
 ) {
     //val context = LocalContext.current
+    val isTelevision = isTelevisionDevice()
+    val noProxyLabel = if (isTelevision) stringResource(R.string.sub_setting_no_proxy) else null
     var remarks by rememberSaveable { mutableStateOf(initial.remarks.orEmpty()) }
     var url by rememberSaveable { mutableStateOf(initial.url.orEmpty()) }
     var userAgent by rememberSaveable { mutableStateOf(initial.userAgent.orEmpty()) }
@@ -219,21 +222,23 @@ fun SubEditScreen(
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_pre_profile),
-                placeholder = stringResource(R.string.sub_setting_pre_profile_tip),
+                placeholder = noProxyLabel ?: stringResource(R.string.sub_setting_pre_profile_tip),
                 value = prevProfile,
                 options = profileSuggestions,
                 onValueChange = { prevProfile = it },
-                editable = true,
-                supportingText = stringResource(R.string.sub_setting_entry_proxy_tip)
+                editable = !isTelevision,
+                supportingText = stringResource(R.string.sub_setting_entry_proxy_tip),
+                emptyOptionLabel = noProxyLabel
             )
             FormDropdownField(
                 label = stringResource(R.string.sub_setting_next_profile),
-                placeholder = stringResource(R.string.sub_setting_pre_profile_tip),
+                placeholder = noProxyLabel ?: stringResource(R.string.sub_setting_pre_profile_tip),
                 value = nextProfile,
                 options = profileSuggestions,
                 onValueChange = { nextProfile = it },
-                editable = true,
-                supportingText = stringResource(R.string.sub_setting_exit_proxy_tip)
+                editable = !isTelevision,
+                supportingText = stringResource(R.string.sub_setting_exit_proxy_tip),
+                emptyOptionLabel = noProxyLabel
             )
             NavigationBarsSpacer()
         }

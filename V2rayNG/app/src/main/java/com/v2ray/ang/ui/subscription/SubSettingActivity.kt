@@ -56,8 +56,10 @@ import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
+import com.v2ray.ang.ui.compose.dpadTextButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
@@ -233,6 +235,7 @@ fun SubSettingScreen(
                                                 }
                                             )
                                             .clickable { onEditSub(subCache.guid) }
+                                            .padding(8.dp)
                                         else Modifier
                                     )
                             ) {
@@ -271,7 +274,7 @@ fun SubSettingScreen(
                                                 shareTarget = Pair(subCache.guid, subCache.subscription.url)
                                             },
                                             modifier = Modifier
-                                                .dpadFocusOutline(focusTargets.share, 20.dp)
+                                                .dpadIconButtonFocusOutline(focusTargets.share)
                                                 .dpadRowActionNavigation(
                                                     focusTargets.share,
                                                     actionFocusOrder,
@@ -292,7 +295,7 @@ fun SubSettingScreen(
                                     IconButton(
                                         onClick = { onEditSub(subCache.guid) },
                                         modifier = Modifier
-                                            .dpadFocusOutline(focusTargets.edit, 20.dp)
+                                            .dpadIconButtonFocusOutline(focusTargets.edit)
                                             .dpadRowActionNavigation(
                                                 focusTargets.edit,
                                                 actionFocusOrder,
@@ -311,7 +314,7 @@ fun SubSettingScreen(
                                             else onRemoveSub(subCache.guid)
                                         },
                                         modifier = Modifier
-                                            .dpadFocusOutline(focusTargets.delete, 20.dp)
+                                            .dpadIconButtonFocusOutline(focusTargets.delete)
                                             .dpadRowActionNavigation(
                                                 focusTargets.delete,
                                                 actionFocusOrder,
@@ -430,15 +433,18 @@ fun SubSettingScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    showUpdateDialog = false
-                    onSubUpdate()
-                }) {
+                TextButton(
+                    onClick = {
+                        showUpdateDialog = false
+                        onSubUpdate()
+                    },
+                    modifier = Modifier.dpadTextButtonFocusOutline()
+                ) {
                     Text(text = stringResource(R.string.action_ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUpdateDialog = false }) {
+                TextButton(onClick = { showUpdateDialog = false }, modifier = Modifier.dpadTextButtonFocusOutline()) {
                     Text(text = stringResource(R.string.action_cancel))
                 }
             }

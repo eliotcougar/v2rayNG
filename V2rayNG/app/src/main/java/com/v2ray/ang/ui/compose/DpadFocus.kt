@@ -4,8 +4,13 @@ import android.content.res.Configuration
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -14,9 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -65,16 +72,43 @@ internal suspend fun afterDpadPopupDismiss(action: () -> Unit) {
 internal fun Modifier.dpadFocusOutline(
     focusRequester: FocusRequester? = null,
     cornerRadius: Dp = 12.dp
+): Modifier = dpadFocusOutline(focusRequester, RoundedCornerShape(cornerRadius))
+
+@Composable
+internal fun Modifier.dpadFocusOutline(
+    focusRequester: FocusRequester?,
+    shape: Shape,
+    clipContent: Boolean = true
 ): Modifier {
     if (!isTelevisionDevice()) return this
     var focused by remember { mutableStateOf(false) }
     return this
         .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
         .onFocusChanged { focused = it.isFocused }
-        .then(
-            if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(cornerRadius))
-            else Modifier
-        )
+        .then(if (clipContent) Modifier.clip(shape) else Modifier)
+        .then(if (focused) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+}
+
+/** Uses the same shape as Material's focus tint instead of approximating it with a radius. */
+@Composable
+internal fun Modifier.dpadIconButtonFocusOutline(focusRequester: FocusRequester? = null): Modifier =
+    dpadFocusOutline(focusRequester, IconButtonDefaults.standardShape, clipContent = false)
+
+/** Uses the same shape as the Material FAB container without changing the button itself. */
+@Composable
+internal fun Modifier.dpadFloatingActionButtonFocusOutline(focusRequester: FocusRequester? = null): Modifier =
+    dpadFocusOutline(focusRequester, FloatingActionButtonDefaults.shape, clipContent = false)
+
+/** Uses Material's text-button shape for dialog actions. */
+@Composable
+internal fun Modifier.dpadTextButtonFocusOutline(focusRequester: FocusRequester? = null): Modifier =
+    dpadFocusOutline(focusRequester, ButtonDefaults.textShape, clipContent = false)
+
+/** Keeps the TV focus border outside the field's native outline and floating label. */
+@Composable
+internal fun Modifier.dpadTextFieldFocusOutline(focusRequester: FocusRequester? = null): Modifier {
+    if (!isTelevisionDevice()) return this
+    return dpadFocusOutline(focusRequester, OutlinedTextFieldDefaults.shape).padding(4.dp)
 }
 
 internal enum class DpadHorizontalDirection { Previous, Next }

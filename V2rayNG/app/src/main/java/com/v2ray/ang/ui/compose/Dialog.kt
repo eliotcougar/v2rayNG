@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
@@ -66,7 +65,7 @@ fun ConfirmDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(); onDismiss() },
-                modifier = Modifier.focusRequester(confirmFocusRequester)
+                modifier = Modifier.dpadTextButtonFocusOutline(confirmFocusRequester)
             ) {
                 confirmIcon?.invoke()
                 if (confirmIcon != null) Spacer(Modifier.width(8.dp))
@@ -77,7 +76,7 @@ fun ConfirmDialog(
             {
                 TextButton(
                     onClick = onDismiss,
-                    modifier = Modifier.focusRequester(dismissFocusRequester)
+                    modifier = Modifier.dpadTextButtonFocusOutline(dismissFocusRequester)
                 ) {
                     Text(text)
                 }
@@ -142,7 +141,7 @@ fun InputDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .dpadFocusOutline()
+                            .dpadTextFieldFocusOutline()
                             .tvAwareTextFieldFocus(tvFieldState, enabled = true) { tvFieldState?.beginEditing() }
                     ) {
                         OutlinedTextField(
@@ -172,10 +171,10 @@ fun InputDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirmText) }
+            TextButton(onClick = onConfirm, modifier = Modifier.dpadTextButtonFocusOutline()) { Text(confirmText) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(dismissText) }
+            TextButton(onClick = onDismiss, modifier = Modifier.dpadTextButtonFocusOutline()) { Text(dismissText) }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -199,7 +198,9 @@ fun QRCodeDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
+            TextButton(onClick = onDismiss, modifier = Modifier.dpadTextButtonFocusOutline()) {
+                Text(stringResource(R.string.action_close))
+            }
         },
         containerColor = MaterialTheme.colorScheme.surface
     )
@@ -261,7 +262,7 @@ fun <T> SelectListDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, modifier = Modifier.dpadTextButtonFocusOutline()) {
                 Text(stringResource(R.string.action_cancel))
             }
         },

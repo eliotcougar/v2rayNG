@@ -51,7 +51,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.ui.compose.ItemDivider
+import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.colorConfigType
@@ -59,9 +59,11 @@ import com.v2ray.ang.ui.compose.colorPing
 import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.dpadBackNavigation
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
@@ -289,7 +291,7 @@ private fun ServerListPage(
                                 focusTargets = focusTargets
                             )
                         }
-                        ItemDivider()
+                        ServerItemDivider()
                     }
                 } else {
                     ServerItemRow(
@@ -299,7 +301,7 @@ private fun ServerListPage(
                         externalFocusRequester = serverFocusRequester.takeIf { row.guid == focusGuid },
                         focusTargets = focusTargets
                     )
-                    ItemDivider()
+                    ServerItemDivider()
                 }
             }
         }
@@ -374,8 +376,13 @@ private fun ServerItemColumn(
             externalFocusRequester = externalFocusRequester,
             focusTargets = focusTargets
         )
-        ItemDivider()
+        ServerItemDivider()
     }
+}
+
+@Composable
+private fun ServerItemDivider() {
+    AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (isTelevisionDevice()) 2.dp else 0.dp))
 }
 
 @Composable
@@ -461,7 +468,7 @@ private fun ServerListItem(
                         onClick = { actions.more(row.guid, row.profile) },
                         modifier = Modifier
                             .size(36.dp)
-                            .dpadFocusOutline(currentFocus.more, 18.dp)
+                            .dpadIconButtonFocusOutline(currentFocus.more)
                             .dpadOrderedFocusNavigation(
                                 current = currentFocus.more,
                                 order = actionFocusOrder,
@@ -485,7 +492,7 @@ private fun ServerListItem(
                     IconButton(
                         onClick = { actions.share(row.guid, row.profile) },
                         modifier = Modifier.size(36.dp)
-                            .dpadFocusOutline(currentFocus.share, 18.dp)
+                            .dpadIconButtonFocusOutline(currentFocus.share)
                             .dpadRowActionNavigation(
                                 currentFocus.share, actionFocusOrder,
                                 previousFocus?.share, nextFocus?.share,
@@ -501,7 +508,7 @@ private fun ServerListItem(
                     IconButton(
                         onClick = { actions.edit(row.guid, row.profile) },
                         modifier = Modifier.size(36.dp)
-                            .dpadFocusOutline(currentFocus.edit, 18.dp)
+                            .dpadIconButtonFocusOutline(currentFocus.edit)
                             .dpadRowActionNavigation(
                                 currentFocus.edit, actionFocusOrder,
                                 previousFocus?.edit, nextFocus?.edit,
@@ -517,7 +524,7 @@ private fun ServerListItem(
                     IconButton(
                         onClick = { actions.remove(row.guid) },
                         modifier = Modifier.size(36.dp)
-                            .dpadFocusOutline(currentFocus.delete, 18.dp)
+                            .dpadIconButtonFocusOutline(currentFocus.delete)
                             .dpadRowActionNavigation(
                                 currentFocus.delete, actionFocusOrder,
                                 previousFocus?.delete, nextFocus?.delete,

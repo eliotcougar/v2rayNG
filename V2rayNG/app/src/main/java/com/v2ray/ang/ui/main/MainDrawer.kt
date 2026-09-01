@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -140,9 +141,10 @@ fun MainDrawerContent(
                     selected = false,
                     onClick = { onNavigate(item) },
                     icon = { Icon(painterResource(item.iconRes), contentDescription = null) },
+                    shape = CircleShape,
                     modifier = Modifier
                         .padding(NavigationDrawerItemDefaults.ItemPadding)
-                        .dpadFocusOutline(focusRequesters[index])
+                        .dpadFocusOutline(focusRequesters[index], CircleShape)
                         .onFocusChanged { if (it.isFocused) focusedIndex = index }
                         .dpadLogicalHorizontalNavigation(onMovePrevious = { true }, onMoveNext = { onClose(); true })
                         .dpadVerticalFocusNavigation(

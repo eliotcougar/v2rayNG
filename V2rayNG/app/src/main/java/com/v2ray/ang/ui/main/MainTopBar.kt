@@ -30,7 +30,7 @@ import com.v2ray.ang.ui.compose.DpadHorizontalDirection
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.adjacentDpadFocusTarget
 import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
-import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
@@ -105,7 +105,7 @@ internal fun MainTopBar(
         current: FocusRequester,
         onBeforeFirst: (() -> Unit)? = null,
         onAfterLast: (() -> Unit)? = null
-    ): Modifier = dpadFocusOutline(current, 20.dp)
+    ): Modifier = dpadIconButtonFocusOutline(current)
         .dpadOrderedFocusNavigation(current, focusOrder, onBeforeFirst, onAfterLast)
         .dpadVerticalFocusNavigation(onMoveUp = { true }, onMoveDown = onMoveDown)
 

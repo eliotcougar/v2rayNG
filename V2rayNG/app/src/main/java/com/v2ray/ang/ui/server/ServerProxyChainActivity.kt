@@ -52,7 +52,8 @@ import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
-import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadFloatingActionButtonFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadTopBarFocusNavigation
@@ -261,7 +262,7 @@ fun ProxyChainScreen(
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier
-                            .dpadFocusOutline(requester, 20.dp)
+                            .dpadIconButtonFocusOutline(requester)
                             .dpadTopBarFocusNavigation(requester, topBarFocusOrder) { remarksFocusRequester.requestFocus() }
                     ) {
                         Icon(painterResource(R.drawable.ic_arrow_back_24dp), stringResource(R.string.acc_back))
@@ -272,7 +273,7 @@ fun ProxyChainScreen(
                         IconButton(
                             onClick = { showProfileDeleteConfirm = true },
                             modifier = Modifier
-                                .dpadFocusOutline(deleteConfigFocusRequester, 20.dp)
+                                .dpadIconButtonFocusOutline(deleteConfigFocusRequester)
                                 .dpadTopBarFocusNavigation(deleteConfigFocusRequester, topBarFocusOrder) {
                                     remarksFocusRequester.requestFocus()
                                 }
@@ -283,7 +284,7 @@ fun ProxyChainScreen(
                     IconButton(
                         onClick = { onSave(remarks, members) },
                         modifier = Modifier
-                            .dpadFocusOutline(saveFocusRequester, 20.dp)
+                            .dpadIconButtonFocusOutline(saveFocusRequester)
                             .dpadTopBarFocusNavigation(saveFocusRequester, topBarFocusOrder) {
                                 remarksFocusRequester.requestFocus()
                             }
@@ -302,7 +303,7 @@ fun ProxyChainScreen(
                 modifier = Modifier
                     .offset(y = -20.dp)
                     .navigationBarsPadding()
-                    .dpadFocusOutline(addFocusRequester, 28.dp)
+                    .dpadFloatingActionButtonFocusOutline(addFocusRequester)
                     .dpadVerticalFocusNavigation(
                         onMoveUp = {
                             memberKeys.lastOrNull()?.let { memberFocusTargets[it]?.field?.requestFocus() }
@@ -413,7 +414,7 @@ fun ProxyChainScreen(
                                     }
                                 },
                                 modifier = Modifier
-                                    .dpadFocusOutline(focusTargets.remove, 20.dp)
+                                    .dpadIconButtonFocusOutline(focusTargets.remove)
                                     .dpadOrderedFocusNavigation(focusTargets.remove, actionFocusOrder)
                                     .dpadVerticalFocusNavigation(
                                         onMoveUp = {

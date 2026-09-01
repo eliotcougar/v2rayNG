@@ -37,6 +37,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.VersionInfoBlock
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadTextButtonFocusOutline
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.util.Utils
 
@@ -147,7 +148,7 @@ fun AboutScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showOssDialog = false }) {
+                TextButton(onClick = { showOssDialog = false }, modifier = Modifier.dpadTextButtonFocusOutline()) {
                     Text(stringResource(R.string.action_ok))
                 }
             },

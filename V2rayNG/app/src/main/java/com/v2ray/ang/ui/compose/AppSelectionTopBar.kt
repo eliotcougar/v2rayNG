@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import kotlinx.coroutines.launch
 
@@ -73,7 +72,7 @@ internal fun AppSelectionTopBar(
                 IconButton(
                     onClick = onSearchOpen,
                     modifier = Modifier
-                        .dpadFocusOutline(searchFocusRequester, 20.dp)
+                        .dpadIconButtonFocusOutline(searchFocusRequester)
                         .dpadTopBarFocusNavigation(searchFocusRequester, focusOrder, onMoveDown)
                 ) {
                     Icon(painterResource(R.drawable.ic_search_24dp), stringResource(R.string.acc_search))
@@ -83,7 +82,7 @@ internal fun AppSelectionTopBar(
                 IconButton(
                     onClick = { showMenu = true },
                     modifier = Modifier
-                        .dpadFocusOutline(moreFocusRequester, 20.dp)
+                        .dpadIconButtonFocusOutline(moreFocusRequester)
                         .dpadTopBarFocusNavigation(moreFocusRequester, focusOrder, onMoveDown)
                 ) {
                     Icon(painterResource(R.drawable.ic_more_vert_24dp), stringResource(R.string.acc_more))

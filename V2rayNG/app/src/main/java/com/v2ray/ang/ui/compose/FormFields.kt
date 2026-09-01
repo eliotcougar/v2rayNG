@@ -49,7 +49,7 @@ fun FormTextField(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .dpadFocusOutline()
+            .dpadTextFieldFocusOutline()
             .tvAwareTextFieldFocus(tvFieldState, enabled, tvNavigation) { tvFieldState?.beginEditing() }
     ) {
         OutlinedTextField(
@@ -91,6 +91,7 @@ fun FormDropdownField(
     enabled: Boolean = true,
     placeholder: String? = null,
     supportingText: String? = null,
+    emptyOptionLabel: String? = null,
     tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -101,7 +102,9 @@ fun FormDropdownField(
     val isTelevision = isTelevisionDevice()
     val tvFieldState = if (isTelevision) rememberTvTextFieldState(tvNavigation.focusRequester) else null
     val selectedOptionFocusRequester = remember { FocusRequester() }
-    val selectedOptionIndex = options.indexOf(value).takeIf { it >= 0 } ?: 0
+    val menuOptions = if (emptyOptionLabel == null) options else listOf("") + options
+    val selectedOptionIndex = menuOptions.indexOf(value).takeIf { it >= 0 } ?: 0
+    val displayedValue = if (!editable && value.isEmpty()) emptyOptionLabel.orEmpty() else value
 
     fun openDropdown() {
         restoreFieldFocus = false
@@ -116,7 +119,7 @@ fun FormDropdownField(
 
     LaunchedEffect(expanded, restoreFieldFocus, selectedOptionIndex) {
         when {
-            expanded && isTelevision && options.isNotEmpty() -> requestFocusWhenReady(selectedOptionFocusRequester)
+            expanded && isTelevision && menuOptions.isNotEmpty() -> requestFocusWhenReady(selectedOptionFocusRequester)
             !expanded && restoreFieldFocus && tvFieldState != null -> {
                 requestFocusWhenReady(tvFieldState.passiveFocusRequester)
                 restoreFieldFocus = false
@@ -143,14 +146,14 @@ fun FormDropdownField(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
-            .dpadFocusOutline()
+            .dpadTextFieldFocusOutline()
             .tvAwareTextFieldFocus(tvFieldState, enabled, resolvedTvNavigation) {
                 if (editable) tvFieldState?.beginEditing()
                 else if (expanded) closeDropdown() else openDropdown()
             }
     ) {
         OutlinedTextField(
-            value = value,
+            value = displayedValue,
             onValueChange = { if (editable) onValueChange(it) },
             readOnly = !editable || (tvFieldState != null && !tvFieldState.isEditing),
             enabled = enabled,
@@ -188,9 +191,9 @@ fun FormDropdownField(
             scrollState = menuScrollState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            options.forEachIndexed { index, option ->
+            menuOptions.forEachIndexed { index, option ->
                 DropdownMenuItem(
-                    text = { Text(option) },
+                    text = { Text(if (option.isEmpty() && emptyOptionLabel != null) emptyOptionLabel else option) },
                     onClick = {
                         onValueChange(option)
                         closeDropdown()

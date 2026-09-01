@@ -147,7 +147,7 @@ fun AppTopBar(
                 } else {
                     IconButton(
                         onClick = if (isSearchActive) onSearchClose else onBackClick,
-                        modifier = navigationModifier.dpadFocusOutline(resolvedNavigationFocusRequester, 20.dp)
+                        modifier = navigationModifier.dpadIconButtonFocusOutline(resolvedNavigationFocusRequester)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back_24dp),
@@ -163,7 +163,7 @@ fun AppTopBar(
                         onClick = action.onClick,
                         enabled = action.enabled,
                         modifier = Modifier
-                            .dpadFocusOutline(focusRequester, 20.dp)
+                            .dpadIconButtonFocusOutline(focusRequester)
                             .dpadTopBarFocusNavigation(
                                 focusRequester,
                                 topBarFocusOrder,
@@ -255,7 +255,7 @@ private fun SearchInputField(
             IconButton(
                 onClick = { onQueryChange(""); focusRequester.requestFocus() },
                 modifier = Modifier
-                    .dpadFocusOutline(clearFocusRequester, 20.dp)
+                    .dpadIconButtonFocusOutline(clearFocusRequester)
                     .dpadTopBarFocusNavigation(clearFocusRequester, focusOrder, onMoveDown)
             ) {
                 Icon(

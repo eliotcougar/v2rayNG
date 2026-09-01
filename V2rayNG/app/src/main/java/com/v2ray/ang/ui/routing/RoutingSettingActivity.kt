@@ -64,6 +64,7 @@ import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.afterDpadPopupDismiss
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
@@ -261,7 +262,7 @@ fun RoutingSettingScreen(
                     IconButton(
                         onClick = onAddRule,
                         modifier = Modifier
-                            .dpadFocusOutline(addFocusRequester, 20.dp)
+                            .dpadIconButtonFocusOutline(addFocusRequester)
                             .dpadTopBarFocusNavigation(
                                 addFocusRequester,
                                 topBarFocusOrder,
@@ -277,7 +278,7 @@ fun RoutingSettingScreen(
                         IconButton(
                             onClick = { showMenu = true },
                             modifier = Modifier
-                                .dpadFocusOutline(moreFocusRequester, 20.dp)
+                                .dpadIconButtonFocusOutline(moreFocusRequester)
                                 .dpadTopBarFocusNavigation(
                                     moreFocusRequester,
                                     topBarFocusOrder,
@@ -443,6 +444,7 @@ private fun RoutingRulesetItem(
                             onMoveDown = { nextFocusTargets?.row?.requestFocus() ?: true }
                         )
                         .clickable(onClick = onEdit)
+                        .padding(8.dp)
                     else Modifier
                 )
         ) {
@@ -491,7 +493,7 @@ private fun RoutingRulesetItem(
             IconButton(
                 onClick = onEdit,
                 modifier = Modifier
-                    .dpadFocusOutline(focusTargets.edit, 20.dp)
+                    .dpadIconButtonFocusOutline(focusTargets.edit)
                     .dpadRowActionNavigation(
                         focusTargets.edit,
                         actionFocusOrder,

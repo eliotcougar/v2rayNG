@@ -50,6 +50,7 @@ import com.v2ray.ang.ui.compose.AppSelectionTopBar
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadIconButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
@@ -224,7 +225,7 @@ fun PerAppProxyScreen(
                     IconButton(
                         onClick = onInfoClick,
                         modifier = Modifier
-                            .dpadFocusOutline(infoFocusRequester, 20.dp)
+                            .dpadIconButtonFocusOutline(infoFocusRequester)
                             .dpadOrderedFocusNavigation(infoFocusRequester, modeFocusOrder)
                             .dpadVerticalFocusNavigation(
                                 onMoveUp = { backFocusRequester.requestFocus() },

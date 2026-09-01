@@ -31,6 +31,7 @@ import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.VersionInfoBlock
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadTextButtonFocusOutline
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.Utils
@@ -119,15 +120,18 @@ fun CheckUpdateScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.dismissUpdateDialog()
-                    result.downloadUrl?.let { Utils.openUri(context, it) }
-                }) {
+                TextButton(
+                    onClick = {
+                        viewModel.dismissUpdateDialog()
+                        result.downloadUrl?.let { Utils.openUri(context, it) }
+                    },
+                    modifier = Modifier.dpadTextButtonFocusOutline()
+                ) {
                     Text(stringResource(R.string.update_now))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissUpdateDialog() }) {
+                TextButton(onClick = { viewModel.dismissUpdateDialog() }, modifier = Modifier.dpadTextButtonFocusOutline()) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },

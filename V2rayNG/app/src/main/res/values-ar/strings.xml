@@ -332,6 +332,7 @@
     <string name="sub_allow_insecure_url">السماح بعنوان HTTP غير آمن</string>
     <string name="sub_setting_pre_profile">وكيل الدخول</string>
     <string name="sub_setting_next_profile">وكيل الخروج</string>
+    <string name="sub_setting_no_proxy">بلا</string>
     <string name="sub_setting_pre_profile_tip">يجب أن تكون ملاحظات التكوين موجودة وفريدة</string>
     <string name="sub_setting_entry_proxy_tip">يُضاف الوكيل المحدد قبل كل ملف تعريف في هذا الاشتراك كحلقة الدخول في سلسلة الوكلاء لذلك الملف.</string>
     <string name="sub_setting_exit_proxy_tip">يُضاف الوكيل المحدد بعد كل ملف تعريف في هذا الاشتراك كحلقة الخروج في سلسلة الوكلاء لذلك الملف.</string>

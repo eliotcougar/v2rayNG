@@ -332,6 +332,7 @@
     <string name="sub_allow_insecure_url">مجاز کردن آدرس HTTP ناامن</string>
     <string name="sub_setting_pre_profile">پروکسی ورودی</string>
     <string name="sub_setting_next_profile">پروکسی خروجی</string>
+    <string name="sub_setting_no_proxy">هیچ‌کدام</string>
     <string name="sub_setting_pre_profile_tip">لطفاً مطمئن شوید که نام مستعار وجود دارد و منحصر به فرد است</string>
     <string name="sub_setting_entry_proxy_tip">پروکسی انتخاب‌شده پیش از هر پروفایل این اشتراک، به‌عنوان حلقهٔ ورودی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>
     <string name="sub_setting_exit_proxy_tip">پروکسی انتخاب‌شده پس از هر پروفایل این اشتراک، به‌عنوان حلقهٔ خروجی زنجیرهٔ پروکسی آن پروفایل اضافه می‌شود.</string>

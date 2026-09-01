@@ -332,6 +332,7 @@
     <string name="sub_allow_insecure_url">Разрешать незащищённые HTTP-адреса</string>
     <string name="sub_setting_pre_profile">Входной прокси</string>
     <string name="sub_setting_next_profile">Выходной прокси</string>
+    <string name="sub_setting_no_proxy">Нет</string>
     <string name="sub_setting_pre_profile_tip">Убедитесь, что профиль с таким названием существует и его название уникально</string>
     <string name="sub_setting_entry_proxy_tip">Выбранный прокси добавляется перед каждым профилем подписки и становится входным звеном цепочки прокси для этого профиля.</string>
     <string name="sub_setting_exit_proxy_tip">Выбранный прокси добавляется после каждого профиля подписки и становится выходным звеном цепочки прокси для этого профиля.</string>

@@ -34,6 +34,7 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
+import com.v2ray.ang.ui.compose.dpadFloatingActionButtonFocusOutline
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
@@ -92,7 +93,7 @@ fun MainBottomBar(
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
                 .navigationBarsPadding()
-                .dpadFocusOutline(focusRequester, 28.dp)
+                .dpadFloatingActionButtonFocusOutline(focusRequester)
                 .dpadLogicalHorizontalNavigation(
                     onMovePrevious = { onMovePrevious(); true },
                     onMoveNext = { statusFocusRequester?.requestFocus() ?: false }

@@ -332,6 +332,7 @@
     <string name="sub_allow_insecure_url">允許不安全的 HTTP 位址</string>
     <string name="sub_setting_pre_profile">前置代理設定檔别名</string>
     <string name="sub_setting_next_profile">落地代理設定檔別名</string>
+    <string name="sub_setting_no_proxy">無</string>
     <string name="sub_setting_pre_profile_tip">請確保設定檔別名存在且唯一</string>
     <string name="sub_setting_entry_proxy_tip">所選代理會加在此訂閱中每個設定檔之前，作為該設定檔代理鏈的入口節點。</string>
     <string name="sub_setting_exit_proxy_tip">所選代理會加在此訂閱中每個設定檔之後，作為該設定檔代理鏈的出口節點。</string>
