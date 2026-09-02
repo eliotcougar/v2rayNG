@@ -8,42 +8,34 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.root.RootManager
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 internal interface StartupSettingsStore {
-    fun autoConnectOnAppStart(): Boolean
     fun startOnBoot(): Boolean
-    fun setAutoConnectOnAppStart(enabled: Boolean)
-    fun setStartOnBoot(enabled: Boolean)
+    fun setStartOnBoot(enabled: Boolean): Boolean
 }
 
 private object MmkvStartupSettingsStore : StartupSettingsStore {
-    override fun autoConnectOnAppStart(): Boolean = MmkvManager.decodeAutoConnectOnAppStart()
     override fun startOnBoot(): Boolean = MmkvManager.decodeStartOnBoot()
-    override fun setAutoConnectOnAppStart(enabled: Boolean) {
-        MmkvManager.encodeSettings(AppConfig.PREF_IS_BOOTED, enabled)
-        SettingsChangeManager.notifySettingChanged(AppConfig.PREF_IS_BOOTED)
-    }
-    override fun setStartOnBoot(enabled: Boolean) {
-        MmkvManager.encodeSettings(AppConfig.PREF_START_ON_BOOT, enabled)
+    override fun setStartOnBoot(enabled: Boolean): Boolean {
+        if (!MmkvManager.encodeSettings(AppConfig.PREF_START_ON_BOOT, enabled)) {
+            LogUtil.e(AppConfig.TAG, "Settings: failed to save start-on-boot preference")
+            return false
+        }
         SettingsChangeManager.notifySettingChanged(AppConfig.PREF_START_ON_BOOT)
+        return true
     }
 }
 
-data class StartupSettingsState(val autoConnectOnAppStart: Boolean = false, val startOnBoot: Boolean = false)
-
-private sealed interface StartupSettingsWrite {
-    data class AutoConnectOnAppStart(val enabled: Boolean) : StartupSettingsWrite
-    data class StartOnBoot(val enabled: Boolean) : StartupSettingsWrite
-}
+data class StartupSettingsState(val startOnBoot: Boolean = false, val isReady: Boolean = false)
 
 class SettingsViewModel private constructor(
     application: Application,
@@ -61,34 +53,23 @@ class SettingsViewModel private constructor(
         ) = SettingsViewModel(application, startupSettingsStore, ioDispatcher)
     }
 
-    private val _startupSettings = MutableStateFlow(
-        StartupSettingsState(
-            autoConnectOnAppStart = startupSettingsStore.autoConnectOnAppStart(),
-            startOnBoot = startupSettingsStore.startOnBoot()
-        )
-    )
+    private val _startupSettings = MutableStateFlow(StartupSettingsState())
     val startupSettings: StateFlow<StartupSettingsState> = _startupSettings.asStateFlow()
-    private val startupSettingsWrites = Channel<StartupSettingsWrite>(Channel.UNLIMITED)
+    private val startupSettingsWrites = Channel<Boolean>(Channel.UNLIMITED)
 
     init {
         viewModelScope.launch(ioDispatcher) {
-            for (write in startupSettingsWrites) {
-                when (write) {
-                    is StartupSettingsWrite.AutoConnectOnAppStart -> startupSettingsStore.setAutoConnectOnAppStart(write.enabled)
-                    is StartupSettingsWrite.StartOnBoot -> startupSettingsStore.setStartOnBoot(write.enabled)
+            _startupSettings.value = StartupSettingsState(startupSettingsStore.startOnBoot(), isReady = true)
+            for (enabled in startupSettingsWrites) {
+                if (startupSettingsStore.setStartOnBoot(enabled)) {
+                    _startupSettings.value = StartupSettingsState(enabled, isReady = true)
                 }
             }
         }
     }
 
-    fun setAutoConnectOnAppStart(enabled: Boolean) {
-        _startupSettings.update { it.copy(autoConnectOnAppStart = enabled) }
-        startupSettingsWrites.trySend(StartupSettingsWrite.AutoConnectOnAppStart(enabled))
-    }
-
     fun setStartOnBoot(enabled: Boolean) {
-        _startupSettings.update { it.copy(startOnBoot = enabled) }
-        startupSettingsWrites.trySend(StartupSettingsWrite.StartOnBoot(enabled))
+        if (startupSettings.value.isReady) startupSettingsWrites.trySend(enabled)
     }
 
     /**

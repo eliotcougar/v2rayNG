@@ -616,17 +616,10 @@ fun SettingsScreen(
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_is_booted),
                     summary = stringResource(R.string.summary_pref_is_booted),
-                    checked = startupSettings.autoConnectOnAppStart,
-                    onCheckedChange = viewModel::setAutoConnectOnAppStart
+                    checked = startupSettings.startOnBoot,
+                    enabled = startupSettings.isReady,
+                    onCheckedChange = viewModel::setStartOnBoot
                 )
-                if (isTelevision) {
-                    SettingsSwitchItem(
-                        title = stringResource(R.string.title_pref_start_on_boot),
-                        summary = stringResource(R.string.summary_pref_start_on_boot),
-                        checked = startupSettings.startOnBoot,
-                        onCheckedChange = viewModel::setStartOnBoot
-                    )
-                }
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_delay_test_url),
                     value = delayTestUrl,

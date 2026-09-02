@@ -22,7 +22,6 @@ data class MainUiState(
     val selectedGroupId: String = "",
     val selectedGuid: String? = null,
     val isRunning: Boolean = false,
-    val serviceStateKnown: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
     val testStatus: MainStatus? = null,
@@ -34,10 +33,6 @@ data class MainUiState(
 )
 
 data class ServiceStatusMessage(val stringRes: Int, val formatArgs: List<Any> = emptyList(), val isError: Boolean = false)
-
-sealed interface MainActivityEffect {
-    data object RequestAutoConnect : MainActivityEffect
-}
 
 /**
  * All possible user interaction intents
@@ -58,8 +53,6 @@ sealed interface MainAction {
     data object UpdateSubscriptions : ViewModelIntent
     data object ExportAll : ViewModelIntent
     data object LocateSelectedServer : ViewModelIntent
-    data object AppResumed : ViewModelIntent
-    data object ResetAutoConnectAttempt : ViewModelIntent
     data class SelectGroup(val groupId: String) : ViewModelIntent
     data class RemoveServer(val guid: String) : ViewModelIntent
     data class Search(val query: String) : ViewModelIntent

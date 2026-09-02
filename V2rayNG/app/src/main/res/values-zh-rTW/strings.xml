@@ -187,10 +187,8 @@
     <string name="title_vpn_settings">VPN 設定</string>
     <string name="title_pref_per_app_proxy">個別應用程式代理</string>
     <string name="summary_pref_per_app_proxy">一般：已勾選的應用程式使用代理，未勾選的應用程式直接連線；\n繞行模式：已勾選的應用程式直接連線，未勾選的應用程式使用代理。\n選單中可自動選取需要使用代理的應用程式。</string>
-    <string name="title_pref_is_booted">開機時自動連線</string>
-    <string name="summary_pref_is_booted">開機時自動連線選擇的伺服器，可能會不成功</string>
-    <string name="title_pref_start_on_boot">裝置開機後自動連線</string>
-    <string name="summary_pref_start_on_boot">裝置開機後在背景啟動 v2rayNG 並連線至所選伺服器。</string>
+    <string name="title_pref_is_booted">裝置開機後自動連線</string>
+    <string name="summary_pref_is_booted">裝置開機後自動連線至所選伺服器。Android 可能會限制背景啟動。</string>
 
 
     <string name="subscription_updater_job_tips">任務將在背景執行，通知中會顯示進度資訊。</string>

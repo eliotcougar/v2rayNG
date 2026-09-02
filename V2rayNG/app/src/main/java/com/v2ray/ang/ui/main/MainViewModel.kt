@@ -24,7 +24,6 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,16 +33,13 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.PatternSyntaxException
 
@@ -51,17 +47,6 @@ class MainViewModel(
     application: Application,
     private val dataSource: MainDataSource
 ) : BaseViewModel(application) {
-
-    private companion object {
-        /*
-         * The UI and daemon are separate Android processes, and vendor TVs may delay the
-         * registration-state broadcast after resume. Waiting briefly avoids a duplicate visible
-         * start while still allowing auto-connect when the daemon is absent. Remove this timeout
-         * only when client registration returns an explicit running/not-running acknowledgement
-         * that MainViewModel can await before handling AppResumed.
-         */
-        const val SERVICE_STATE_QUERY_TIMEOUT_MILLIS = 500L
-    }
 
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -83,8 +68,6 @@ class MainViewModel(
     )
     val serviceStatusMessages: SharedFlow<ServiceStatusMessage> =
         _serviceStatusMessages.asSharedFlow()
-    private val _activityEffects = Channel<MainActivityEffect>(Channel.BUFFERED)
-    val activityEffects = _activityEffects.receiveAsFlow()
 
     // ---------- Keyword filtering ----------
     @Volatile
@@ -104,8 +87,6 @@ class MainViewModel(
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
-    private var autoConnectJob: Job? = null
-    private var autoConnectAttempted = false
 
     @Volatile
     private var testingGroupId: String? = null
@@ -249,8 +230,6 @@ class MainViewModel(
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
             MainAction.LocateSelectedServer -> triggerLocateSelectedServer()
-            MainAction.AppResumed -> handleAppResumed()
-            MainAction.ResetAutoConnectAttempt -> resetAutoConnectAttempt()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
@@ -265,29 +244,6 @@ class MainViewModel(
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
         }
-    }
-
-    private fun handleAppResumed() {
-        if (autoConnectAttempted || !dataSource.isAutoConnectOnAppStartEnabled()) return
-        autoConnectAttempted = true
-        autoConnectJob?.cancel()
-        autoConnectJob = viewModelScope.launch {
-            val currentState = uiState.value
-            val resolvedState = if (currentState.serviceStateKnown) {
-                currentState
-            } else {
-                withTimeoutOrNull(SERVICE_STATE_QUERY_TIMEOUT_MILLIS) {
-                    uiState.first { it.serviceStateKnown }
-                }
-            }
-            if (resolvedState?.isRunning != true && !uiState.value.selectedGuid.isNullOrEmpty()) {
-                _activityEffects.send(MainActivityEffect.RequestAutoConnect)
-            }
-        }
-    }
-
-    private fun resetAutoConnectAttempt() {
-        if (!uiState.value.isRunning) autoConnectAttempted = false
     }
 
     // ---------- Initialization ----------
@@ -884,7 +840,6 @@ class MainViewModel(
         _uiState.update { state ->
             state.copy(
                 isRunning = running,
-                serviceStateKnown = true,
                 status = if (running) MainStatus.Connected else MainStatus.Disconnected,
                 testStatus = if (!clearTestingText && state.isTesting) state.testStatus else null
             )

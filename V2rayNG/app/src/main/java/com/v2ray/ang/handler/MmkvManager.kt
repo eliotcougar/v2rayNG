@@ -966,23 +966,17 @@ object MmkvManager {
         return settingsStorage.decodeStringSet(key)
     }
 
-    /** Whether a cold launch of the app should connect automatically. */
-    fun decodeAutoConnectOnAppStart(): Boolean {
-        return decodeSettingsBool(PREF_IS_BOOTED, false)
-    }
-
     /**
      * Whether the background service should start after device boot.
      *
-     * Before this setting was split, PREF_IS_BOOTED controlled the boot receiver. Migrate that
-     * value once so existing installations retain their behavior and the two switches can then
-     * change independently.
+     * Preserve the explicit boot choice from TV builds that offered separate boot and app-launch
+     * switches. When absent, inherit the upstream boot preference once.
      */
     fun decodeStartOnBoot(): Boolean = migrateStartOnBootSetting(
         storedValue = if (settingsStorage.containsKey(PREF_START_ON_BOOT)) {
             decodeSettingsBool(PREF_START_ON_BOOT, false)
         } else null,
-        legacyValue = decodeAutoConnectOnAppStart(),
+        legacyValue = decodeSettingsBool(PREF_IS_BOOTED, false),
         persist = { settingsStorage.encode(PREF_START_ON_BOOT, it) }
     )
 

@@ -10,7 +10,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
@@ -98,32 +97,8 @@ class MainActivity : HelperBaseComponentActivity() {
         checkAndRequestPermission(PermissionType.POST_NOTIFICATIONS) {}
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        if (intent.action == Intent.ACTION_MAIN &&
-            (intent.hasCategory(Intent.CATEGORY_LAUNCHER) ||
-                intent.hasCategory(Intent.CATEGORY_LEANBACK_LAUNCHER))
-            && !mainViewModel.uiState.value.isRunning
-        ) {
-            mainViewModel.onAction(MainAction.ResetAutoConnectAttempt)
-        }
-    }
-
-    override fun onPostResume() {
-        super.onPostResume()
-        mainViewModel.onAction(MainAction.AppResumed)
-    }
-
     @Composable
     override fun ScreenContent() {
-        LaunchedEffect(mainViewModel) {
-            mainViewModel.activityEffects.collect { effect ->
-                when (effect) {
-                    MainActivityEffect.RequestAutoConnect -> autoConnectOnAppStart()
-                }
-            }
-        }
         BackHandler { moveTaskToBack(false) }
         MainScreen(
             mainViewModel = mainViewModel,
@@ -205,17 +180,6 @@ class MainActivity : HelperBaseComponentActivity() {
     private fun handleLayoutTestClick() {
         if (mainViewModel.uiState.value.isRunning) {
             mainViewModel.testCurrentServerRealPing()
-        }
-    }
-
-    private fun autoConnectOnAppStart() {
-        if (mainViewModel.uiState.value.isRunning || MmkvManager.getSelectServer().isNullOrEmpty()) return
-
-        if (SettingsManager.isVpnMode()) {
-            val intent = VpnService.prepare(this)
-            if (intent == null) startV2Ray() else requestVpnPermission.launch(intent)
-        } else {
-            startV2Ray()
         }
     }
 
