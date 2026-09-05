@@ -539,7 +539,7 @@
     <string name="acc_edit_asset_named">Изменить %1$s</string>
     <string name="acc_delete_asset_named">Удалить %1$s</string>
     <string name="acc_qr_code">QR-код</string>
-    <string name="acc_copy_log">Копировать журнал</string>
+    <string name="acc_copy_log">Копировать журнал в буфер обмена</string>
     <string name="acc_clear_log">Очистить журнал</string>
     <string name="acc_add_rule">Добавить правило маршрутизации</string>
     <string name="acc_routing_rule_summary">%1$s. %2$s</string>
@@ -555,8 +555,11 @@
     <string name="acc_delete_routing_rule_named">Удалить %1$s</string>
     <string name="acc_start">Запустить службу</string>
     <string name="acc_stop">Остановить службу</string>
+    <string name="acc_connect">Подключиться</string>
+    <string name="acc_disconnect">Отключиться</string>
     <string name="acc_back">Назад</string>
     <string name="acc_search">Поиск</string>
+    <string name="acc_clear_search">Очистить поиск</string>
     <string name="acc_add">Добавить профиль</string>
     <string name="acc_more">Дополнительные параметры</string>
     <string name="acc_move_to_top">Переместить в начало</string>
