@@ -28,6 +28,10 @@
     <string name="acc_service_started_connected_to">服務已成功啟動。現在已連線至%1$s。</string>
     <string name="toast_services_failure">啟動服務失敗</string>
 
+    <plurals name="acc_group_tab">
+        <item quantity="other">%1$s。包含%2$d個伺服器</item>
+    </plurals>
+
     <!--ServerActivity-->
     <string name="title_server">設定檔</string>
     <string name="menu_item_add_config">新增設定</string>
@@ -407,6 +411,13 @@
     <string name="connection_test_testing_count">正在測試 %d 個設定…</string>
     <string name="connection_test_available">"連線成功：延遲 %1$s"</string>
     <string name="server_test_delay_value">%1$d ms</string>
+    <string name="acc_server_test_failed">連線測試失敗</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="other">%1$d 毫秒</item>
+    </plurals>
+    <string name="acc_share_config_named">分享設定 %1$s</string>
+    <string name="acc_edit_config_named">編輯設定 %1$s</string>
+    <string name="acc_delete_config_named">刪除設定 %1$s</string>
     <string name="connection_test_error">連線測試失敗：%s</string>
     <string name="connection_test_fail">"無法使用網際網路"</string>
     <string name="connection_test_error_status_code">錯誤碼：#%d</string>
