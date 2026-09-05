@@ -16,7 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -142,9 +142,9 @@ fun UserAssetUrlScreen(
     onSave: (String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
-    var remarks by remember { mutableStateOf(initialRemarks) }
-    var url by remember { mutableStateOf(initialUrl) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var remarks by rememberSaveable(editAssetId, initialRemarks) { mutableStateOf(initialRemarks) }
+    var url by rememberSaveable(editAssetId, initialUrl) { mutableStateOf(initialUrl) }
+    var showDeleteConfirm by rememberSaveable(editAssetId) { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -200,7 +200,10 @@ fun UserAssetUrlScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_asset_source_named, initialRemarks),
-            onConfirm = onDelete,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
             onDismiss = { showDeleteConfirm = false }
         )
     }
