@@ -90,7 +90,9 @@ object MmkvManager {
     private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
 
     private fun notifySelectedProfileChanged() {
-        MessageHelper.sendMsg2UI(AngApplication.application, AppConfig.MSG_SELECTED_PROFILE_CHANGED, "")
+        runCatching {
+            MessageHelper.sendMsg2UI(AngApplication.application, AppConfig.MSG_SELECTED_PROFILE_CHANGED, "")
+        }.onFailure { LogUtil.e(TAG, "Failed to notify selected profile change after persistence", it) }
     }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
@@ -1026,16 +1028,43 @@ object MmkvManager {
         return JsonUtil.fromJsonSafe(ruleset, Array<RulesetItem>::class.java)?.toMutableList() ?: mutableListOf()
     }
 
+    internal fun <T> withRoutingRulesetLock(block: () -> T): T = synchronized(settingsStorage, block)
+
+    /** Core configuration only needs rule contents; keyed UI additionally requires persisted IDs. */
+    fun decodeRoutingRulesetsForEditing(): MutableList<RulesetItem>? = withRoutingRulesetLock {
+        readRoutingRulesetsWithIds()
+    }
+
+    private fun readRoutingRulesetsWithIds(): MutableList<RulesetItem>? {
+        val rules = decodeRoutingRulesets() ?: return null
+        val normalized = withUniqueRoutingRuleIds(rules)
+        if (normalized != rules) {
+            check(writeRoutingRulesets(normalized)) { "Failed to persist routing rule IDs" }
+        }
+        return normalized.toMutableList()
+    }
+
+    fun removeRoutingRuleset(ruleId: String): Boolean = withRoutingRulesetLock {
+        val rules = readRoutingRulesetsWithIds() ?: return@withRoutingRulesetLock true
+        val position = rules.indexOfFirst { it.id == ruleId }
+        if (position < 0) return@withRoutingRulesetLock true
+        rules.removeAt(position)
+        writeRoutingRulesets(rules)
+    }
+
     /**
      * Encodes the routing rulesets.
      *
      * @param rulesetList The list of routing rulesets.
      */
-    fun encodeRoutingRulesets(rulesetList: MutableList<RulesetItem>?) {
-        if (rulesetList.isNullOrEmpty())
-            encodeSettings(PREF_ROUTING_RULESET, "")
-        else
-            encodeSettings(PREF_ROUTING_RULESET, JsonUtil.toJson(rulesetList))
+    fun encodeRoutingRulesets(rulesetList: MutableList<RulesetItem>?): Boolean = withRoutingRulesetLock {
+        writeRoutingRulesets(rulesetList)
+    }
+
+    private fun writeRoutingRulesets(rulesetList: List<RulesetItem>?): Boolean {
+        val normalized = rulesetList?.let { withUniqueRoutingRuleIds(it) }
+        val content = if (normalized.isNullOrEmpty()) "" else JsonUtil.toJson(normalized)
+        return encodeSettings(PREF_ROUTING_RULESET, content)
     }
 
     //endregion

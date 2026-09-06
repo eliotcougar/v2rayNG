@@ -44,7 +44,7 @@ class MainReorderTest {
             true
         }
         viewModel = spy(MainViewModel(mock(), source, dispatcher, dispatcher))
-        doNothing().whenever(viewModel).toastError(any<Int>())
+        doNothing().whenever(viewModel).toastError(any<Int>(), any())
     }
 
     @After fun tearDown() {
@@ -139,7 +139,7 @@ class MainReorderTest {
         advanceUntilIdle()
         verify(source, times(1)).getServerGuidList("s")
         persisted = listOf("new")
-        viewModel.reloadServerList()
+        viewModel.reloadAllGroups(listOf(viewModel.uiState.value.selectedGroupId))
         advanceUntilIdle()
         assertEquals(persisted, visible())
         verify(source, times(2)).getServerGuidList("s")
@@ -172,7 +172,7 @@ class MainReorderTest {
         viewModel.setupGroupTab()
         advanceUntilIdle()
         whenever(source.decodeServerConfig("b")).thenReturn(ProfileItem.create(EConfigType.VLESS).apply { remarks = "edited" })
-        viewModel.reloadServerList()
+        viewModel.reloadAllGroups(listOf(viewModel.uiState.value.selectedGroupId))
         advanceUntilIdle()
         viewModel.subscriptionIdChanged("shared")
         advanceUntilIdle()
@@ -193,7 +193,7 @@ class MainReorderTest {
         advanceUntilIdle()
         assertEquals("", viewModel.uiState.value.selectedGroupId)
         persisted = listOf("new")
-        viewModel.reloadServerList()
+        viewModel.reloadAllGroups(listOf(viewModel.uiState.value.selectedGroupId))
         advanceUntilIdle()
         viewModel.subscriptionIdChanged("s")
         advanceUntilIdle()

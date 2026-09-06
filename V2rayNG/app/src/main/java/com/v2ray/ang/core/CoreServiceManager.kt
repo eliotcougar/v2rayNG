@@ -44,7 +44,6 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -1058,6 +1057,10 @@ object CoreServiceManager {
                             pendingResult.finish()
                         }
                     }
+                }
+
+                AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES -> {
+                    setActiveOutboundUpdatesEnabled(intent.getStringExtra("content").toBoolean())
                 }
 
                 AppConfig.MSG_MEASURE_DELAY -> {

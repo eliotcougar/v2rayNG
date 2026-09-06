@@ -47,6 +47,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
@@ -107,7 +108,7 @@ fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () ->
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        text = { Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) },
         confirmButton = {
             AppDialogButton(
                 text = deleteText,

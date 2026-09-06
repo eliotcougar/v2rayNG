@@ -31,7 +31,7 @@ class SubscriptionsPersistenceTest {
             MmkvManager.encodeSubscription(it, SubscriptionItem(remarks = it, lastUpdated = 100))
         }
         viewModel = spy(SubscriptionsViewModel(mock(), dispatcher))
-        doNothing().whenever(viewModel).toastError(any<Int>())
+        doNothing().whenever(viewModel).toastError(any<Int>(), any())
     }
 
     @After fun tearDown() {

@@ -26,23 +26,29 @@ class RoutingScreenAccessibilityTest {
         assertTrue("Enable TalkBack before running this test", accessibility.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_SPOKEN).isNotEmpty())
         assertTrue("Load routing rules before running this test", !MmkvManager.decodeRoutingRulesets().isNullOrEmpty())
         val editLabel = context.getString(R.string.action_edit)
+        val namedEditLabels = MmkvManager.decodeRoutingRulesets().orEmpty().map {
+            context.getString(R.string.acc_edit_routing_rule_named, it.remarks.orEmpty())
+        }.toSet()
 
         repeat(5) {
             ActivityScenario.launch(RoutingSettingActivity::class.java).use { scenario ->
-                assertRuleAccessible(automation, editLabel)
+                assertRuleAccessible(automation, editLabel, namedEditLabels)
                 scenario.recreate()
-                assertRuleAccessible(automation, editLabel)
+                assertRuleAccessible(automation, editLabel, namedEditLabels)
             }
         }
     }
 
-    private fun assertRuleAccessible(automation: UiAutomation, editLabel: String) {
+    private fun assertRuleAccessible(automation: UiAutomation, editLabel: String, namedEditLabels: Set<String>) {
         automation.waitForIdle(300, 5_000)
         val nodes = automation.rootInActiveWindow?.let(::descendants).orEmpty()
         val edit = nodes.firstOrNull { node ->
             val children = descendants(node)
-            node.isVisibleToUser && node.isClickable && children.count { it.isClickable } == 1 &&
-                children.any { it.contentDescription?.toString() == editLabel }
+            node.isVisibleToUser && (
+                node.actionList.any { it.label?.toString() in namedEditLabels } ||
+                    (node.isClickable && children.count { it.isClickable } == 1 &&
+                        children.any { it.contentDescription?.toString() == editLabel })
+                )
         }
         assertTrue("The loaded routing rule must expose its Edit action", edit != null)
         assertTrue("The Edit action must accept accessibility focus", edit!!.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS))

@@ -164,16 +164,14 @@ fun SubSettingScreen(
     val qrCodeBitmap by viewModel.qrCode.collectAsStateWithLifecycle()
 
     val lazyListState = rememberLazyListState()
-    val context = LocalContext.current
+    val enabledFeedback = stringResource(R.string.acc_subscription_auto_update_enabled)
+    val disabledFeedback = stringResource(R.string.acc_subscription_auto_update_disabled)
     val actionFeedback = rememberAccessibilityActionFeedback()
     val lifecycleOwner = LocalLifecycleOwner.current
-    LaunchedEffect(viewModel, lifecycleOwner, context, actionFeedback) {
+    LaunchedEffect(viewModel, lifecycleOwner, enabledFeedback, disabledFeedback, actionFeedback) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             viewModel.autoUpdateChanges.collect { enabled ->
-                actionFeedback(context.getString(
-                    if (enabled) R.string.acc_subscription_auto_update_enabled
-                    else R.string.acc_subscription_auto_update_disabled
-                ))
+                actionFeedback(if (enabled) enabledFeedback else disabledFeedback)
             }
         }
     }

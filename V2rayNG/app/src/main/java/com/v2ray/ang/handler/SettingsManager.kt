@@ -116,16 +116,17 @@ object SettingsManager {
      * Common method to reset routing rulesets.
      * @param rulesetList The list of rulesets.
      */
-    private fun resetRoutingRulesetsCommon(rulesetList: MutableList<RulesetItem>) {
-        val rulesetNew: MutableList<RulesetItem> = mutableListOf()
-        MmkvManager.decodeRoutingRulesets()?.forEach { key ->
-            if (key.locked == true) {
-                rulesetNew.add(key)
-            }
-        }
+    private fun resetRoutingRulesetsCommon(rulesetList: MutableList<RulesetItem>) = MmkvManager.withRoutingRulesetLock {
+        val rulesetNew = mergeRoutingRulesets(MmkvManager.decodeRoutingRulesets().orEmpty(), rulesetList)
+        check(MmkvManager.encodeRoutingRulesets(rulesetNew)) { "Failed to import routing rules" }
+    }
 
-        rulesetNew.addAll(rulesetList)
-        MmkvManager.encodeRoutingRulesets(rulesetNew)
+    internal fun mergeRoutingRulesets(current: List<RulesetItem>, imported: List<RulesetItem>): MutableList<RulesetItem> {
+        val locked = current.filter { it.locked == true }
+        // IDs may have been repaired since export. Skip copies of retained locked rules by
+        // their complete contents, not their ID or title; keep genuinely different rules.
+        val retained = locked.mapTo(mutableSetOf()) { it.copy(id = "") }
+        return (locked + imported.filterNot { it.copy(id = "") in retained }).toMutableList()
     }
 
     /**
@@ -143,25 +144,17 @@ object SettingsManager {
     }
 
     fun getRoutingRulesetById(ruleId: String): RulesetItem? =
-        MmkvManager.decodeRoutingRulesets()?.firstOrNull { it.id == ruleId }
+        MmkvManager.decodeRoutingRulesetsForEditing()?.firstOrNull { it.id == ruleId }
 
-    fun saveRoutingRulesetById(ruleId: String, ruleset: RulesetItem): Boolean {
-        val rulesetList = MmkvManager.decodeRoutingRulesets() ?: mutableListOf()
+    fun saveRoutingRulesetById(ruleId: String, ruleset: RulesetItem): Boolean = MmkvManager.withRoutingRulesetLock {
+        val rulesetList = MmkvManager.decodeRoutingRulesetsForEditing() ?: return@withRoutingRulesetLock false
         val index = rulesetList.indexOfFirst { it.id == ruleId }
-        if (index < 0) return false
-        rulesetList[index] = ruleset
+        if (index < 0) return@withRoutingRulesetLock false
+        rulesetList[index] = ruleset.copy(id = ruleId)
         MmkvManager.encodeRoutingRulesets(rulesetList)
-        return true
     }
 
-    fun removeRoutingRulesetById(ruleId: String): Boolean {
-        val rulesetList = MmkvManager.decodeRoutingRulesets() ?: return false
-        val index = rulesetList.indexOfFirst { it.id == ruleId }
-        if (index < 0) return false
-        rulesetList.removeAt(index)
-        MmkvManager.encodeRoutingRulesets(rulesetList)
-        return true
-    }
+    fun removeRoutingRulesetById(ruleId: String): Boolean = MmkvManager.removeRoutingRuleset(ruleId)
 
     /**
      * Save a routing ruleset.
@@ -192,7 +185,7 @@ object SettingsManager {
         if (index < 0) return
 
         val rulesetList = MmkvManager.decodeRoutingRulesets()
-        if (rulesetList.isNullOrEmpty()) return
+        if (rulesetList.isNullOrEmpty() || index !in rulesetList.indices) return
 
         rulesetList.removeAt(index)
         MmkvManager.encodeRoutingRulesets(rulesetList)

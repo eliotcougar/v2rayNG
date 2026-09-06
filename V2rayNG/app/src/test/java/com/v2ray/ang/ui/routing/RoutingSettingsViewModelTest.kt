@@ -5,13 +5,14 @@ import com.v2ray.ang.dto.entities.RulesetItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.mockito.kotlin.mock
 
 class RoutingSettingsViewModelTest {
 
     @Test
-    fun updateAndRemoveResolveCurrentPositionByRuleId() {
+    fun updateAndRemoveResolveCurrentPositionByRuleId() = runTest {
         val store = FakeRoutingRulesDataSource(rule("a"), rule("b"))
         val viewModel = RoutingSettingsViewModel.createForTest(mock<Application>(), store)
         viewModel.reload()
@@ -26,7 +27,7 @@ class RoutingSettingsViewModelTest {
     }
 
     @Test
-    fun missingRuleIdDoesNotMutateOrPersistAnotherRule() {
+    fun missingRuleIdDoesNotMutateOrPersistAnotherRule() = runTest {
         val store = FakeRoutingRulesDataSource(rule("a"))
         val viewModel = RoutingSettingsViewModel.createForTest(mock<Application>(), store)
         viewModel.reload()
@@ -39,7 +40,7 @@ class RoutingSettingsViewModelTest {
     }
 
     @Test
-    fun reloadMigratesMissingIdsInOneListWrite() {
+    fun reloadMigratesMissingIdsInOneListWrite() = runTest {
         val store = FakeRoutingRulesDataSource(rule(""))
         val viewModel = RoutingSettingsViewModel.createForTest(mock<Application>(), store) { "generated" }
 
@@ -63,9 +64,10 @@ class RoutingSettingsViewModelTest {
             return true
         }
         override fun remove(ruleId: String): Boolean = items.removeAll { it.id == ruleId }
-        override fun saveAll(items: List<RulesetItem>) {
+        override fun saveAll(items: List<RulesetItem>): Boolean {
             this.items = items.map { it.copy() }.toMutableList()
             saveAllCount++
+            return true
         }
     }
 }

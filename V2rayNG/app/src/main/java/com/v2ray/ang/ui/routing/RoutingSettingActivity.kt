@@ -30,6 +30,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
@@ -147,7 +149,7 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
             onRemoveRule = { ruleId ->
                 lifecycleScope.launch {
                     try {
-                        viewModel.remove(ruleId)
+                        if (!viewModel.remove(ruleId)) toastError(R.string.toast_failure)
                     } catch (cancelled: CancellationException) {
                         throw cancelled
                     } catch (e: Exception) {
@@ -169,7 +171,18 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        lifecycleScope.launch { reloadRules() }
+    }
+
+    private suspend fun reloadRules(): Boolean = try {
         viewModel.reload()
+        true
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (e: Exception) {
+        LogUtil.e(AppConfig.TAG, "Failed to load routing rules", e)
+        toastError(R.string.toast_failure)
+        false
     }
 
     private fun getDomainStrategy(): String {
@@ -182,8 +195,7 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
             try {
                 SettingsManager.resetRoutingRulesetsFromPresets(this@RoutingSettingActivity, type)
                 launch(Dispatchers.Main) {
-                    viewModel.reload()
-                    toastSuccess(R.string.toast_success)
+                    if (reloadRules()) toastSuccess(R.string.toast_success)
                 }
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.TAG, "Failed to import predefined ruleset", e)
@@ -202,8 +214,7 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
             val result = SettingsManager.resetRoutingRulesets(clipboard)
             withContext(Dispatchers.Main) {
                 if (result) {
-                    viewModel.reload()
-                    toastSuccess(R.string.toast_success)
+                    if (reloadRules()) toastSuccess(R.string.toast_success)
                 } else {
                     toastError(R.string.toast_failure)
                 }
@@ -218,8 +229,7 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
                     val result = SettingsManager.resetRoutingRulesets(scanResult)
                     withContext(Dispatchers.Main) {
                         if (result) {
-                            viewModel.reload()
-                            toastSuccess(R.string.toast_success)
+                            if (reloadRules()) toastSuccess(R.string.toast_success)
                         } else {
                             toastError(R.string.toast_failure)
                         }
@@ -260,6 +270,20 @@ fun RoutingSettingScreen(
     onImportQRcode: () -> Unit,
     onExportClipboard: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    fun performMutation(operation: suspend () -> Boolean) {
+        coroutineScope.launch {
+            try {
+                if (!operation()) context.toastError(R.string.toast_failure)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to update routing rules", e)
+                context.toastError(R.string.toast_failure)
+            }
+        }
+    }
     val isTelevision = isTelevisionDevice()
     // Keep lazy content and its focus map on one snapshot: TalkBack can measure before recomposition.
     val rulesets = viewModel.rulesetsFlow.collectAsStateWithLifecycle().value
@@ -295,7 +319,7 @@ fun RoutingSettingScreen(
     }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(rulesetIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
-            viewModel.move(fromIndex, toIndex)
+            performMutation { viewModel.move(fromIndex, toIndex) }
         }
     }
 
@@ -368,7 +392,7 @@ fun RoutingSettingScreen(
                 .verticalScrollbar(lazyListState),
             contentPadding = NavigationBarsBottomPadding()
         ) {
-            item(key = "domain_strategy") {
+            item(key = 0) {
                 SettingsListItem(
                     title = stringResource(R.string.routing_settings_domain_strategy),
                     entries = domainStrategies,
@@ -393,7 +417,7 @@ fun RoutingSettingScreen(
                     index = index,
                     itemCount = rulesets.size,
                     targetIndex = ::verticalDpadReorderTarget,
-                    onMove = viewModel::move
+                    onMove = { from, to -> performMutation { viewModel.move(from, to) } }
                 )
                 val isMoving = dpadReorderState.isMoving(ruleset.id)
                 val actionFocusOrder = remember(focusTargets) {
@@ -409,12 +433,12 @@ fun RoutingSettingScreen(
                             },
                             onEnabledChange = { checked ->
                                 val updated = ruleset.copy(enabled = checked)
-                                viewModel.update(ruleset.id, updated)
+                                performMutation { viewModel.update(ruleset.id, updated) }
                             },
                             onDelete = { deleteRuleId = ruleset.id },
                             reorderIndex = index,
                             itemCount = rulesets.size,
-                            onMove = { command -> viewModel.move(ruleset.id, command) },
+                            onMove = { command -> performMutation { viewModel.move(ruleset.id, command) }; true },
                             onFeedback = actionFeedback,
                         )
                         } else Row(
@@ -523,7 +547,7 @@ fun RoutingSettingScreen(
                                         checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
-                                            viewModel.update(ruleset.id, updated)
+                                            performMutation { viewModel.update(ruleset.id, updated) }
                                         },
                                         label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = focusTargets.toggle,
@@ -547,7 +571,7 @@ fun RoutingSettingScreen(
                                     checked = ruleset.enabled,
                                     onCheckedChange = { checked ->
                                         val updated = ruleset.copy(enabled = checked)
-                                        viewModel.update(ruleset.id, updated)
+                                        performMutation { viewModel.update(ruleset.id, updated) }
                                     },
                                     modifier = Modifier.scale(0.7f),
                                     colors = SwitchDefaults.colors(
@@ -582,7 +606,7 @@ fun RoutingSettingScreen(
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_routing_rule),
             onConfirm = {
-                viewModel.remove(ruleId)
+                onRemoveRule(ruleId)
                 deleteRuleId = null
             },
             onDismiss = { deleteRuleId = null }
