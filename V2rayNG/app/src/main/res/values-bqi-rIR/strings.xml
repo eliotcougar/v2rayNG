@@ -71,11 +71,11 @@
     <string name="confirm_delete_profile">ای کانفیگ پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
     <string name="confirm_delete_profile_named">ای کانفیگ پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="confirm_delete_policy_group">ای بونکۊ سیاست پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
-    <string name="confirm_delete_policy_group_named">ای بونکۊ سیاست پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
+    <string name="confirm_delete_policy_group_named">ای بونکۊ سیاست پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">ای عوزو زنجیره پروکسی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
     <string name="confirm_delete_proxy_chain_member_named">ای عوزو زنجیره پروکسی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="confirm_delete_routing_rule">ای قانووݩ تور جوستن پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
-    <string name="confirm_delete_routing_rule_named">ای قانووݩ تور جوستن پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
+    <string name="confirm_delete_routing_rule_named">ای قانووݩ تور جوستن پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="confirm_delete_subscription_group">ای بونکۊ اشتراک پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
     <string name="confirm_delete_asset_file">ای فایل بونچک جغرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="confirm_delete_asset_source">ای بونچک فایل جوقرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
@@ -186,7 +186,7 @@
     <string name="msg_file_not_found">فایلن نجوست</string>
     <string name="msg_remark_is_duplicate">ای نوم ز زیتر بیڌس</string>
     <string name="asset_geo_files_sources">بونچک فایلا جغرافیایی (اختیاری)</string>
-    <string name="confirm_delete_asset_source_named">ای بونچک فایل جوقرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
+    <string name="confirm_delete_asset_source_named">ای بونچک فایل جوقرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
 
     <!-- PerAppProxyActivity -->
     <string name="msg_dialog_progress">هونی بار ونی ابۊ…</string>
@@ -367,7 +367,7 @@
     <string name="sub_setting_remarks">نیشتنا</string>
     <string name="sub_setting_url">نشۊوی اینترنتی اختیاری</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
-    <string name="confirm_delete_subscription_group_named">ای بونکۊ اشتراک پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
+    <string name="confirm_delete_subscription_group_named">ای بونکۊ اشتراک پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n\n%1$s</string>
     <string name="acc_last_updated">ورۊ رسۊوی نهایی من %1$s</string>
     <string name="acc_subscription_update_on">ورۊ کردن روشن هڌ</string>
     <string name="acc_subscription_update_off">ورۊ کردن خاموش هڌ</string>
