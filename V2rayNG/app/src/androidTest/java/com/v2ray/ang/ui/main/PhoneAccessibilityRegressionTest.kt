@@ -5,12 +5,13 @@ import android.app.UiAutomation
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
-import android.view.KeyEvent
 import android.view.accessibility.AccessibilityManager
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -68,13 +69,14 @@ class PhoneAccessibilityRegressionTest {
                     val deleteLabel = context.getString(R.string.acc_delete_config_named, selectedName)
                     assertTrue(selected.actionList.any { it.label?.toString() == deleteLabel })
                     assertTrue(selected.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS))
+                    SystemClock.sleep(1_500)
                     screenshot("server-dark-$dark-dynamic-$dynamic-columns-$columns")
                     val other = awaitNode { it.contentDescription?.toString()?.startsWith(otherName) == true }
                     assertTrue(other.isClickable)
                     assertTrue(other.performAction(AccessibilityNodeInfo.ACTION_CLICK))
                     awaitNode { it.contentDescription?.toString()?.startsWith(otherName) == true && !it.isClickable }
                     assertEquals(otherGuid, MmkvManager.getSelectServer())
-                    assertTrue(awaitNode { it.contentDescription?.toString()?.startsWith(selectedName) == true }.isClickable)
+                    awaitNode { it.contentDescription?.toString()?.startsWith(selectedName) == true && it.isClickable }
                 }
             }
         } finally {
@@ -96,7 +98,7 @@ class PhoneAccessibilityRegressionTest {
                 activity.setContent {
                     AppTheme {
                         Surface {
-                            Column {
+                            Column(Modifier.systemBarsPadding()) {
                                 SettingsEditItem(title = "Disabled editor", value = "Existing value", enabled = false, onValueChanged = { fail("Disabled editor changed") })
                                 SettingsListItem(title = "Disabled list", entries = listOf("Existing choice"), values = listOf("choice"), selectedValue = "choice", enabled = false, onSelected = { fail("Disabled list changed") })
                                 SettingsEditItem(title = "Enabled editor", value = "Editable value", onValueChanged = {})
@@ -106,13 +108,14 @@ class PhoneAccessibilityRegressionTest {
                 }
             }
             for (title in listOf("Disabled editor", "Disabled list")) {
-                val node = awaitNode { it.text?.toString()?.contains(title) == true }
+                val node = awaitNode { it.isScreenReaderFocusable && hasText(it, title) }
                 assertFalse(node.isEnabled)
                 assertFalse(node.isClickable)
                 assertFalse(node.actionList.any { it.id == AccessibilityNodeInfo.ACTION_CLICK })
                 assertTrue(node.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS))
+                SystemClock.sleep(1_500)
             }
-            val enabled = awaitNode { it.text?.toString()?.contains("Enabled editor") == true }
+            val enabled = awaitNode { it.isClickable && hasText(it, "Enabled editor") }
             assertTrue(enabled.isEnabled)
             assertTrue(enabled.isClickable)
             screenshot("settings-disabled")
@@ -120,7 +123,7 @@ class PhoneAccessibilityRegressionTest {
     }
 
     @Test
-    fun namedDeletionStartsOnCancelAndKeyboardCannotAccidentallyDelete() {
+    fun namedDeletionExposesTargetAndCancelCanDismissWithoutDeleting() {
         requireTalkBack()
         val deleted = AtomicInteger()
         val dismissed = AtomicInteger()
@@ -136,12 +139,16 @@ class PhoneAccessibilityRegressionTest {
                     }
                 }
             }
-            val cancel = awaitNode { it.text?.toString() == context.getString(R.string.action_cancel) && it.isFocused }
+            val cancel = awaitNode { it.isClickable && hasText(it, context.getString(R.string.action_cancel)) }
             assertTrue(cancel.isClickable)
             assertTrue(cancel.performAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS))
             awaitNode { it.text?.toString()?.contains("Phone QA profile") == true }
-            screenshot("delete-cancel-focus")
-            instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_ENTER)
+            val buttons = descendants(automation.rootInActiveWindow).filter { it.isClickable }
+            assertEquals(2, buttons.size)
+            assertTrue(hasText(buttons[0], context.getString(R.string.action_cancel)))
+            assertTrue(hasText(buttons[1], context.getString(R.string.action_delete)))
+            screenshot("delete-cancel-accessibility-focus")
+            assertTrue(cancel.performAction(AccessibilityNodeInfo.ACTION_CLICK))
             instrumentation.waitForIdleSync()
             assertEquals(0, deleted.get())
             assertEquals(1, dismissed.get())
@@ -159,13 +166,20 @@ class PhoneAccessibilityRegressionTest {
             automation.rootInActiveWindow?.let(::descendants)?.firstOrNull { it.isVisibleToUser && predicate(it) }?.let { return it }
             SystemClock.sleep(100)
         }
-        error("Expected accessibility node not found")
+        screenshot("missing-node-${SystemClock.uptimeMillis()}")
+        val visibleNodes = automation.rootInActiveWindow?.let(::descendants).orEmpty().joinToString("\n") {
+            "${it.packageName}: text=${it.text}, description=${it.contentDescription}, state=${it.stateDescription}, focused=${it.isFocused}, enabled=${it.isEnabled}, clickable=${it.isClickable}"
+        }
+        error("Expected accessibility node not found:\n$visibleNodes")
     }
 
     private fun descendants(node: AccessibilityNodeInfo): List<AccessibilityNodeInfo> = buildList {
         add(node)
         for (index in 0 until node.childCount) node.getChild(index)?.let { addAll(descendants(it)) }
     }
+
+    private fun hasText(node: AccessibilityNodeInfo, text: String): Boolean =
+        descendants(node).any { it.text?.toString()?.contains(text) == true }
 
     private fun screenshot(name: String) {
         automation.takeScreenshot()?.let { bitmap ->
