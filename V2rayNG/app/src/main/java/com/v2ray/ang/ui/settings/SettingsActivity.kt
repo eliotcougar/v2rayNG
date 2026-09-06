@@ -1,10 +1,13 @@
 package com.v2ray.ang.ui.settings
 
 import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -36,9 +39,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.VPN
 import com.v2ray.ang.R
+import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
@@ -56,7 +62,9 @@ import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.verticalScrollbar
+import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.launch
 
 class SettingsActivity : BaseComponentActivity() {
 
@@ -64,6 +72,26 @@ class SettingsActivity : BaseComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.refreshSystemVpnSettingsAvailability()
+            }
+        }
+    }
+
+    private fun openSystemVpnSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+        } catch (error: ActivityNotFoundException) {
+            reportSystemVpnSettingsFailure(error)
+        } catch (error: SecurityException) {
+            reportSystemVpnSettingsFailure(error)
+        }
+    }
+
+    private fun reportSystemVpnSettingsFailure(error: RuntimeException) {
+        LogUtil.e(AppConfig.TAG, "Cannot open system VPN settings", error)
+        toastError(R.string.toast_system_vpn_settings_unavailable)
     }
 
     @Composable
@@ -71,7 +99,8 @@ class SettingsActivity : BaseComponentActivity() {
         SettingsScreen(
             viewModel = viewModel,
             onBackClick = { finish() },
-            onModeHelpClicked = { Utils.openUri(this, AppConfig.APP_WIKI_MODE) }
+            onModeHelpClicked = { Utils.openUri(this, AppConfig.APP_WIKI_MODE) },
+            onSystemVpnSettingsClicked = ::openSystemVpnSettings
         )
     }
 }
@@ -81,11 +110,13 @@ class SettingsActivity : BaseComponentActivity() {
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBackClick: () -> Unit,
-    onModeHelpClicked: () -> Unit
+    onModeHelpClicked: () -> Unit,
+    onSystemVpnSettingsClicked: () -> Unit
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val systemVpnSettingsAvailable by viewModel.systemVpnSettingsAvailable.collectAsStateWithLifecycle()
     var uiSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var vpnSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var coreSettingsExpanded by rememberSaveable { mutableStateOf(true) }
@@ -99,13 +130,13 @@ fun SettingsScreen(
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, false)
     var appendHttpProxy by rememberMmkvBool(AppConfig.PREF_APPEND_HTTP_PROXY, false)
     var vpnDns by rememberMmkvString(AppConfig.PREF_VPN_DNS, "")
-    var vpnBypassLan by rememberMmkvString(AppConfig.PREF_VPN_BYPASS_LAN, "0")
+    var vpnBypassLan by rememberMmkvString(AppConfig.PREF_VPN_BYPASS_LAN, AppConfig.DEFAULT_VPN_BYPASS_LAN)
     var vpnInterfaceAddress by rememberMmkvString(AppConfig.PREF_VPN_INTERFACE_ADDRESS_CONFIG_INDEX, "0")
     var vpnMtu by rememberMmkvString(AppConfig.PREF_VPN_MTU, "")
 
     var mux by rememberMmkvBool(AppConfig.PREF_MUX_ENABLED, false)
     var muxConcurrency by rememberMmkvString(AppConfig.PREF_MUX_CONCURRENCY, "8")
-    var muxXudpConcurrency by rememberMmkvString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, "8")
+    var muxXudpConcurrency by rememberMmkvString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY)
     var muxXudpQuic by rememberMmkvString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
 
     var fragment by rememberMmkvBool(AppConfig.PREF_FRAGMENT_ENABLED, false)
@@ -123,7 +154,7 @@ fun SettingsScreen(
     var enableRootMode by rememberMmkvBool(AppConfig.PREF_ROOT_MODE_ENABLE, false)
     var lanSharing by rememberMmkvBool(AppConfig.PREF_ROOT_LAN_SHARING, false)
 
-    var hevTunLogLevel by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_LOGLEVEL, "warning")
+    var hevTunLogLevel by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_LOGLEVEL, AppConfig.DEFAULT_HEV_TUNNEL_LOGLEVEL)
     var hevTunRwTimeout by rememberMmkvString(AppConfig.PREF_HEV_TUNNEL_RW_TIMEOUT, "")
     var useHevTun by rememberMmkvBool(AppConfig.PREF_USE_HEV_TUNNEL, true)
 
@@ -132,7 +163,7 @@ fun SettingsScreen(
     var dynamicSocksPort by rememberMmkvBool(AppConfig.PREF_DYNAMIC_SOCKS_PORT, false)
     var socksUsername by rememberMmkvString(AppConfig.PREF_SOCKS_USERNAME, "")
     var socksPassword by rememberMmkvString(AppConfig.PREF_SOCKS_PASSWORD, "")
-    var socksEnableUdp by rememberMmkvBool(AppConfig.PREF_SOCKS_ENABLE_UDP, false)
+    var socksEnableUdp by rememberMmkvBool(AppConfig.PREF_SOCKS_ENABLE_UDP, AppConfig.DEFAULT_SOCKS_ENABLE_UDP)
     var proxySharing by rememberMmkvBool(AppConfig.PREF_PROXY_SHARING, false)
     var rememberRoutesPerWifiNetwork by rememberMmkvBool(AppConfig.PREF_REMEMBER_ROUTES_PER_WIFI_NETWORK, false)
 
@@ -156,7 +187,7 @@ fun SettingsScreen(
     var domesticDns by rememberMmkvString(AppConfig.PREF_DOMESTIC_DNS, "")
     var dnsHosts by rememberMmkvString(AppConfig.PREF_DNS_HOSTS, "")
     var coreLogLevel by rememberMmkvString(AppConfig.PREF_LOGLEVEL, "warning")
-    var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "0")
+    var outboundResolveMethod by rememberMmkvString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD)
 
     var isBooted by rememberMmkvBool(AppConfig.PREF_IS_BOOTED, false)
     var delayTestUrl by rememberMmkvString(AppConfig.PREF_DELAY_TEST_URL, "")
@@ -167,7 +198,7 @@ fun SettingsScreen(
     val hevTunEnabled = isVpn && useHevTun
     val localProxyForced = hevTunEnabled
     val effectiveLocalProxy = enableLocalProxy || localProxyForced
-    val muxXudpConcurrencyInt = muxXudpConcurrency.toIntOrNull() ?: 8
+    val muxXudpConcurrencyInt = muxXudpConcurrency.toIntOrNull() ?: AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY.toInt()
 
     val dynamicColorSupported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     LaunchedEffect(dynamicColorSupported) {
@@ -653,6 +684,13 @@ fun SettingsScreen(
                     checked = isBooted,
                     onCheckedChange = { isBooted = it }
                 )
+                if (systemVpnSettingsAvailable) {
+                    SettingsMenuItem(
+                        title = stringResource(R.string.title_system_vpn_settings),
+                        subtitle = stringResource(R.string.summary_system_vpn_settings),
+                        onClick = onSystemVpnSettingsClicked
+                    )
+                }
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_delay_test_url),
                     value = delayTestUrl,

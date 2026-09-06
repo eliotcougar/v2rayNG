@@ -20,6 +20,7 @@ import com.v2ray.ang.dto.ConfigResult
 import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BrowserDialerMode
+import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
@@ -34,7 +35,6 @@ import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import com.v2ray.ang.extension.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -655,25 +655,14 @@ object CoreServiceManager {
                 }
             }
 
+            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
             val result = ConnectionTestResult(
                 delayMillis = time,
                 errorMessage = errorStr,
+                country = endpoint?.country,
+                ipAddress = endpoint?.ipAddress,
             )
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
-
-            // Only fetch IP info if the delay test was successful
-            if (time >= 0) {
-                SpeedtestManager.getRemoteIPInfo()?.let { ip ->
-                    MessageHelper.sendMsg2UI(
-                        service,
-                        AppConfig.MSG_MEASURE_DELAY_RESULT,
-                        result.copy(
-                            country = ip.country,
-                            ipAddress = ip.ipAddress,
-                        ),
-                    )
-                }
-            }
         }
     }
 

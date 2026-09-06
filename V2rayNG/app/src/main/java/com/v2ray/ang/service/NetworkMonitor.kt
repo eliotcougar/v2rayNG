@@ -7,12 +7,12 @@ import android.net.NetworkRequest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.extension.delay
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import com.v2ray.ang.extension.delay
 import kotlinx.coroutines.launch
 
 /**
