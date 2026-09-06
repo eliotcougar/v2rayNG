@@ -23,6 +23,7 @@ data class MainUiState(
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val connectionTargetText: String = "",
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = false,
@@ -53,6 +54,7 @@ sealed interface MainAction {
     data class ImportManually(val type: Int) : MainAction
     data object RestartService : MainAction
     data object LocateSelectedServer : MainAction
+    data class MainUiVisibilityChanged(val visible: Boolean) : MainAction
 
     data class SelectGroup(val groupId: String) : MainAction
     data class SelectServer(val guid: String) : MainAction

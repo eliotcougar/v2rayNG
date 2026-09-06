@@ -13,9 +13,11 @@ import android.os.ResultReceiver
 import android.system.OsConstants
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.R
 import com.v2ray.ang.contracts.IDialerService
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.dto.CoreUrlDownloadRequest
+import com.v2ray.ang.dto.ConfigResult
 import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BrowserDialerMode
@@ -31,6 +33,7 @@ import com.v2ray.ang.handler.SpeedtestManager
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.service.DialerNativeService
 import com.v2ray.ang.service.DialerWebviewService
+import com.v2ray.ang.service.NetworkIdentityResolver
 import com.v2ray.ang.service.NetworkMonitor
 import com.v2ray.ang.shizuku.TetheringCoreSync
 import com.v2ray.ang.util.LogUtil
@@ -40,7 +43,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.jvm.Volatile
 import libv2ray.CoreCallbackHandler
 import libv2ray.CoreController
 import libv2ray.ProcessFinder
@@ -48,8 +55,13 @@ import java.lang.ref.SoftReference
 import java.net.InetSocketAddress
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 object CoreServiceManager {
+
+    private const val POLICY_ROUTE_POLL_INTERVAL_MS = 500L
+    private const val ACTIVE_OUTBOUND_POLL_INTERVAL_MS = 1000L
 
     private val coreController: CoreController = CoreNativeManager.newCoreController(CoreCallback())
     private val mMsgReceive = ReceiveMessageHandler()
@@ -65,11 +77,15 @@ object CoreServiceManager {
     private var teardownExecutor: ExecutorService? = null
     private var receiversRegistered = false
 
-    @Volatile
-    private var isReloading = false
-
-    /** Tun descriptor the core was started with, null in the proxy only and root run modes. */
-    private var currentVpnInterface: ParcelFileDescriptor? = null
+    @Volatile private var runningProfileGuid = ""
+    private val networkResetMutex = Mutex()
+    private val coreScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var policyRoutePollJob: Job? = null
+    private var activeOutboundPollJob: Job? = null
+    private val networkTransitions = AtomicInteger(0)
+    private val coreRecoveryEnabled = AtomicBoolean(false)
+    private val primaryPolicyBalancerAvailable = AtomicBoolean(false)
+    private val activeOutboundUpdatesEnabled = AtomicBoolean(false)
 
     var serviceControl: SoftReference<ServiceControl>? = null
         set(value) {
@@ -89,10 +105,296 @@ object CoreServiceManager {
     fun isRunning() = coreController.isRunning
 
     /**
+     * Sequentially closes and recreates the only Xray instance in this process
+     * after Android changes the selected underlay. The owning service and any
+     * VPN interface remain active, and unchanged upstream process-global state
+     * never overlaps two live instances.
+     */
+    private fun resetCoreNetworkState(
+        service: Service,
+        previousNetworkKey: String?,
+        newNetworkKey: String,
+        newNetworkHandle: Long,
+    ) {
+        networkTransitions.incrementAndGet()
+        PolicyRouteCache.setCurrentNetwork(newNetworkKey, newNetworkHandle)
+        if (!coreController.isRunning) {
+            networkTransitions.decrementAndGet()
+            return
+        }
+
+        val profileGuid = runningProfileGuid
+        val transitionSnapshot = PolicyRouteCache.snapshot()
+        coreScope.launch {
+            networkResetMutex.withLock {
+                try {
+                    val currentTransition = PolicyRouteCache.snapshot()
+                    if (!coreRecoveryEnabled.get() ||
+                        runningProfileGuid != profileGuid ||
+                        currentTransition.generation != transitionSnapshot.generation ||
+                        currentTransition.networkHandle != transitionSnapshot.networkHandle ||
+                        !coreController.isRunning
+                    ) {
+                        LogUtil.i(AppConfig.TAG, "StartCore-Manager: Superseded network recovery skipped")
+                        return@withLock
+                    }
+                    val currentHasPrimaryBalancer = primaryPolicyBalancerAvailable.get()
+                    if (currentHasPrimaryBalancer) {
+                        PolicyRouteCache.remember(
+                            previousNetworkKey,
+                            profileGuid,
+                            currentPrimaryBalancerTarget(),
+                            transitionSnapshot.generation,
+                        )
+                    }
+                    val refreshedConfig = buildRefreshedCoreConfig(service, profileGuid)
+                    val latestTransition = PolicyRouteCache.snapshot()
+                    if (!coreRecoveryEnabled.get() ||
+                        runningProfileGuid != profileGuid ||
+                        latestTransition.generation != transitionSnapshot.generation ||
+                        latestTransition.networkHandle != transitionSnapshot.networkHandle ||
+                        !coreController.isRunning
+                    ) {
+                        LogUtil.i(AppConfig.TAG, "StartCore-Manager: Superseded network recovery skipped")
+                        return@withLock
+                    }
+                    val nextHasPrimaryBalancer = refreshedConfig?.hasPrimaryBalancer
+                        ?: currentHasPrimaryBalancer
+                    val warmTarget = if (nextHasPrimaryBalancer) {
+                        PolicyRouteCache.lookup(latestTransition.networkKey, profileGuid).orEmpty()
+                    } else {
+                        ""
+                    }
+                    TetheringCoreSync.onStopping(service)
+                    when {
+                        refreshedConfig != null && nextHasPrimaryBalancer -> {
+                            coreController.resetNetworkStateWithConfigAndWarmRoute(
+                                refreshedConfig.content,
+                                AppConfig.TAG_BALANCER,
+                                warmTarget,
+                            )
+                        }
+
+                        refreshedConfig != null -> {
+                            coreController.resetNetworkStateWithConfig(refreshedConfig.content)
+                        }
+
+                        nextHasPrimaryBalancer -> {
+                            coreController.resetNetworkStateWithWarmRoute(AppConfig.TAG_BALANCER, warmTarget)
+                        }
+
+                        else -> coreController.resetNetworkState()
+                    }
+                    // A stop can race the native reset. Never reattach a tethering lease
+                    // after the lifecycle owner has invalidated this running profile.
+                    if (!coreRecoveryEnabled.get() || runningProfileGuid != profileGuid) {
+                        return@withLock
+                    }
+                    TetheringCoreSync.onStarted(
+                        service, profileGuid, getRunningServerName(),
+                        coreController.runningConfig, SettingsManager.isUsingHevTun(),
+                    )
+                    primaryPolicyBalancerAvailable.set(nextHasPrimaryBalancer)
+                    reconcilePolicyRouteTracking()
+                    serviceControl?.get()?.let {
+                        emitActiveOutbound(it, if (nextHasPrimaryBalancer) warmTarget else "")
+                    }
+                    LogUtil.i(
+                        AppConfig.TAG,
+                        "StartCore-Manager: Core network state reset" +
+                            if (warmTarget.isNotEmpty()) " with cached policy route" else "",
+                    )
+                } catch (e: Exception) {
+                    TetheringCoreSync.onStartFailed(service, e.message.orEmpty())
+                    if (coreController.isRunning) {
+                        LogUtil.e(
+                            AppConfig.TAG,
+                            "StartCore-Manager: Core network reset failed; continuing with the running core",
+                            e,
+                        )
+                    } else {
+                        coreRecoveryEnabled.set(false)
+                        primaryPolicyBalancerAvailable.set(false)
+                        stopPolicyRoutePolling()
+                        stopActiveOutboundPolling()
+                        LogUtil.e(
+                            AppConfig.TAG,
+                            "StartCore-Manager: Core network reset and recovery failed; keeping traffic fail-closed",
+                            e,
+                        )
+                        getService()?.let { service ->
+                            val message = service.getString(R.string.notification_core_recovery_failed)
+                            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
+                            NotificationManager.showCoreFailure(message)
+                        }
+                    }
+                } finally {
+                    if (networkTransitions.decrementAndGet() == 0 && isPolicyRouteTrackingActive()) {
+                        refreshFreshPolicyRoute()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun buildRefreshedCoreConfig(service: Service, profileGuid: String): ConfigResult? {
+        return try {
+            val result = CoreConfigManager.getV2rayConfig(service, profileGuid)
+            if (result.status && result.content.isNotBlank()) {
+                result
+            } else {
+                LogUtil.w(
+                    AppConfig.TAG,
+                    "StartCore-Manager: Keeping the running configuration because refresh failed: " +
+                        result.errorMessage.ifBlank { "generated configuration is empty" },
+                )
+                null
+            }
+        } catch (e: Exception) {
+            LogUtil.w(
+                AppConfig.TAG,
+                "StartCore-Manager: Keeping the running configuration because refresh failed",
+                e,
+            )
+            null
+        }
+    }
+
+    private fun updateCoreNetworkIdentity(newNetworkKey: String, newNetworkHandle: Long) {
+        val previous = PolicyRouteCache.snapshot()
+        if (previous.networkKey == newNetworkKey && previous.networkHandle == newNetworkHandle) return
+        PolicyRouteCache.setCurrentNetwork(newNetworkKey, newNetworkHandle)
+        if (coreController.isRunning && isPolicyRouteTrackingActive()) {
+            coreScope.launch { refreshFreshPolicyRoute() }
+        }
+    }
+
+    private fun isPolicyRouteTrackingActive() =
+        coreRecoveryEnabled.get() && primaryPolicyBalancerAvailable.get()
+
+    private fun currentPrimaryBalancerTarget(): String {
+        if (!isPolicyRouteTrackingActive()) return ""
+        return try {
+            coreController.getBalancerPrincipleTarget(AppConfig.TAG_BALANCER)
+        } catch (e: Exception) {
+            LogUtil.d(AppConfig.TAG, "Primary policy route unavailable: ${e.message}")
+            ""
+        }
+    }
+
+    private fun refreshFreshPolicyRoute() {
+        if (!isPolicyRouteTrackingActive()) return
+        val cacheSnapshot = PolicyRouteCache.snapshot()
+        rememberFreshPolicyRoute(currentPrimaryBalancerTarget(), cacheSnapshot)
+    }
+
+    private fun startPolicyRoutePolling() {
+        policyRoutePollJob?.cancel()
+        if (!isPolicyRouteTrackingActive()) {
+            policyRoutePollJob = null
+            return
+        }
+        policyRoutePollJob = coreScope.launch {
+            var lastTarget = ""
+            while (isPolicyRouteTrackingActive()) {
+                if (coreController.isRunning && networkTransitions.get() == 0) {
+                    val target = currentPrimaryBalancerTarget()
+                    if (target.isNotBlank() && target != lastTarget) {
+                        if (rememberFreshPolicyRoute(target)) {
+                            lastTarget = target
+                        }
+                    }
+                }
+                delay(POLICY_ROUTE_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopPolicyRoutePolling() {
+        policyRoutePollJob?.cancel()
+        policyRoutePollJob = null
+    }
+
+    private fun rememberFreshPolicyRoute(
+        target: String?,
+        cacheSnapshot: PolicyRouteCache.Snapshot = PolicyRouteCache.snapshot(),
+    ): Boolean {
+        if (!isPolicyRouteTrackingActive() || networkTransitions.get() != 0 || target.isNullOrBlank()) return false
+        val profileGuid = runningProfileGuid
+        if (PolicyRouteCache.rememberCurrent(cacheSnapshot, profileGuid, target)) {
+            serviceControl?.get()?.let { emitActiveOutbound(it, target) }
+            LogUtil.i(AppConfig.TAG, "Policy route cache accepted fresh observatory target")
+            return true
+        }
+        return false
+    }
+
+    private fun reconcilePolicyRouteTracking() {
+        if (isPolicyRouteTrackingActive()) {
+            startPolicyRoutePolling()
+            if (activeOutboundUpdatesEnabled.get()) {
+                startActiveOutboundPolling()
+            }
+        } else {
+            stopPolicyRoutePolling()
+            stopActiveOutboundPolling()
+        }
+    }
+
+    /**
      * Gets the name of the currently running server.
      * @return The name of the running server.
      */
     fun getRunningServerName() = currentConfig?.remarks.orEmpty()
+
+    fun setActiveOutboundUpdatesEnabled(enabled: Boolean) {
+        activeOutboundUpdatesEnabled.set(enabled)
+        if (enabled && isPolicyRouteTrackingActive()) {
+            startActiveOutboundPolling()
+        } else {
+            stopActiveOutboundPolling()
+        }
+    }
+
+    private fun currentActiveOutbound() = currentPrimaryBalancerTarget()
+
+    private fun emitActiveOutbound(serviceControl: ServiceControl, target: String) {
+        MessageHelper.sendMsg2UI(
+            serviceControl.getService(),
+            AppConfig.MSG_ACTIVE_OUTBOUND_CHANGED,
+            target,
+        )
+    }
+
+    private fun emitCurrentActiveOutbound(serviceControl: ServiceControl) {
+        emitActiveOutbound(serviceControl, currentActiveOutbound())
+    }
+
+    private fun startActiveOutboundPolling() {
+        if (!coreController.isRunning || !isPolicyRouteTrackingActive() ||
+            activeOutboundPollJob?.isActive == true
+        ) return
+
+        activeOutboundPollJob?.cancel()
+        activeOutboundPollJob = coreScope.launch {
+            var lastTarget: String? = null
+            while (coreController.isRunning && activeOutboundUpdatesEnabled.get() &&
+                isPolicyRouteTrackingActive()
+            ) {
+                val target = currentActiveOutbound()
+                if (target != lastTarget) {
+                    serviceControl?.get()?.let { emitActiveOutbound(it, target) }
+                    lastTarget = target
+                }
+                delay(ACTIVE_OUTBOUND_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
+    private fun stopActiveOutboundPolling() {
+        activeOutboundPollJob?.cancel()
+        activeOutboundPollJob = null
+    }
 
     /**
      * Refer to the official documentation for [registerReceiver](https://developer.android.com/reference/androidx/core/content/ContextCompat#registerReceiver(android.content.Context,android.content.BroadcastReceiver,android.content.IntentFilter,int):
@@ -132,13 +434,12 @@ object CoreServiceManager {
         urlDownloadScope?.cancel()
         urlDownloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        currentVpnInterface = vpnInterface
         launchCore(service, vpnInterface)
         startNetworkMonitor(service)
     }
 
     @Throws(Exception::class)
-    private fun launchCore(service: Service, vpnInterface: ParcelFileDescriptor?, isReload: Boolean = false) {
+    private fun launchCore(service: Service, vpnInterface: ParcelFileDescriptor?) {
         val guid = MmkvManager.getSelectServer() ?: error("No server selected")
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
         currentProfileId = guid
@@ -167,12 +468,29 @@ object CoreServiceManager {
         if (dialerAddr.isNotNullEmpty()) {
             CoreNativeManager.reconcileBrowserDialer(dialerAddr)
         }
-        coreController.startLoop(result.content, tunFd)
+        runningProfileGuid = guid
+        primaryPolicyBalancerAvailable.set(result.hasPrimaryBalancer)
+        coreRecoveryEnabled.set(true)
+        try {
+            coreController.startLoop(result.content, tunFd)
+        } catch (e: Exception) {
+            coreRecoveryEnabled.set(false)
+            primaryPolicyBalancerAvailable.set(false)
+            runningProfileGuid = ""
+            throw e
+        }
 
         if (!isRunning()) {
+            coreRecoveryEnabled.set(false)
+            primaryPolicyBalancerAvailable.set(false)
+            runningProfileGuid = ""
             error("Core failed to start")
         }
 
+        if (isPolicyRouteTrackingActive()) {
+            coreScope.launch { refreshFreshPolicyRoute() }
+        }
+        reconcilePolicyRouteTracking()
         if (browserDialer != null) {
             browserDialer!!.stop()
             browserDialer = null
@@ -198,9 +516,7 @@ object CoreServiceManager {
             result.content,
             usesHevTun,
         )
-        if (!isReload) {
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
-        }
+        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
@@ -211,6 +527,12 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        stopActiveOutboundPolling()
+        coreRecoveryEnabled.set(false)
+        primaryPolicyBalancerAvailable.set(false)
+        stopPolicyRoutePolling()
+        PolicyRouteCache.clear()
+        runningProfileGuid = ""
         urlDownloadScope?.cancel()
         urlDownloadScope = null
         val service = getService()
@@ -222,7 +544,6 @@ object CoreServiceManager {
 
         networkMonitor?.unregister()
         networkMonitor = null
-        currentVpnInterface = null
 
         stopNativeCoreAsync(service, "stop")
 
@@ -283,11 +604,16 @@ object CoreServiceManager {
     }
 
     private fun cleanupFailedStart(service: Service) {
+        coreRecoveryEnabled.set(false)
+        primaryPolicyBalancerAvailable.set(false)
+        stopPolicyRoutePolling()
+        stopActiveOutboundPolling()
+        PolicyRouteCache.clear()
+        runningProfileGuid = ""
         urlDownloadScope?.cancel()
         urlDownloadScope = null
         networkMonitor?.unregister()
         networkMonitor = null
-        currentVpnInterface = null
         stopNativeCoreAsync(service, "start-failure")
         CoreNativeManager.reconcileBrowserDialer("")
         runCatching { browserDialer?.stop() }
@@ -356,46 +682,39 @@ object CoreServiceManager {
         val connectivity = service.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
         networkMonitor = NetworkMonitor(
             connectivity = connectivity,
+            includeLocationInfo = NetworkIdentityResolver.canReadWifiIdentity(service),
             onUnderlyingNetworksChanged = { networks -> serviceControl?.get()?.setUnderlyingNetworks(networks) },
-            onHandover = { reloadCore() },
+            onNetworkEvent = { event -> handleNetworkEvent(service, event) },
         ).also { it.register() }
     }
 
-    /**
-     * Restarts the core in place after the upstream network changed: the service, the notification
-     * and the VPN interface all stay up, so nothing of this is visible.
-     *
-     * The config is rebuilt on purpose, outbound server domains are resolved while building it and
-     * an address resolved on a network that is gone can be unusable on the new one.
-     *
-     * @return True if the core is running again.
-     */
-    private fun reloadCore(): Boolean {
-        if (isReloading) return false
-        val service = getService() ?: return false
-        if (!isRunning()) return false
-
-        return try {
-            val tunFd = currentVpnInterface
-
-            isReloading = true
-            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload start...")
-
-            TetheringCoreSync.onStopping(service)
-            coreController.stopLoop()
-            launchCore(service, tunFd, isReload = true)
-
-            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload finished")
-            true
-        } catch (e: Exception) {
-            val message = e.message?.takeUnless { it.isBlank() } ?: e.javaClass.simpleName
-            LogUtil.e(AppConfig.TAG, "StartCore-Manager: Failed to reload core: $message", e)
-            TetheringCoreSync.onStartFailed(service, message)
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
-            false
-        } finally {
-            isReloading = false
+    private fun handleNetworkEvent(service: Service, event: NetworkMonitor.NetworkEvent) {
+        val networkHandle = event.network.networkHandle
+        val resolvedKey = event.capabilities?.let { capabilities ->
+            runCatching { NetworkIdentityResolver.resolve(service, capabilities) }
+                .onFailure { error ->
+                    LogUtil.w(AppConfig.TAG, "NetworkMonitor: Failed to resolve underlay identity", error)
+                }
+                .getOrNull()
         }
+
+        if (!event.isHandover) {
+            if (resolvedKey != null) {
+                updateCoreNetworkIdentity(resolvedKey, networkHandle)
+            }
+            return
+        }
+
+        val previousNetworkKey = PolicyRouteCache.snapshot().networkKey
+        // Capabilities normally arrive before the one-second debounce expires. A handle-scoped
+        // fallback still guarantees recovery without accidentally borrowing another network's
+        // cached route if Android withholds them.
+        val newNetworkKey = resolvedKey ?: "network:$networkHandle"
+        LogUtil.i(
+            AppConfig.TAG,
+            "NetworkMonitor: Recovering core on ${newNetworkKey.substringBefore(':')} handover",
+        )
+        resetCoreNetworkState(service, previousNetworkKey, newNetworkKey, networkHandle)
     }
 
     /**
@@ -552,6 +871,13 @@ object CoreServiceManager {
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: CoreCallback onEmitStatus $s")
             return 0
         }
+
+        override fun onBalancerTargetChanged(balancerTag: String?, target: String?): Long {
+            if (balancerTag == AppConfig.TAG_BALANCER) {
+                return if (rememberFreshPolicyRoute(target)) 0 else 1
+            }
+            return 0
+        }
     }
 
     /**
@@ -608,6 +934,7 @@ object CoreServiceManager {
                 AppConfig.MSG_REGISTER_CLIENT -> {
                     if (isRunning()) {
                         MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, "")
+                        emitCurrentActiveOutbound(serviceControl)
                     } else {
                         MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_NOT_RUNNING, "")
                     }

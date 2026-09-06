@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
@@ -13,6 +14,8 @@ import com.v2ray.ang.dto.TestServiceMessage
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.dto.entities.SubscriptionCache
+import com.v2ray.ang.enums.BalancerStrategyType
+import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
@@ -80,6 +83,7 @@ class MainViewModel(
 
     @Volatile
     private var testingGroupId: String? = null
+    private var mainUiVisible = false
 
     private val initialPageReady = CompletableDeferred<Unit>()
 
@@ -114,6 +118,19 @@ class MainViewModel(
             MainServiceEvent.StateStopSuccess -> updateRunningState(false)
             is MainServiceEvent.MeasureDelayResult -> {
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
+            }
+            is MainServiceEvent.ActiveOutboundChanged -> {
+                val displayName = outboundTargetDisplayName(event.target)
+                _uiState.update { state ->
+                    if (!state.isRunning) state
+                    else if (shouldPollActiveOutbound(state.selectedGuid)) {
+                        state.copy(connectionTargetText = displayName.ifBlank {
+                            selectedConnectionTarget(state.selectedGuid)
+                        })
+                    } else {
+                        state.copy(connectionTargetText = selectedConnectionTarget(state.selectedGuid))
+                    }
+                }
             }
 
             MainServiceEvent.MeasureConfigSuccess -> {
@@ -197,6 +214,44 @@ class MainViewModel(
     private fun currentServers(): List<ServersCache> =
         mutableServerGroupState(uiState.value.selectedGroupId).value.servers
 
+    private fun selectedProfile(guid: String? = _uiState.value.selectedGuid): ProfileItem? =
+        guid?.let(dataSource::decodeServerConfig)
+
+    private fun selectedConnectionTarget(guid: String? = _uiState.value.selectedGuid): String {
+        val profile = selectedProfile(guid) ?: return ""
+        return when {
+            isRandomOrRoundRobinPolicyGroup(profile) -> profile.remarks
+            !profile.configType.isComplexType() -> profile.remarks
+            else -> ""
+        }
+    }
+
+    private fun shouldPollActiveOutbound(guid: String? = _uiState.value.selectedGuid): Boolean {
+        val profile = selectedProfile(guid) ?: return false
+        return profile.configType == EConfigType.POLICYGROUP && !isRandomOrRoundRobinPolicyGroup(profile)
+    }
+
+    private fun isRandomOrRoundRobinPolicyGroup(profile: ProfileItem): Boolean {
+        if (profile.configType != EConfigType.POLICYGROUP) return false
+        return when (BalancerStrategyType.from(profile.policyGroupType)) {
+            BalancerStrategyType.RANDOM, BalancerStrategyType.ROUND_ROBIN -> true
+            else -> false
+        }
+    }
+
+    private fun updateActiveOutboundUpdates(guid: String? = _uiState.value.selectedGuid) {
+        CoreServiceManager.setActiveOutboundUpdatesEnabled(mainUiVisible && shouldPollActiveOutbound(guid))
+    }
+
+    private fun outboundTargetDisplayName(target: String): String {
+        val trimmed = target.trim()
+        if (trimmed.isBlank()) return ""
+        val parts = trimmed.split("-", limit = 4)
+        return if (parts.size == 4 && parts[0] == AppConfig.TAG_PROXY &&
+            parts[2].toIntOrNull() != null && parts[3].isNotBlank()
+        ) parts[3] else trimmed
+    }
+
     // ---------- Action handler ----------
     fun onAction(action: MainAction) {
         when (action) {
@@ -217,6 +272,10 @@ class MainViewModel(
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
             MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.MainUiVisibilityChanged -> {
+                mainUiVisible = action.visible
+                updateActiveOutboundUpdates()
+            }
             is MainAction.ShareQRCode -> {
                 val bitmap = dataSource.share2QRCode(action.guid)
                 _uiState.update { it.copy(shareQRCodeBitmap = bitmap) }
@@ -724,11 +783,24 @@ class MainViewModel(
 
     fun updateSelectedGuid(guid: String) {
         dataSource.setSelectServer(guid)
-        _uiState.update { it.copy(selectedGuid = guid) }
+        _uiState.update {
+            it.copy(
+                selectedGuid = guid,
+                connectionTargetText = if (it.isRunning) selectedConnectionTarget(guid) else ""
+            )
+        }
+        updateActiveOutboundUpdates(guid)
     }
 
     fun refreshSelectedGuid() {
-        _uiState.update { it.copy(selectedGuid = dataSource.getSelectServer()) }
+        val guid = dataSource.getSelectServer()
+        _uiState.update {
+            it.copy(
+                selectedGuid = guid,
+                connectionTargetText = if (it.isRunning) selectedConnectionTarget(guid) else ""
+            )
+        }
+        updateActiveOutboundUpdates(guid)
     }
 
     fun removeServerAndRefresh(guid: String) {
@@ -875,7 +947,14 @@ class MainViewModel(
             state.copy(
                 isRunning = running,
                 status = if (!clearTestingText && state.isTesting) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected
+                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                connectionTargetText = if (!running) {
+                    ""
+                } else if (clearTestingText || state.connectionTargetText.isBlank()) {
+                    selectedConnectionTarget(state.selectedGuid)
+                } else {
+                    state.connectionTargetText
+                }
             )
         }
     }
@@ -886,6 +965,7 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
+        CoreServiceManager.setActiveOutboundUpdatesEnabled(false)
         cancelAllPing()
         dataSource.close()
         super.onCleared()
