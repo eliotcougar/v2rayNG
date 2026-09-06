@@ -12,6 +12,8 @@ import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVHandler
 import com.tencent.mmkv.MMKVLogLevel
 import com.tencent.mmkv.MMKVRecoverStrategic
+import com.v2ray.ang.AngApplication
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.AppConfig.DEFAULT_SUBSCRIPTION_ID
 import com.v2ray.ang.AppConfig.PREF_IS_BOOTED
 import com.v2ray.ang.AppConfig.PREF_START_ON_BOOT
@@ -29,6 +31,7 @@ import com.v2ray.ang.dto.entities.WebDavConfig
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import com.v2ray.ang.helper.MessageHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -85,6 +88,10 @@ object MmkvManager {
     private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
     private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
+
+    private fun notifySelectedProfileChanged() {
+        MessageHelper.sendMsg2UI(AngApplication.application, AppConfig.MSG_SELECTED_PROFILE_CHANGED, "")
+    }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
         return synchronized(mainStorage) {
@@ -266,6 +273,7 @@ object MmkvManager {
                 }
                 removeProfilePayloads(removablePayloads)
             }
+            notifySelectedProfileChanged()
             true
         } catch (e: Exception) {
             LogUtil.e(TAG, failureMessage, e)
@@ -335,9 +343,10 @@ object MmkvManager {
      * @param guid The server GUID.
      */
     fun setSelectServer(guid: String) {
-        withProfileIndexLock {
+        val saved = withProfileIndexLock {
             mainStorage.encode(KEY_SELECTED_SERVER, guid)
         }
+        if (saved) notifySelectedProfileChanged()
     }
 
     /**
@@ -479,6 +488,7 @@ object MmkvManager {
                     }
                 }
             }
+            if (key == getSelectServer()) notifySelectedProfileChanged()
             key
         } catch (e: Exception) {
             LogUtil.e(TAG, "Failed to persist profile $key", e)
@@ -561,6 +571,7 @@ object MmkvManager {
             }
             removeProfilePayloads(removablePayloads)
         }
+        if (getSelectServer() in profiles) notifySelectedProfileChanged()
     }
 
     /**
@@ -649,7 +660,7 @@ object MmkvManager {
      * @return The number of server configurations removed.
      */
     fun removeAllServer(): Int {
-        return withProfileIndexLock {
+        val count = withProfileIndexLock {
             val count = profileFullStorage.allKeys()?.count() ?: 0
             val profileIndexKeys = mainStorage.allKeys().orEmpty()
                 .filter { key -> key.startsWith(KEY_SUB_SERVER_PREFIX) }
@@ -665,6 +676,8 @@ object MmkvManager {
             serverRawStorage.clearAll()
             count
         }
+        notifySelectedProfileChanged()
+        return count
     }
 
     /**

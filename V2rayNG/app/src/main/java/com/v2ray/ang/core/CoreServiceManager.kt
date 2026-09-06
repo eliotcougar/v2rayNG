@@ -42,6 +42,7 @@ import com.v2ray.ang.service.NetworkMonitor
 import com.v2ray.ang.shizuku.TetheringCoreSync
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +84,8 @@ object CoreServiceManager {
     private val teardownLock = Any()
     private var teardownExecutor: ExecutorService? = null
     private var receiversRegistered = false
+    private val connectionTests = ConnectionTestSession()
+    internal val connectionState = connectionTests.state
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var runningProfileGuid = ""
@@ -174,6 +177,7 @@ object CoreServiceManager {
                         ""
                     }
                     TetheringCoreSync.onStopping(service)
+                    connectionTests.started(profileGuid)
                     connectionTestScope.coroutineContext.cancelChildren()
                     when {
                         refreshedConfig != null && nextHasPrimaryBalancer -> {
@@ -222,6 +226,7 @@ object CoreServiceManager {
                             e,
                         )
                     } else {
+                        connectionTests.stopped()
                         coreRecoveryEnabled.set(false)
                         primaryPolicyBalancerAvailable.set(false)
                         stopPolicyRoutePolling()
@@ -525,6 +530,7 @@ object CoreServiceManager {
             result.content,
             usesHevTun,
         )
+        connectionTests.started(guid)
         reportStartSuccess(service, config.remarks)
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
@@ -536,6 +542,7 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        connectionTests.stopped()
         connectionTestScope.coroutineContext.cancelChildren()
         val wasRunning = isRunning()
         stopActiveOutboundPolling()
@@ -618,6 +625,7 @@ object CoreServiceManager {
     }
 
     private fun cleanupFailedStart(service: Service) {
+        connectionTests.stopped()
         connectionTestScope.coroutineContext.cancelChildren()
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
@@ -822,6 +830,7 @@ object CoreServiceManager {
             return
         }
 
+        val request = connectionTests.beginTest() ?: return
         connectionTestScope.coroutineContext.cancelChildren()
         connectionTestScope.launch {
             var time = -1L
@@ -829,16 +838,21 @@ object CoreServiceManager {
 
             try {
                 time = coreController.measureDelay(SettingsManager.getDelayTestUrl())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "StartCore-Manager: Failed to measure delay", e)
+                LogUtil.e(AppConfig.TAG, "CoreServiceManager: Primary delay test failed for ${request.profileGuid}", e)
                 errorStr = e.message?.substringAfter("\":").orEmpty()
             }
+            ensureActive()
             if (time == -1L) {
                 ensureActive()
                 try {
                     time = coreController.measureDelay(SettingsManager.getDelayTestUrl(true))
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
-                    LogUtil.e(AppConfig.TAG, "StartCore-Manager: Failed to measure delay", e)
+                    LogUtil.e(AppConfig.TAG, "CoreServiceManager: Fallback delay test failed for ${request.profileGuid}", e)
                     errorStr = e.message?.substringAfter("\":").orEmpty()
                 }
             }
@@ -856,7 +870,7 @@ object CoreServiceManager {
             }
             ensureActive()
             withContext(Dispatchers.Main.immediate) {
-                if (isRunning()) {
+                if (isRunning() && connectionTests.complete(request, result)) {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
                 } else {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
@@ -864,6 +878,7 @@ object CoreServiceManager {
             }
         }.invokeOnCompletion { cause ->
             if (cause is CancellationException) {
+                connectionTests.cancel(request)
                 MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
             }
         }
