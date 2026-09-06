@@ -38,6 +38,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -115,6 +116,7 @@ class MainViewModel(
     private val groupServerFlows = ConcurrentHashMap<String, StateFlow<List<ServersCache>>>()
     private val serverOrderPersistenceJobs = mutableMapOf<String, Job>()
 
+    private var initializeJob: Job? = null
     private var setupGroupJob: Job? = null
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
@@ -172,7 +174,7 @@ class MainViewModel(
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
                 val status = MainStatus.ConnectionTest(event.result)
-                _uiState.update { it.copy(isTesting = testRequests.isTesting, status = status) }
+                _uiState.update { it.copy(isTesting = testRequests.isTesting, testStatus = status) }
                 publishTestAnnouncement(status)
             }
             is MainServiceEvent.ActiveOutboundChanged -> {
@@ -195,7 +197,7 @@ class MainViewModel(
 
             is MainServiceEvent.MeasureConfigNotify -> {
                 if (event.requestId == testRequests.bulk?.id) {
-                    _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
+                    _uiState.update { it.copy(testStatus = MainStatus.TestProgress(event.progress)) }
                 }
             }
 
@@ -214,7 +216,7 @@ class MainViewModel(
                 if (!testRequests.completeCurrent(event.requestId)) return
                 publishTestAnnouncement(null)
                 _uiState.update {
-                    it.copy(isTesting = testRequests.isTesting, status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected)
+                    it.copy(isTesting = testRequests.isTesting, testStatus = null)
                 }
             }
             is MainServiceEvent.MeasureConfigCancelled -> {
@@ -389,7 +391,7 @@ class MainViewModel(
     }
 
     // ---------- Action handler ----------
-    fun onAction(action: MainAction) {
+    fun onAction(action: MainAction.ViewModelIntent) {
         when (action) {
             MainAction.Initialize -> initialize()
             MainAction.RefreshGroups -> setupGroupTab(forceRefresh = true)
@@ -402,12 +404,12 @@ class MainViewModel(
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
+            MainAction.LocateSelectedServer -> triggerLocateSelectedServer()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
-            is MainAction.SelectServer -> updateSelectedGuid(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
-            MainAction.LocateHandled -> consumeLocateTarget()
+            is MainAction.LocateHandled -> consumeLocateTarget(action.target)
             is MainAction.MainUiVisibilityChanged -> {
                 mainUiVisible = action.visible
                 updateActiveOutboundUpdates()
@@ -420,26 +422,13 @@ class MainViewModel(
             MainAction.DismissQRCodeDialog -> {
                 _uiState.update { it.copy(shareQRCodeBitmap = null) }
             }
-
-            MainAction.ToggleService,
-            MainAction.TestCurrentServer,
-            MainAction.ImportQRcode,
-            MainAction.ImportClipboard,
-            MainAction.ImportConfigLocal,
-            is MainAction.ImportManually,
-            MainAction.RestartService,
-            MainAction.LocateSelectedServer,
-            is MainAction.EditServer,
-            is MainAction.ShareClipboard,
-            is MainAction.ShareFullContent -> {
-                // Handled by Activity via its onAction lambda
-            }
         }
     }
 
     // ---------- Initialization ----------
     fun initialize() {
-        viewModelScope.launch(preloadDispatcher) {
+        if (initializeJob != null) return
+        initializeJob = viewModelScope.launch(preloadDispatcher) {
             try {
                 initialPageReady.await()
                 delay(32)
@@ -530,6 +519,16 @@ class MainViewModel(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers)
         )
+        _uiState.update { state ->
+            val index = state.groups.indexOfFirst { it.id == groupId }
+            if (index < 0 || state.groups[index].serverCount == filteredServers.size) {
+                state
+            } else {
+                val groups = state.groups.toMutableList()
+                groups[index] = groups[index].copy(serverCount = filteredServers.size)
+                state.copy(groups = groups)
+            }
+        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -551,8 +550,6 @@ class MainViewModel(
             )
         }
     }
-
-    fun getSubscriptions(): List<SubscriptionCache> = dataSource.getSubscriptions()
 
     private fun resolveSelectedGroup(groups: List<GroupMapItem>): String {
         val current = uiState.value.selectedGroupId
@@ -873,14 +870,6 @@ class MainViewModel(
         }
     }
 
-    fun reloadServerList() {
-        val groupId = uiState.value.selectedGroupId
-        selectedGroupLoadJob?.cancel()
-        selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
-            updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
-        }
-    }
-
     fun reloadAllGroups(groupIds: List<String>) {
         reloadJob?.cancel()
         reloadJob = viewModelScope.launch(preloadDispatcher) {
@@ -919,6 +908,7 @@ class MainViewModel(
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
         keywordFilter = keyword
+        _uiState.update { it.copy(searchQuery = keyword) }
         filterJob?.cancel()
         filterJob = viewModelScope.launch(defaultDispatcher) {
             delay(300)
@@ -968,13 +958,14 @@ class MainViewModel(
     }
 
     fun moveServer(groupId: String, fromPosition: Int, toPosition: Int): Boolean {
-        val groupState = mutableServerGroupState(groupId).value
+        val groupFlow = mutableServerGroupState(groupId)
+        val groupState = groupFlow.value
         val servers = groupState.servers.toMutableList()
         if (!servers.moveItem(fromPosition, toPosition)) return false
         val rows = groupState.rows.toMutableList()
         if (!rows.moveItem(fromPosition, toPosition)) return false
         val guids = servers.map { it.guid }
-        mutableServerGroupState(groupId).value = ServerGroupUiState(servers, rows)
+        groupFlow.value = ServerGroupUiState(servers, rows)
         // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
         serverOrderPersistenceJobs[groupId] = viewModelScope.launch {
@@ -1012,7 +1003,7 @@ class MainViewModel(
         testRequests.invalidateCurrent()
         publishTestAnnouncement(null)
         _uiState.update {
-            it.copy(isTesting = false, status = if (it.isRunning) MainStatus.Connected else MainStatus.Disconnected)
+            it.copy(isTesting = false, testStatus = null)
         }
         dataSource.cancelAllPing()
     }
@@ -1038,7 +1029,7 @@ class MainViewModel(
             )
         }
         val request = testRequests.beginBulk(groupId)
-        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        _uiState.update { it.copy(isTesting = true, testStatus = MainStatus.Testing) }
         publishTestAnnouncement(MainStatus.Testing)
         viewModelScope.launch(ioDispatcher) {
             val resetGuids = serverGuids.toHashSet()
@@ -1077,14 +1068,14 @@ class MainViewModel(
         if (!uiState.value.isRunning) return
         val requestId = testRequests.beginCurrent()
         publishTestAnnouncement(null)
-        _uiState.update { it.copy(isTesting = true, status = MainStatus.Testing) }
+        _uiState.update { it.copy(isTesting = true, testStatus = MainStatus.Testing) }
         publishTestAnnouncement(MainStatus.Testing)
         dataSource.testCurrentServerRealPing(requestId)
     }
 
     private fun onTestsFinished(requestId: String) {
         if (testRequests.completeBulk(requestId) == null) return
-        _uiState.update { it.copy(isTesting = testRequests.isTesting, status = MainStatus.TestCompleted) }
+        _uiState.update { it.copy(isTesting = testRequests.isTesting, testStatus = MainStatus.TestCompleted) }
         publishTestAnnouncement(MainStatus.TestCompleted)
         viewModelScope.launch(ioDispatcher) {
             cacheMutex.withLock { groupDataCache.clear() }
@@ -1109,8 +1100,10 @@ class MainViewModel(
         }
     }
 
-    private fun consumeLocateTarget() {
-        _uiState.update { it.copy(locateTarget = null) }
+    private fun consumeLocateTarget(target: LocateTarget) {
+        _uiState.update { state ->
+            if (state.locateTarget == target) state.copy(locateTarget = null) else state
+        }
     }
 
     // ---------- Running state ----------
@@ -1123,8 +1116,8 @@ class MainViewModel(
             state.copy(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
-                status = if (!clearTestingText && state.isRunning == running) state.status
-                else if (running) MainStatus.Connected else MainStatus.Disconnected,
+                status = if (running) MainStatus.Connected else MainStatus.Disconnected,
+                testStatus = if (!clearTestingText && state.isRunning == running) state.testStatus else null,
                 connectionTargetText = if (!running) {
                     ""
                 } else if (clearTestingText || state.connectionTargetText.isBlank()) {
@@ -1145,7 +1138,6 @@ class MainViewModel(
         CoreServiceManager.setActiveOutboundUpdatesEnabled(false)
         cancelAllPing()
         dataSource.close()
-        super.onCleared()
     }
 
     // ---------- Factory ----------

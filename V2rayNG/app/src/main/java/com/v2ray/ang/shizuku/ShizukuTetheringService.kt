@@ -1175,6 +1175,8 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         Seq.setContext(appContext)
         Libv2ray.initCoreEnv(assetPath, xudpKey)
         val controller = Libv2ray.newCoreController(object : CoreCallbackHandler {
+            // The tethering core has no profile-selection UI to update.
+            override fun onBalancerTargetChanged(balancerTag: String?, target: String?): Long = 0
             override fun startup(): Long = 0
             override fun shutdown(): Long = 0
             override fun onEmitStatus(code: Long, status: String?): Long {

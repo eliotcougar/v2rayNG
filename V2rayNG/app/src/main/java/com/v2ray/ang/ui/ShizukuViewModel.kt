@@ -16,7 +16,7 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.HotspotRoutingSnapshot
 import com.v2ray.ang.extension.serializable
-import com.v2ray.ang.extension.toastInfo
+import com.v2ray.ang.extension.toast
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.shizuku.HotspotRoutingConfig
@@ -284,7 +284,7 @@ internal class ShizukuViewModel(application: Application) : BaseViewModel(applic
             _uiState.update { it.withTetheringStatus(status, ipv6Enabled) }
             operationJob = null
             if (status.warning == ShizukuTetheringService.RESULT_UNPROTECTED_UPSTREAM) {
-                localizedContext.toastInfo(R.string.shizuku_tethering_wrong_upstream)
+                localizedContext.toast(R.string.shizuku_tethering_wrong_upstream)
             }
             if (statusRefreshPending) refreshTetheringStatus()
         }

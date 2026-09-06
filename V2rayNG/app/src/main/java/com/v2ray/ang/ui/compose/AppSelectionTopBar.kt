@@ -1,0 +1,104 @@
+package com.v2ray.ang.ui.compose
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.v2ray.ang.R
+
+internal data class AppSelectionMenuAction(val label: String, val onClick: () -> Unit)
+
+@Composable
+internal fun AppSelectionTopBar(
+    title: String,
+    isLoading: Boolean,
+    isSearchActive: Boolean,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onSearchClose: () -> Unit,
+    onSearchOpen: () -> Unit,
+    onBackClick: () -> Unit,
+    backFocusRequester: FocusRequester,
+    onMoveDown: () -> Boolean,
+    menuActions: List<AppSelectionMenuAction>
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+    val searchInputFocusRequester = remember { FocusRequester() }
+    val searchClearFocusRequester = remember { FocusRequester() }
+    val moreFocusRequester = remember { FocusRequester() }
+    val hasSearchQuery = searchQuery.isNotEmpty()
+    val topBarFocusOrder = remember(
+        backFocusRequester, searchFocusRequester, searchInputFocusRequester,
+        searchClearFocusRequester, moreFocusRequester, isSearchActive, hasSearchQuery
+    ) {
+        if (isSearchActive) buildList {
+            add(backFocusRequester)
+            add(searchInputFocusRequester)
+            if (hasSearchQuery) add(searchClearFocusRequester)
+            add(moreFocusRequester)
+        } else listOf(backFocusRequester, searchFocusRequester, moreFocusRequester)
+    }
+
+    AppTopBar(
+        title = title,
+        onBackClick = onBackClick,
+        isLoading = isLoading,
+        isSearchActive = isSearchActive,
+        searchQuery = searchQuery,
+        onSearchQueryChange = onSearchQueryChange,
+        onSearchClose = onSearchClose,
+        searchPlaceholder = stringResource(R.string.menu_item_search),
+        searchInputFocusRequester = searchInputFocusRequester,
+        searchClearFocusRequester = searchClearFocusRequester,
+        navigationFocusRequester = backFocusRequester,
+        customActionFocusRequesters = if (isSearchActive) listOf(moreFocusRequester)
+        else listOf(searchFocusRequester, moreFocusRequester),
+        onMoveDown = onMoveDown,
+        actions = {
+            if (!isSearchActive) {
+                AppIconButton(
+                    icon = painterResource(R.drawable.ic_search_24dp),
+                    label = stringResource(R.string.menu_item_search),
+                    focusRequester = searchFocusRequester,
+                    modifier = Modifier.dpadTopBarFocusNavigation(searchFocusRequester, topBarFocusOrder, onMoveDown),
+                    onClick = onSearchOpen
+                )
+            }
+            Box {
+                AppIconButton(
+                    icon = painterResource(R.drawable.ic_more_vert_24dp),
+                    label = stringResource(R.string.action_more),
+                    focusRequester = moreFocusRequester,
+                    modifier = Modifier.dpadTopBarFocusNavigation(moreFocusRequester, topBarFocusOrder, onMoveDown),
+                    onClick = { showMenu = true }
+                )
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.dpadPopupHorizontalNavigation(onMovePrevious = {
+                        showMenu = false
+                        when {
+                            !isSearchActive -> searchFocusRequester
+                            hasSearchQuery -> searchClearFocusRequester
+                            else -> searchInputFocusRequester
+                        }.requestFocus()
+                    })
+                ) {
+                    menuActions.forEach { action ->
+                        AppDropdownMenuItem(text = action.label, onClick = { showMenu = false; action.onClick() })
+                    }
+                }
+            }
+        }
+    )
+}

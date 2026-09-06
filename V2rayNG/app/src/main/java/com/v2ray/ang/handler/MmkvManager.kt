@@ -14,6 +14,7 @@ import com.tencent.mmkv.MMKVLogLevel
 import com.tencent.mmkv.MMKVRecoverStrategic
 import com.v2ray.ang.AppConfig.DEFAULT_SUBSCRIPTION_ID
 import com.v2ray.ang.AppConfig.PREF_IS_BOOTED
+import com.v2ray.ang.AppConfig.PREF_START_ON_BOOT
 import com.v2ray.ang.AppConfig.PREF_ROUTING_RULESET
 import com.v2ray.ang.AppConfig.TAG
 import com.v2ray.ang.BuildConfig
@@ -31,6 +32,16 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+
+internal fun migrateStartOnBootSetting(
+    storedValue: Boolean?,
+    legacyValue: Boolean,
+    persist: (Boolean) -> Unit
+): Boolean {
+    if (storedValue != null) return storedValue
+    persist(legacyValue)
+    return legacyValue
+}
 
 object MmkvManager {
 
@@ -1168,24 +1179,19 @@ object MmkvManager {
         return settingsStorage.decodeStringSet(key)
     }
 
-
     /**
-     * Encodes the start on boot setting.
+     * Whether the background service should start after device boot.
      *
-     * @param startOnBoot Whether to start on boot.
+     * Preserve the explicit boot choice from TV builds that offered separate boot and app-launch
+     * switches. When absent, inherit the upstream boot preference once.
      */
-    fun encodeStartOnBoot(startOnBoot: Boolean) {
-        encodeSettings(PREF_IS_BOOTED, startOnBoot)
-    }
-
-    /**
-     * Decodes the start on boot setting.
-     *
-     * @return Whether to start on boot.
-     */
-    fun decodeStartOnBoot(): Boolean {
-        return decodeSettingsBool(PREF_IS_BOOTED, false)
-    }
+    fun decodeStartOnBoot(): Boolean = migrateStartOnBootSetting(
+        storedValue = if (settingsStorage.containsKey(PREF_START_ON_BOOT)) {
+            decodeSettingsBool(PREF_START_ON_BOOT, false)
+        } else null,
+        legacyValue = decodeSettingsBool(PREF_IS_BOOTED, false),
+        persist = { settingsStorage.encode(PREF_START_ON_BOOT, it) }
+    )
 
     //endregion
 

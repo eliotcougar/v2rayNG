@@ -218,7 +218,6 @@ object MessageHelper {
             LogUtil.e(AppConfig.TAG, "Failed to send message with action: $action", e)
         }
     }
-
     private fun messageIntent(action: String, what: Int, content: Serializable): Intent =
         Intent(action).apply {
             `package` = AppConfig.ANG_PACKAGE

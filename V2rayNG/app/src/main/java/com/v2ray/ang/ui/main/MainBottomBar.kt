@@ -1,5 +1,7 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.ui.text.style.TextOverflow
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +62,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun MainBottomBar(
     displayText: String,
+    testDisplayText: String,
     accessibilityText: String,
     status: MainStatus,
     testAnnouncements: Flow<MainTestAnnouncement?>,
@@ -68,6 +71,7 @@ fun MainBottomBar(
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
 ) {
+    val isTelevision = isTelevisionDevice()
     val announcements = remember { MainTestAnnouncements() }
     val lifecycleOwner = LocalLifecycleOwner.current
     var publishedId by remember { mutableStateOf<Long?>(null) }
@@ -95,7 +99,7 @@ fun MainBottomBar(
     val resultText = localizedTestText(if (exposeTestResult) formatTestAnnouncement(status) else "")
 
     val checkConnectionLabel = stringResource(R.string.connection_test_pending)
-    val connectionActionModifier = if (isRunning) {
+    val connectionActionModifier = if (isRunning && !isTelevision) {
         Modifier.clickable(
             onClickLabel = checkConnectionLabel,
             onClick = { onAction(MainAction.TestCurrentServer) },
@@ -121,21 +125,30 @@ fun MainBottomBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp)
-                    .padding(horizontal = 16.dp),
+                    .padding(start = if (isTelevision) 48.dp else 16.dp, end = if (isTelevision) 48.dp else 80.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.clearAndSetSemantics {
-                        if (exposeTestResult) {
-                            text = resultText
-                        } else {
-                            hideFromAccessibility()
-                        }
+                Column {
+                    Text(
+                        text = displayText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.clearAndSetSemantics { hideFromAccessibility() },
+                    )
+                    if (testDisplayText.isNotBlank()) {
+                        Text(
+                            text = testDisplayText,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clearAndSetSemantics {
+                                if (exposeTestResult) text = resultText else hideFromAccessibility()
+                            },
+                        )
                     }
-                )
+                }
             }
         }
         AccessibilityLiveRegionText(
@@ -144,7 +157,7 @@ fun MainBottomBar(
             mode = LiveRegionMode.Assertive,
             onPublished = { publishedId = it },
         )
-        FloatingActionButton(
+        if (!isTelevision) FloatingActionButton(
             onClick = { onAction(MainAction.ToggleService) },
             modifier = Modifier
                 .align(Alignment.TopEnd)
