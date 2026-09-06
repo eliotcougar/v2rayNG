@@ -20,15 +20,15 @@ class ServerRowAccessibilityDescriptionTest {
     fun ordinaryRowHasNoStatePrefixAndKeepsLocalizedDelay() {
         assertEquals(
             "Example. L. Description. VMESS / tls. 21 millisecondes",
-            row.accessibilityDescription("21 millisecondes", prefix = null),
+            row.accessibilityDescription("21 millisecondes"),
         )
     }
 
     @Test
-    fun selectedRowStartsWithLocalizedPrefix() {
+    fun localizedLabelLeavesSelectionAnnouncementToStateSemantics() {
         assertEquals(
-            "Выбрано. Example. L. Description. VMESS / tls. 21 миллисекунда",
-            row.accessibilityDescription("21 миллисекунда", prefix = "Выбрано"),
+            "Example. L. Description. VMESS / tls. 21 миллисекунда",
+            row.accessibilityDescription("21 миллисекунда"),
         )
     }
 
@@ -37,7 +37,7 @@ class ServerRowAccessibilityDescriptionTest {
         assertEquals(
             "Example",
             row.copy(subscriptionBadge = "", statistics = " ", typeDescription = "")
-                .accessibilityDescription("", prefix = null),
+                .accessibilityDescription(""),
         )
     }
 }

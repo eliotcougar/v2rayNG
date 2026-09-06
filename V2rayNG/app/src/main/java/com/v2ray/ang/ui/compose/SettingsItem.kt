@@ -34,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -119,6 +120,7 @@ private fun SettingsItemRow(
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester, showFocus = showFocus)
             .semantics(mergeDescendants = true) {
+                if (!enabled) disabled()
                 role?.let { this.role = it }
                 toggleState?.let { toggleableState = ToggleableState(it) }
             }

@@ -59,6 +59,7 @@ fun ConfirmDialog(
     confirmText: String = stringResource(R.string.action_ok),
     dismissText: String? = stringResource(R.string.action_cancel),
     confirmIcon: @Composable (() -> Unit)? = null,
+    messageTextAlign: TextAlign = TextAlign.Start,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -73,7 +74,14 @@ fun ConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = title?.let { { Text(it) } },
-        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        text = {
+            Text(
+                message,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = messageTextAlign,
+            )
+        },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(); onDismiss() },
@@ -101,6 +109,23 @@ fun ConfirmDialog(
 @Composable
 fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val isTelevision = isTelevisionDevice()
+    if (!isTelevision) {
+        ConfirmDialog(
+            message = message,
+            messageTextAlign = TextAlign.Center,
+            confirmText = stringResource(R.string.action_delete),
+            confirmIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete_24dp),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            },
+            onConfirm = onConfirm,
+            onDismiss = onDismiss,
+        )
+        return
+    }
     val dismissFocusRequester = remember { FocusRequester() }
     val deleteText = stringResource(R.string.action_delete)
     val cancelText = stringResource(android.R.string.cancel)

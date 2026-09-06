@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -463,7 +464,6 @@ private fun ServerListItem(
     }
     val description = model.accessibilityDescription(
         testResult = testResultAccessibility,
-        prefix = if (isSelected) stringResource(R.string.acc_selected_server) else null,
     )
     val itemActions = serverAccessibilityActions(model.profile.configType.isComplexType()).map { action ->
         val label = when (action) {
@@ -535,7 +535,9 @@ private fun ServerListItem(
             )
             .then(
                 if (!isTelevision) {
-                    Modifier.clickable(onClickLabel = stringResource(R.string.acc_select_server), onClick = actions.select)
+                    (if (isSelected) Modifier.focusable() else {
+                        Modifier.clickable(onClickLabel = stringResource(R.string.acc_select_server), onClick = actions.select)
+                    })
                         .clearAndSetSemantics {
                             contentDescription = description
                             customActions = accessibilityActions
