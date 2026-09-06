@@ -33,7 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.booleanResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.hideFromAccessibility
@@ -69,6 +71,7 @@ import androidx.tv.material3.NavigationDrawerScope
 import androidx.tv.material3.Text as TvText
 import androidx.tv.material3.lightColorScheme as tvColorScheme
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.isTetheringAvailable
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.dpadLogicalHorizontalNavigation
@@ -131,10 +134,15 @@ private val secondaryDrawerItems = listOf(
 
 private val drawerItems = primaryDrawerItems + secondaryDrawerItems
 
+internal fun visibleMainDrawerItems(tetheringEnabled: Boolean): List<MainDestination> =
+    drawerItems.filter { tetheringEnabled || it != MainDestination.Tethering }
+
 @Composable
 fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) -> Unit) {
     val drawerScrollState = rememberScrollState()
-    val tetheringEnabled = booleanResource(R.bool.shizuku_tethering_enabled)
+    val tetheringEnabled = isTetheringAvailable(
+        booleanResource(R.bool.shizuku_tethering_enabled), LocalConfiguration.current.uiMode,
+    )
 
     ModalDrawerSheet(
         drawerState = drawerState,
@@ -179,7 +187,7 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     )
                 }
             }
-            drawerItems.filter { tetheringEnabled || it != MainDestination.Tethering }
+            visibleMainDrawerItems(tetheringEnabled)
                 .forEachIndexed { index, item ->
                     if (index == primaryDrawerItems.size) AppDivider()
                     NavigationDrawerItem(
@@ -224,13 +232,17 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
     onClose: () -> Unit,
     onNavigate: (MainDestination) -> Unit
 ) {
-    val focusRequesters = remember { List(drawerItems.size) { FocusRequester() } }
+    val tetheringEnabled = isTetheringAvailable(
+        booleanResource(R.bool.shizuku_tethering_enabled), LocalConfiguration.current.uiMode,
+    )
+    val visibleItems = remember(tetheringEnabled) { visibleMainDrawerItems(tetheringEnabled) }
+    val focusRequesters = remember(visibleItems) { visibleItems.associateWith { FocusRequester() } }
     val drawerScrollState = rememberScrollState()
-    var focusedIndex by remember { mutableIntStateOf(0) }
+    var focusedItem by remember(visibleItems) { mutableStateOf(visibleItems.first()) }
 
     LaunchedEffect(drawerValue, focusGeneration) {
         if (drawerValue == TvDrawerValue.Open) {
-            requestFocusWhenReady(focusRequesters[focusedIndex], focusRequesters.first())
+            requestFocusWhenReady(focusRequesters.getValue(focusedItem))
         }
     }
 
@@ -291,43 +303,45 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 }
             }
 
-            drawerItems.forEachIndexed { index, item ->
+            visibleItems.forEachIndexed { index, item ->
                 if (index == primaryDrawerItems.size) {
                     AppDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp))
                 }
-                TvListItem(
-                    selected = false,
-                    onClick = { onNavigate(item) },
-                    headlineContent = {
-                        TvText(stringResource(item.labelRes), modifier = Modifier.alpha(labelAlpha), maxLines = 1)
-                    },
-                    leadingContent = {
-                        Icon(
-                            painter = painterResource(item.iconRes),
-                            contentDescription = null,
-                            tint = if (drawerValue == TvDrawerValue.Open && focusedIndex == index) {
-                                MaterialTheme.colorScheme.inverseOnSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    },
-                    scale = TvListItemScale.None,
-                    modifier = Modifier
-                        .focusRequester(focusRequesters[index])
-                        .onFocusChanged { if (it.isFocused) focusedIndex = index }
-                        .dpadLogicalHorizontalNavigation(onMovePrevious = {}, onMoveNext = onClose)
-                        .dpadVerticalFocusNavigation(
-                            onMoveUp = {
-                                focusRequesters[(index - 1).coerceAtLeast(0)].requestFocus()
-                                true
-                            },
-                            onMoveDown = {
-                                focusRequesters[(index + 1).coerceAtMost(focusRequesters.lastIndex)].requestFocus()
-                                true
-                            }
-                        )
-                )
+                key(item) {
+                    TvListItem(
+                        selected = false,
+                        onClick = { onNavigate(item) },
+                        headlineContent = {
+                            TvText(stringResource(item.labelRes), modifier = Modifier.alpha(labelAlpha), maxLines = 1)
+                        },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(item.iconRes),
+                                contentDescription = null,
+                                tint = if (drawerValue == TvDrawerValue.Open && focusedItem == item) {
+                                    MaterialTheme.colorScheme.inverseOnSurface
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+                            )
+                        },
+                        scale = TvListItemScale.None,
+                        modifier = Modifier
+                            .focusRequester(focusRequesters.getValue(item))
+                            .onFocusChanged { if (it.isFocused) focusedItem = item }
+                            .dpadLogicalHorizontalNavigation(onMovePrevious = {}, onMoveNext = onClose)
+                            .dpadVerticalFocusNavigation(
+                                onMoveUp = {
+                                    focusRequesters.getValue(visibleItems[(index - 1).coerceAtLeast(0)]).requestFocus()
+                                    true
+                                },
+                                onMoveDown = {
+                                    focusRequesters.getValue(visibleItems[(index + 1).coerceAtMost(visibleItems.lastIndex)]).requestFocus()
+                                    true
+                                }
+                            )
+                    )
+                }
             }
         }
     }

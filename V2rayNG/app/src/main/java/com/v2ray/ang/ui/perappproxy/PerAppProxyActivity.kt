@@ -3,7 +3,6 @@ package com.v2ray.ang.ui.perappproxy
 import androidx.annotation.StringRes
 import android.os.Bundle
 import androidx.activity.viewModels
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,9 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -58,6 +54,7 @@ import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDivider
+import com.v2ray.ang.ui.compose.AppDialogButton
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppListItem
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -90,6 +87,7 @@ private enum class PerAppMenuAction(@StringRes val labelRes: Int) {
 private fun PerAppSwitch(
     label: String,
     checked: Boolean,
+    isTelevision: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,7 +101,8 @@ private fun PerAppSwitch(
                 value = checked,
                 role = Role.Switch,
                 onValueChange = onCheckedChange,
-            ),
+            )
+            .then(if (isTelevision) Modifier.padding(horizontal = 20.dp, vertical = 12.dp) else Modifier),
     ) {
         Text(
             text = label,
@@ -378,9 +377,8 @@ private fun PerAppModeToggle(
     onCheckedChange: (Boolean) -> Unit, modifier: Modifier = Modifier,
 ) {
     PerAppSwitch(
-        label, checked, onCheckedChange,
-        modifier.dpadFocusOutline(cornerRadius = 16.dp)
-            .then(if (isTelevision) Modifier.padding(horizontal = 20.dp, vertical = 12.dp) else Modifier),
+        label, checked, isTelevision, onCheckedChange,
+        modifier.dpadFocusOutline(cornerRadius = 16.dp),
     )
 }
 
@@ -397,14 +395,13 @@ private fun TvPerAppInfoPopup(message: String, onDismiss: () -> Unit) {
         text = {
             Text(text = message, style = MaterialTheme.typography.bodyLarge)
         },
-        confirmButton = {},
-        modifier = Modifier
-            .onPreviewKeyEvent { event ->
-                if (event.type == KeyEventType.KeyUp) onDismiss()
-                true
-            }
-            .focusRequester(focusRequester)
-            .focusable(),
+        confirmButton = {
+            AppDialogButton(
+                text = stringResource(R.string.action_ok),
+                onClick = onDismiss,
+                focusRequester = focusRequester,
+            )
+        },
         containerColor = MaterialTheme.colorScheme.surface,
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     )
