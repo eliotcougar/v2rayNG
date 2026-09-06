@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -40,7 +41,6 @@ import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.ui.base.BaseComponentActivity
-import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.ItemDivider
@@ -61,13 +61,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class LogcatRow(val raw: String, val tag: String, val content: String)
+private data class LogcatRow(val key: String, val raw: String, val tag: String, val content: String)
 
-private fun parseLogcatRow(log: String): LogcatRow {
-    if (log.isEmpty()) return LogcatRow("", "", "")
-    val parts = log.split("):", limit = 2)
+private fun parseLogcatRow(entry: LogcatEntry): LogcatRow {
+    if (entry.text.isEmpty()) return LogcatRow(entry.key, "", "", "")
+    val parts = entry.text.split("):", limit = 2)
     return LogcatRow(
-        raw = log,
+        key = entry.key,
+        raw = entry.text,
         tag = parts.first().split("(", limit = 2).first().trim(),
         content = if (parts.size > 1) parts.last().trim() else ""
     )
@@ -146,7 +147,7 @@ fun LogcatScreen(
     val context = LocalContext.current
     val isTelevision = isTelevisionDevice()
     val scope = rememberCoroutineScope()
-    val logs by viewModel.filteredLogs.collectAsStateWithLifecycle()
+    val logs by viewModel.logEntries.collectAsStateWithLifecycle()
     val rows = remember(logs) { logs.map(::parseLogcatRow) }
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
@@ -217,7 +218,7 @@ fun LogcatScreen(
         },
         floatingActionButton = {
             if (!isTelevision) {
-                FloatingActionButton(onClick = viewModel::loadLogcat) {
+                FloatingActionButton(onClick = viewModel::loadLogcat, modifier = Modifier.navigationBarsPadding()) {
                     Icon(
                         painterResource(R.drawable.ic_restore_24dp),
                         contentDescription = stringResource(R.string.acc_refresh)
@@ -239,7 +240,7 @@ fun LogcatScreen(
                     .verticalScrollbar(listState),
                 contentPadding = NavigationBarsBottomPadding()
             ) {
-                itemsIndexed(items = rows, key = { index, _ -> index }) { index, row ->
+                itemsIndexed(items = rows, key = { _, row -> row.key }) { index, row ->
                     LogcatItem(
                         row = row,
                         focusRequester = firstRowFocusRequester.takeIf { index == 0 },

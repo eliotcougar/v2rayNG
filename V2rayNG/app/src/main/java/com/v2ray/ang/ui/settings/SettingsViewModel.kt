@@ -1,6 +1,8 @@
 package com.v2ray.ang.ui.settings
 
 import android.app.Application
+import android.content.Intent
+import android.provider.Settings
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
@@ -70,6 +72,16 @@ class SettingsViewModel private constructor(
 
     fun setStartOnBoot(enabled: Boolean) {
         if (startupSettings.value.isReady) startupSettingsWrites.trySend(enabled)
+    }
+
+    private val _systemVpnSettingsAvailable = MutableStateFlow(false)
+    val systemVpnSettingsAvailable = _systemVpnSettingsAvailable.asStateFlow()
+
+    suspend fun refreshSystemVpnSettingsAvailability() {
+        _systemVpnSettingsAvailable.value = withContext(Dispatchers.IO) {
+            // Android exposes the VPN page, not a direct link to the Always-on VPN switch.
+            Intent(Settings.ACTION_VPN_SETTINGS).resolveActivity(getApplication<Application>().packageManager) != null
+        }
     }
 
     /**

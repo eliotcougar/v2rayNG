@@ -11,6 +11,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -39,6 +42,31 @@ fun GroupTabBar(
 ) {
     val isTelevision = isTelevisionDevice()
     val selectedIndex = selectedTabIndex.coerceIn(0, groups.lastIndex)
+    if (!isTelevision) {
+        ScrollableTabRow(
+            selectedTabIndex = selectedIndex,
+            modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+            edgePadding = 16.dp,
+            indicator = { positions ->
+                TabRowDefaults.SecondaryIndicator(
+                    modifier = Modifier.tabIndicatorOffset(positions[selectedIndex]),
+                    color = MaterialTheme.colorScheme.secondary
+                )
+            }
+        ) {
+            groups.forEachIndexed { index, group ->
+                val text = if (group.id.isEmpty()) stringResource(R.string.filter_config_all)
+                else "${group.remarks} (${group.serverCount})"
+                Tab(
+                    selected = index == selectedIndex,
+                    onClick = { onTabClick(index) },
+                    modifier = Modifier.widthIn(min = 56.dp).heightIn(min = 48.dp),
+                    text = { Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
+                )
+            }
+        }
+        return
+    }
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
 
     LaunchedEffect(selectedIndex) {
