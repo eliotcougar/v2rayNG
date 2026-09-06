@@ -9,6 +9,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
+import com.v2ray.ang.dto.RealPingResult
 import com.v2ray.ang.dto.TestServiceMessage
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.ServersCache
@@ -24,6 +25,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +41,30 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 import java.util.regex.PatternSyntaxException
+
+private fun applyTestDelayResults(
+    servers: List<ServersCache>,
+    updates: Map<String, Long>,
+): List<ServersCache> = servers.map { server ->
+    val delayMillis = updates[server.guid]
+    if (delayMillis == null || delayMillis == server.testDelayMillis) {
+        server
+    } else {
+        server.copy(testDelayMillis = delayMillis)
+    }
+}
+
+private fun applyTestDelayResultsToRows(
+    rows: List<ServerRowUiModel>,
+    updates: Map<String, Long>,
+): List<ServerRowUiModel> = rows.map { row ->
+    val delayMillis = updates[row.guid]
+    if (delayMillis == null || delayMillis == row.testDelayMillis) {
+        row
+    } else {
+        row.copy(testDelayMillis = delayMillis)
+    }
+}
 
 class MainViewModel(
     application: Application,
@@ -77,6 +103,8 @@ class MainViewModel(
     private var preloadJob: Job? = null
     private var selectedGroupLoadJob: Job? = null
     private var reloadJob: Job? = null
+    private var testResultFlushJob: Job? = null
+    private val pendingTestResults = linkedMapOf<String, Long>()
 
     @Volatile
     private var testingGroupId: String? = null
@@ -116,21 +144,53 @@ class MainViewModel(
                 _uiState.update { it.copy(status = MainStatus.ConnectionTest(event.result)) }
             }
 
-            MainServiceEvent.MeasureConfigSuccess -> {
-                viewModelScope.launch(ioDispatcher) {
-                    val gid = testingGroupId ?: uiState.value.selectedGroupId
-                    cacheMutex.withLock { groupDataCache.remove(gid) }
-                    updateGroupUi(gid, loadGroup(gid, forceRefresh = true))
-                }
-            }
+            is MainServiceEvent.MeasureConfigSuccess -> queueTestResult(event.result)
 
             is MainServiceEvent.MeasureConfigNotify -> {
                 _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
             }
 
             is MainServiceEvent.MeasureConfigFinish -> {
-                onTestsFinished()
+                val scheduledFlush = testResultFlushJob
+                testResultFlushJob = viewModelScope.launch {
+                    scheduledFlush?.cancelAndJoin()
+                    flushPendingTestResults()
+                    onTestsFinished()
+                }
             }
+        }
+    }
+
+    private fun queueTestResult(result: RealPingResult) {
+        pendingTestResults[result.guid] = result.delayMillis
+        if (testResultFlushJob?.isActive == true) return
+
+        testResultFlushJob = viewModelScope.launch {
+            while (pendingTestResults.isNotEmpty()) {
+                delay(TEST_RESULT_FLUSH_INTERVAL_MS)
+                flushPendingTestResults()
+            }
+        }
+    }
+
+    private suspend fun flushPendingTestResults() {
+        if (pendingTestResults.isEmpty()) return
+
+        val groupId = testingGroupId ?: uiState.value.selectedGroupId
+        val updates = cacheMutex.withLock {
+            val drained = pendingTestResults.toMap()
+            pendingTestResults.clear()
+            groupDataCache[groupId]?.let { cached ->
+                groupDataCache[groupId] = applyTestDelayResults(cached, drained)
+            }
+            drained
+        }
+        if (updates.isEmpty()) return
+        mutableServerGroupState(groupId).update { current ->
+            current.copy(
+                servers = applyTestDelayResults(current.servers, updates),
+                rows = applyTestDelayResultsToRows(current.rows, updates),
+            )
         }
     }
 
@@ -719,6 +779,7 @@ class MainViewModel(
     // ---------- Testing ----------
     fun cancelAllPing() {
         dataSource.cancelAllPing()
+        cancelPendingTestResults()
         testingGroupId = null
         _uiState.update {
             it.copy(
@@ -730,6 +791,7 @@ class MainViewModel(
 
     fun testAllRealPing(onlyTcp: Boolean = false) {
         dataSource.cancelAllPing()
+        cancelPendingTestResults()
         val groupId = uiState.value.selectedGroupId
         val servers = currentServers()
         if (servers.isEmpty()) {
@@ -757,8 +819,16 @@ class MainViewModel(
             )
         }
         viewModelScope.launch(ioDispatcher) {
+            val resetGuids = serverGuids.toHashSet()
+            cacheMutex.withLock {
+                groupDataCache[groupId]?.let { cached ->
+                    groupDataCache[groupId] = cached.map { server ->
+                        if (server.guid !in resetGuids || server.testDelayMillis == 0L) server
+                        else server.copy(testDelayMillis = 0L)
+                    }
+                }
+            }
             dataSource.clearAllTestDelayResults(serverGuids)
-            cacheMutex.withLock { groupDataCache.remove(groupId) }
             dataSource.sendMsg2TestService(
                 TestServiceMessage(
                     key = AppConfig.MSG_MEASURE_CONFIG_START,
@@ -768,6 +838,12 @@ class MainViewModel(
                 )
             )
         }
+    }
+
+    private fun cancelPendingTestResults() {
+        testResultFlushJob?.cancel()
+        testResultFlushJob = null
+        pendingTestResults.clear()
     }
 
     fun testCurrentServerRealPing() {
@@ -841,5 +917,9 @@ class MainViewModel(
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
+    }
+
+    private companion object {
+        const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
     }
 }
