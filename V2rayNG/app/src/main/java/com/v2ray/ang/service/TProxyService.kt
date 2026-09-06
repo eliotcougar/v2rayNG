@@ -92,3 +92,17 @@ class TProxyService(
                 settings = HevTunnelSettings.current(),
             ),
         )
+    }
+
+    /**
+     * Stops the tun2socks process
+     */
+    override fun stopTun2Socks() {
+        try {
+            LogUtil.i(AppConfig.TAG, "TProxyStopService...")
+            TProxyStopService()
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "Failed to stop hev-socks5-tunnel", e)
+        }
+    }
+}
