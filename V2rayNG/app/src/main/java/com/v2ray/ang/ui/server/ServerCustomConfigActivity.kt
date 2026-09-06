@@ -206,7 +206,7 @@ fun ServerCustomConfigScreen(
 ) {
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     val textFieldState = rememberTextFieldState(initialText = initialContent)
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
     val verticalScroll = rememberScrollState()
@@ -483,7 +483,7 @@ fun ServerCustomConfigScreen(
 
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
-            message = stringResource(R.string.confirm_delete_profile),
+            message = stringResource(R.string.confirm_delete_profile_named, initialRemarks),
             onConfirm = {
                 showDeleteConfirm = false
                 onDelete()

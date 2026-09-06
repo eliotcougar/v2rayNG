@@ -16,6 +16,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -116,7 +117,6 @@ val toastNormalBgLight = Color(0xB3353A3E) // Dark Gray
 val toastNormalBgDark = Color(0xB34A4F54) // Darker Gray
 val toastSuccessBg = Color(0xB3388E3C) // Green
 val toastErrorBg = Color(0xB3D50000) // Red
-val toastInfoBg = Color(0xB33F51B5) // Indigo Blue
 val toastIconCircleBg = Color(0x33FFFFFF) // Semi-transparent White
 val toastTextColor = Color.White // White
 
@@ -177,6 +177,7 @@ fun AppTheme(
         else -> LightColor
     }
     val snackbarController = rememberAppSnackbarController()
+    val actionFeedback = remember { AccessibilityActionFeedbackState() }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -192,15 +193,16 @@ fun AppTheme(
 
     CompositionLocalProvider(
         LocalDarkTheme provides darkTheme,
-        LocalAppSnackbar provides snackbarController
+        LocalAccessibilityActionFeedback provides actionFeedback
     ) {
         MaterialTheme(
             colorScheme = colorScheme
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                AppSnackbarBridge(controller = snackbarController)
                 content()
-                AppSnackbarHost(hostState = snackbarController.hostState)
+                AppSnackbarHost(controller = snackbarController)
+                AppSnackbarBridge(controller = snackbarController)
+                AccessibilityActionFeedbackHost(actionFeedback)
             }
         }
     }

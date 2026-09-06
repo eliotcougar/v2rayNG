@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -49,6 +50,7 @@ fun MainScreen(
     val groups = uiState.groups
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
+    val accessibilityText = mainViewModel.formatConnectionStatusForAccessibility(isRunning)
     val displayText = if (
         isRunning &&
         !uiState.isTesting &&
@@ -71,11 +73,17 @@ fun MainScreen(
     var showDelAllConfirm by remember { mutableStateOf(false) }
     var showDelDuplicateConfirm by remember { mutableStateOf(false) }
     var showDelInvalidConfirm by remember { mutableStateOf(false) }
-    var showRemoveConfirm by remember { mutableStateOf<String?>(null) }
+    var showRemoveConfirm by rememberSaveable(stateSaver = ServerDeleteTarget.Saver) {
+        mutableStateOf<ServerDeleteTarget?>(null)
+    }
 
     var shareTarget by remember { mutableStateOf<Triple<String, ProfileItem, Boolean>?>(null) }
-    val removeServer: (String) -> Unit = { guid ->
-        if (confirmRemove) showRemoveConfirm = guid else onAction(MainAction.RemoveServer(guid))
+    val removeServer: (String, String) -> Unit = { guid, profileName ->
+        if (confirmRemove) {
+            showRemoveConfirm = ServerDeleteTarget(guid, profileName)
+        } else {
+            onAction(MainAction.RemoveServer(guid))
+        }
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -214,6 +222,10 @@ fun MainScreen(
             bottomBar = {
                 MainBottomBar(
                     displayText = displayText,
+                    accessibilityText = accessibilityText,
+                    status = uiState.status,
+                    testAnnouncements = mainViewModel.testAnnouncements,
+                    formatTestAnnouncement = mainViewModel::formatTestAnnouncement,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
                     onAction = onAction
@@ -264,7 +276,7 @@ fun MainScreen(
                             lazyListStates = lazyListStates,
                             lazyGridStates = lazyGridStates,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                            onAction = onAction,
                             onShareServer = { guid, profile ->
                                 shareTarget = Triple(guid, profile, false)
                             },

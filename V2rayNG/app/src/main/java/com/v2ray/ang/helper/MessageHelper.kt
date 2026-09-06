@@ -18,7 +18,7 @@ import com.v2ray.ang.util.LogUtil
 import java.io.Serializable
 
 object MessageHelper {
-
+    const val EXTRA_REQUEST_ID = "requestId"
 
     /**
      * Sends a message to the service.
@@ -40,8 +40,41 @@ object MessageHelper {
         what: Int,
         content: Serializable,
         onResult: (handled: Boolean) -> Unit,
+    ) = sendMsgForResult(
+        ctx = ctx,
+        action = AppConfig.BROADCAST_ACTION_SERVICE,
+        what = what,
+        content = content,
+        target = "service",
+        onResult = onResult,
+    )
+
+    /**
+     * Sends an ordered UI message and reports whether an active UI consumer accepted it.
+     */
+    internal fun sendMsg2UIForResult(
+        ctx: Context,
+        what: Int,
+        content: Serializable,
+        onResult: (handled: Boolean) -> Unit,
+    ) = sendMsgForResult(
+        ctx = ctx,
+        action = AppConfig.BROADCAST_ACTION_ACTIVITY,
+        what = what,
+        content = content,
+        target = "UI",
+        onResult = onResult,
+    )
+
+    private fun sendMsgForResult(
+        ctx: Context,
+        action: String,
+        what: Int,
+        content: Serializable,
+        target: String,
+        onResult: (handled: Boolean) -> Unit,
     ) {
-        sendOrderedMsg2Service(ctx, messageIntent(AppConfig.BROADCAST_ACTION_SERVICE, what, content), onResult)
+        sendOrderedMsg2Service(ctx, messageIntent(action, what, content), onResult, target)
     }
 
     internal fun sendCoreUrlDownloadRequest(
@@ -59,6 +92,7 @@ object MessageHelper {
         ctx: Context,
         intent: Intent,
         onResult: (handled: Boolean) -> Unit,
+        target: String = "service",
     ) {
         val resultReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
@@ -76,7 +110,7 @@ object MessageHelper {
                 null,
             )
         } catch (e: Exception) {
-            LogUtil.e(AppConfig.TAG, "Failed to send ordered message to service", e)
+            LogUtil.e(AppConfig.TAG, "Failed to send ordered message to $target", e)
             onResult(false)
         }
     }
@@ -88,8 +122,8 @@ object MessageHelper {
      * @param what The message identifier.
      * @param content The message content.
      */
-    fun sendMsg2UI(ctx: Context, what: Int, content: Serializable) {
-        sendMsg(ctx, AppConfig.BROADCAST_ACTION_ACTIVITY, what, content)
+    fun sendMsg2UI(ctx: Context, what: Int, content: Serializable, requestId: String? = null) {
+        sendMsg(ctx, AppConfig.BROADCAST_ACTION_ACTIVITY, what, content, requestId)
     }
 
     fun sendSubscriptionDataChanged(ctx: Context, subscriptionIds: Collection<String>) {
@@ -105,11 +139,12 @@ object MessageHelper {
      * @param ctx The context.
      * @param message The test service message containing key, subscriptionId, and serverGuids.
      */
-    fun sendMsg2TestService(ctx: Context, message: TestServiceMessage) {
+    fun sendMsg2TestService(ctx: Context, message: TestServiceMessage, requestId: String? = null) {
         try {
             val intent = Intent()
             intent.component = ComponentName(ctx, CoreTestService::class.java)
             intent.putExtra("content", message)
+            requestId?.let { intent.putExtra(EXTRA_REQUEST_ID, it) }
             when (message.key) {
                 AppConfig.MSG_MEASURE_CONFIG_START -> {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -174,9 +209,11 @@ object MessageHelper {
      * @param what The message identifier.
      * @param content The message content.
      */
-    private fun sendMsg(ctx: Context, action: String, what: Int, content: Serializable) {
+    private fun sendMsg(ctx: Context, action: String, what: Int, content: Serializable, requestId: String? = null) {
         try {
-            ctx.sendBroadcast(messageIntent(action, what, content))
+            ctx.sendBroadcast(messageIntent(action, what, content).apply {
+                requestId?.let { putExtra(EXTRA_REQUEST_ID, it) }
+            })
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to send message with action: $action", e)
         }

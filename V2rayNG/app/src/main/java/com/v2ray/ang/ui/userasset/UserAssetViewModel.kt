@@ -13,7 +13,6 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.HttpUtil
 import com.v2ray.ang.util.LogUtil
-import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -52,7 +51,7 @@ class UserAssetViewModel(application: Application) : BaseViewModel(application) 
         }.also { reloadJob = it }
     }
 
-    private fun buildAssetList(
+    internal fun buildAssetList(
         decodedAssets: List<AssetUrlCache>?,
         geoFilesSource: String
     ): List<AssetUrlCache> {
@@ -61,7 +60,8 @@ class UserAssetViewModel(application: Application) : BaseViewModel(application) 
             .filter { geoFile -> savedAssets.none { it.assetUrl.remarks == geoFile } }
             .map {
                 AssetUrlCache(
-                    Utils.getUuid(),
+                    // Built-in rows have no persisted GUID; keep their UI identity across reloads.
+                    "builtin:$it",
                     AssetUrlItem(
                         it,
                         String.format(AppConfig.GITHUB_DOWNLOAD_URL, geoFilesSource).concatUrl(it),

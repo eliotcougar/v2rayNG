@@ -17,11 +17,21 @@
     <string name="notification_action_stop_v2ray">توقف</string>
     <string name="toast_permission_denied">امکان دریافت مجوز وجود ندارد</string>
     <string name="toast_permission_denied_notification">امکان دریافت مجوز ارسال اعلان وجود ندارد</string>
+    <string name="notification_channel_service">سرویس v2rayNG</string>
+    <string name="notification_channel_subscription_updates">به‌روزرسانی اشتراک‌ها</string>
+    <string name="notification_channel_connection_checks">بررسی اتصال</string>
+    <string name="notification_channel_other">سایر اعلان‌ها</string>
     <string name="notification_action_more">برای اطلاعات بیشتر کلیک کنید</string>
     <string name="toast_services_start">شروع خدمات</string>
-    <string name="toast_services_stop">توقف سرویس</string>
+    <string name="toast_services_stop">سرویس متوقف شد</string>
     <string name="toast_services_success">سرویس با موفقیت شروع شد</string>
+    <string name="acc_service_started_connected_to">سرویس با موفقیت شروع شد. اکنون به %1$s متصل هستید.</string>
     <string name="toast_services_failure">شروع سرویس با شکست مواجه شد</string>
+
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s. شامل %2$d سرور است</item>
+        <item quantity="other">%1$s. شامل %2$d سرور است</item>
+    </plurals>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -46,12 +56,18 @@
     <string name="confirm_delete_duplicate_profiles">آیا مطمئن هستید که می‌خواهید همه پروفایل‌های تکراری نمایش‌داده‌شده را حذف کنید؟</string>
     <string name="confirm_delete_invalid_profiles">لطفاً ابتدا پروفایل‌ها را آزمایش کنید. آیا مطمئن هستید که می‌خواهید همه پروفایل‌های نامعتبر نمایش‌داده‌شده را حذف کنید؟</string>
     <string name="confirm_delete_profile">آیا مطمئن هستید که می‌خواهید این پروفایل را حذف کنید؟</string>
+    <string name="confirm_delete_profile_named">آیا مطمئن هستید که می‌خواهید این پروفایل را حذف کنید؟\n%1$s</string>
     <string name="confirm_delete_policy_group">آیا مطمئن هستید که می‌خواهید این گروه سیاست را حذف کنید؟</string>
+    <string name="confirm_delete_policy_group_named">آیا مطمئن هستید که می‌خواهید این گروه سیاست را حذف کنید؟\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">آیا مطمئن هستید که می‌خواهید این عضو زنجیره پراکسی را حذف کنید؟</string>
+    <string name="confirm_delete_proxy_chain_member_named">آیا مطمئن هستید که می‌خواهید این عضو زنجیره پراکسی را حذف کنید؟\n%1$s</string>
     <string name="confirm_delete_routing_rule">آیا مطمئن هستید که می‌خواهید این قانون مسیریابی را حذف کنید؟</string>
+    <string name="confirm_delete_routing_rule_named">آیا مطمئن هستید که می‌خواهید این قانون مسیریابی را حذف کنید؟\n%1$s</string>
     <string name="confirm_delete_subscription_group">آیا مطمئن هستید که می‌خواهید این گروه اشتراک را حذف کنید؟</string>
+    <string name="confirm_delete_subscription_group_named">آیا مطمئن هستید که می‌خواهید این گروه اشتراک را حذف کنید؟\n%1$s</string>
     <string name="confirm_delete_asset_file">آیا مطمئن هستید که می‌خواهید فایل دارایی \"%1$s\" را حذف کنید؟</string>
     <string name="confirm_delete_asset_source">آیا مطمئن هستید که می‌خواهید این منبع دارایی را حذف کنید؟</string>
+    <string name="confirm_delete_asset_source_named">آیا مطمئن هستید که می‌خواهید این منبع دارایی را حذف کنید؟\n%1$s</string>
     <string name="server_lab_remarks">ملاحظات</string>
     <string name="server_lab_address">نشانی</string>
     <string name="server_lab_port">پورت</string>
@@ -351,8 +367,14 @@
     <string name="title_del_config_count">حذف %d کانفیگ</string>
     <string name="title_import_config_count">وارد کردن %d کانفیگ</string>
     <string name="title_export_config_count">صادر کردن %d کانفیگ</string>
-    <string name="title_update_config_count">آپدیت کردن %d کانفیگ</string>
-    <string name="title_update_asset_count">%d فایل منبع بروزرسانی شد</string>
+    <plurals name="title_update_config_count">
+        <item quantity="one">%1$d کانفیگ به‌روزرسانی شد</item>
+        <item quantity="other">%1$d کانفیگ به‌روزرسانی شد</item>
+    </plurals>
+    <plurals name="title_update_asset_count">
+        <item quantity="one">%1$d فایل منبع به‌روزرسانی شد</item>
+        <item quantity="other">%1$d فایل منبع به‌روزرسانی شد</item>
+    </plurals>
     <string name="title_update_subscription_result">بروزرسانی %1$d کانفیگ انجام شد (%2$d موفق، %3$d شکست خورده، %4$d نادیده گرفته شده)</string>
     <string name="title_update_subscription_no_subscription">هیچ اشتراکی وجود ندارد</string>
     <string name="toast_server_not_found_in_group">سرور انتخاب‌شده در گروه فعلی پیدا نشد</string>
@@ -389,14 +411,28 @@
 
     <string name="connection_test_pending">اتصال را بررسی کنید</string>
     <string name="connection_test_testing">در حال آزمایش…</string>
+    <string name="connection_test_complete">آزمایش به پایان رسید</string>
     <string name="connection_test_testing_count">تست کردن %d کانفیگ…</string>
     <string name="connection_test_available">اتصال در %1$s با موفقیت برقرار شد</string>
+    <plurals name="connection_test_delay_accessibility_value">
+        <item quantity="one">%1$d میلی‌ثانیه</item>
+        <item quantity="other">%1$d میلی‌ثانیه</item>
+    </plurals>
     <string name="server_test_delay_value">%1$d میلی‌ثانیه</string>
+    <string name="acc_server_test_failed">آزمایش اتصال ناموفق بود</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d میلی‌ثانیه</item>
+        <item quantity="other">%1$d میلی‌ثانیه</item>
+    </plurals>
+    <string name="acc_share_config_named">اشتراک‌گذاری پیکربندی %1$s</string>
+    <string name="acc_edit_config_named">ویرایش پیکربندی %1$s</string>
+    <string name="acc_delete_config_named">حذف پیکربندی %1$s</string>
     <string name="connection_test_error">آزمایش اتصال ناموفق بود: %s</string>
     <string name="connection_test_fail">اینترنت در دسترس نیست</string>
     <string name="connection_test_error_status_code">کد خطا: #%d</string>
     <string name="connection_connected">متصل است.\nبرای بررسی اتصال ضربه بزنید.</string>
     <string name="connection_connected_via">متصل از طریق %s</string>
+    <string name="connection_connected_accessibility">متصل است</string>
     <string name="connection_not_connected">متصل نیست</string>
     <string name="connection_running_task_left">آزمایش‌های در حال اجرا: %s</string>
 
@@ -571,18 +607,54 @@
     <string name="toast_malformed_json_detail">قالب پیکربندی نامعتبر است: %1$s</string>
     <string name="acc_add_asset">افزودن منبع فایل‌های جغرافیایی</string>
     <string name="acc_download_file">دانلود فایل‌های منبع</string>
+    <string name="acc_asset_file_details">اندازهٔ فایل %1$s. در %2$s به‌روزرسانی شد</string>
+    <string name="acc_edit_asset_named">ویرایش %1$s</string>
+    <string name="acc_delete_asset_named">حذف %1$s</string>
     <string name="acc_qr_code">کد QR</string>
-    <string name="acc_copy_log">کپی گزارش</string>
+    <string name="acc_copy_log">کپی گزارش در کلیپ‌بورد</string>
     <string name="acc_clear_log">پاک کردن گزارش</string>
     <string name="acc_add_rule">افزودن قانون مسیریابی</string>
+    <string name="acc_routing_rule_summary">%1$s، %2$s</string>
+    <string name="acc_routing_rule_locked_summary">%1$s، قفل است</string>
+    <string name="acc_routing_rule_blocked">مسدود است</string>
+    <string name="acc_routing_rule_routed_through">از طریق %1$s مسیریابی می‌شود</string>
+    <string name="acc_routing_rule_routed_directly">به‌طور مستقیم مسیریابی می‌شود</string>
+    <string name="acc_routing_rule_enabled">قانون روشن است</string>
+    <string name="acc_routing_rule_disabled">قانون خاموش است</string>
+    <string name="acc_enable_routing_rule">فعال کردن قانون</string>
+    <string name="acc_disable_routing_rule">غیرفعال کردن قانون</string>
+    <string name="acc_edit_routing_rule_named">ویرایش %1$s</string>
+    <string name="acc_delete_routing_rule_named">حذف %1$s</string>
     <string name="acc_start">شروع سرویس</string>
     <string name="acc_stop">توقف سرویس</string>
+    <string name="acc_connect">اتصال</string>
+    <string name="acc_disconnect">قطع اتصال</string>
     <string name="acc_back">بازگشت</string>
     <string name="acc_search">جستجو</string>
+    <string name="acc_clear_search">پاک کردن جستجو</string>
     <string name="acc_add">افزودن کانفیگ</string>
     <string name="acc_more">گزینه‌های بیشتر</string>
-    <string name="acc_selected_server">انتخاب شده</string>
+    <string name="acc_move_to_top">انتقال به ابتدای فهرست</string>
+    <string name="acc_move_up">انتقال به بالا</string>
+    <string name="acc_move_down">انتقال به پایین</string>
+    <string name="acc_move_to_bottom">انتقال به انتهای فهرست</string>
+    <string name="acc_moved">جابه‌جا شد</string>
+    <string name="acc_selected_server">انتخاب‌شده</string>
+    <string name="acc_select_server">انتخاب</string>
     <string name="acc_share_subscription">اشتراک‌گذاری لینک اشتراک</string>
+    <string name="acc_last_updated">آخرین بار در %1$s به‌روزرسانی شد</string>
+    <string name="acc_subscription_update_on">به‌روزرسانی روشن است</string>
+    <string name="acc_subscription_update_off">به‌روزرسانی خاموش است</string>
+    <string name="acc_enable_subscription_update">فعال کردن به‌روزرسانی</string>
+    <string name="acc_disable_subscription_update">غیرفعال کردن به‌روزرسانی</string>
+    <string name="acc_enable_subscription_auto_update">فعال کردن به‌روزرسانی خودکار دوره‌ای</string>
+    <string name="acc_disable_subscription_auto_update">غیرفعال کردن به‌روزرسانی خودکار دوره‌ای</string>
+    <string name="acc_subscription_auto_update_enabled">به‌روزرسانی خودکار دوره‌ای فعال شد</string>
+    <string name="acc_subscription_auto_update_disabled">به‌روزرسانی خودکار دوره‌ای غیرفعال شد</string>
+    <string name="acc_unnamed_subscription">بی‌نام.</string>
+    <string name="acc_share_named">اشتراک‌گذاری %1$s</string>
+    <string name="acc_edit_named">ویرایش %1$s</string>
+    <string name="acc_delete_named">حذف %1$s</string>
     <string name="acc_share_log">اشتراک‌گذاری گزارش</string>
     <string name="acc_remove">حذف عضو زنجیره پروکسی</string>
     <string name="acc_add_member">افزودن عضو زنجیره پروکسی</string>
@@ -592,12 +664,20 @@
     <string name="acc_turn_torch_off">خاموش کردن چراغ‌قوه</string>
     <string name="acc_select_image">انتخاب تصویر برای اسکن</string>
     <string name="acc_locked">این قانون هنگام وارد کردن تنظیمات از پیش تعیین‌شده حفظ می‌شود</string>
+    <string name="acc_settings_group_expanded">%1$s، گروه باز است</string>
+    <string name="acc_settings_group_collapsed">%1$s، گروه بسته است</string>
     <string name="acc_open_menu">باز کردن منوی پیمایش</string>
     <string name="acc_edit">ویرایش</string>
     <string name="acc_delete">حذف</string>
     <string name="acc_save">ذخیره</string>
     <string name="acc_update_subscriptions">به‌روزرسانی اشتراک‌ها</string>
     <string name="acc_per_app_proxy_information">اطلاعات پروکسی به تفکیک برنامه</string>
+    <string name="acc_app_checked">علامت‌خورده</string>
+    <string name="acc_app_not_checked">علامت‌نخورده</string>
+    <string name="acc_app_routing_state">%1$s. %2$s</string>
+    <string name="acc_app_routed_directly">به‌طور مستقیم مسیریابی می‌شود</string>
+    <string name="acc_app_routed_through">از طریق برنامه مسیریابی می‌شود</string>
+    <string name="acc_per_app_routing_disabled">مسیریابی به تفکیک برنامه فعال نیست</string>
     <string name="permission_camera">دوربین</string>
     <string name="permission_notification">اعلان</string>
     <string name="permission_local_network">شبکه محلی</string>
@@ -612,4 +692,6 @@
     <string name="title_pref_remember_routes_per_wifi_network">به‌خاطر سپردن مسیرهای قابل استفاده برای هر شبکه Wi-Fi</string>
     <string name="summary_pref_remember_routes_per_wifi_network">برای نگه‌داری سابقه مسیر جداگانه، از نام شبکه Wi-Fi متصل استفاده می‌کند. به مجوز مکان دقیق نیاز دارد، زیرا Android نام شبکه‌های Wi-Fi را به‌عنوان اطلاعات مکانی محافظت می‌کند.</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">برای خواندن نام شبکه Wi-Fi، مجوز مکان دقیق لازم است</string>
+    <string name="acc_toggle_on">روشن</string>
+    <string name="acc_toggle_off">خاموش</string>
 </resources>

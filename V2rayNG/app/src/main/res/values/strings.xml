@@ -17,11 +17,21 @@
     <string name="notification_action_stop_v2ray">Stop</string>
     <string name="toast_permission_denied">Permission denied</string>
     <string name="toast_permission_denied_notification">Notification permission denied</string>
+    <string name="notification_channel_service">v2rayNG service</string>
+    <string name="notification_channel_subscription_updates">Subscription updates</string>
+    <string name="notification_channel_connection_checks">Connection checks</string>
+    <string name="notification_channel_other">Other notifications</string>
     <string name="notification_action_more">Tap for more</string>
     <string name="toast_services_start">Starting service</string>
-    <string name="toast_services_stop">Stopping service</string>
+    <string name="toast_services_stop">Service stopped</string>
     <string name="toast_services_success">Service started successfully</string>
+    <string name="acc_service_started_connected_to">Service started successfully. Now connected to %1$s.</string>
     <string name="toast_services_failure">Failed to start service</string>
+
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s. Contains %2$d server</item>
+        <item quantity="other">%1$s. Contains %2$d servers</item>
+    </plurals>
 
     <!--ServerActivity-->
     <string name="title_server">Config</string>
@@ -46,12 +56,18 @@
     <string name="confirm_delete_duplicate_profiles">Are you sure you want to delete all duplicate profiles currently shown?</string>
     <string name="confirm_delete_invalid_profiles">Please test the profiles first. Are you sure you want to delete all invalid profiles currently shown?</string>
     <string name="confirm_delete_profile">Are you sure you want to delete this profile?</string>
+    <string name="confirm_delete_profile_named">Are you sure you want to delete this profile?\n%1$s</string>
     <string name="confirm_delete_policy_group">Are you sure you want to delete this policy group?</string>
+    <string name="confirm_delete_policy_group_named">Are you sure you want to delete this policy group?\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">Are you sure you want to delete this chain member?</string>
+    <string name="confirm_delete_proxy_chain_member_named">Are you sure you want to delete this chain member?\n%1$s</string>
     <string name="confirm_delete_routing_rule">Are you sure you want to delete this routing rule?</string>
+    <string name="confirm_delete_routing_rule_named">Are you sure you want to delete this routing rule?\n%1$s</string>
     <string name="confirm_delete_subscription_group">Are you sure you want to delete this subscription group?</string>
+    <string name="confirm_delete_subscription_group_named">Are you sure you want to delete this subscription group?\n%1$s</string>
     <string name="confirm_delete_asset_file">Are you sure you want to delete the asset file \"%1$s\"?</string>
     <string name="confirm_delete_asset_source">Are you sure you want to delete this asset source?</string>
+    <string name="confirm_delete_asset_source_named">Are you sure you want to delete this asset source?\n%1$s</string>
     <string name="server_lab_remarks">remarks</string>
     <string name="server_lab_address">address</string>
     <string name="server_lab_port">port</string>
@@ -351,8 +367,14 @@
     <string name="title_del_config_count">Delete %d configs</string>
     <string name="title_import_config_count">Import %d configs</string>
     <string name="title_export_config_count">Export %d configs</string>
-    <string name="title_update_config_count">Update %d configs</string>
-    <string name="title_update_asset_count">Updated %d asset files</string>
+    <plurals name="title_update_config_count">
+        <item quantity="one">Updated %1$d config</item>
+        <item quantity="other">Updated %1$d configs</item>
+    </plurals>
+    <plurals name="title_update_asset_count">
+        <item quantity="one">Updated %1$d asset file</item>
+        <item quantity="other">Updated %1$d asset files</item>
+    </plurals>
     <string name="title_update_subscription_result">Updated %1$d configs (%2$d success, %3$d failed, %4$d skipped)</string>
     <string name="title_update_subscription_no_subscription">No subscriptions</string>
     <string name="toast_server_not_found_in_group">Selected server not found in current group</string>
@@ -389,14 +411,28 @@
 
     <string name="connection_test_pending">Check connectivity</string>
     <string name="connection_test_testing">Testing…</string>
+    <string name="connection_test_complete">Testing complete</string>
     <string name="connection_test_testing_count">Testing %d configs…</string>
     <string name="connection_test_available">Connection succeeded in %1$s</string>
+    <plurals name="connection_test_delay_accessibility_value">
+        <item quantity="one">%1$d millisecond</item>
+        <item quantity="other">%1$d milliseconds</item>
+    </plurals>
     <string name="server_test_delay_value">%1$d ms</string>
+    <string name="acc_server_test_failed">Connection test failed</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d millisecond</item>
+        <item quantity="other">%1$d milliseconds</item>
+    </plurals>
+    <string name="acc_share_config_named">Share config %1$s</string>
+    <string name="acc_edit_config_named">Edit config %1$s</string>
+    <string name="acc_delete_config_named">Delete config %1$s</string>
     <string name="connection_test_error">Connection test failed: %s</string>
     <string name="connection_test_fail">Internet unavailable</string>
     <string name="connection_test_error_status_code">Error code: #%d</string>
     <string name="connection_connected">Connected. Tap to check connection.</string>
     <string name="connection_connected_via">Connected via %s</string>
+    <string name="connection_connected_accessibility">Connected</string>
     <string name="connection_not_connected">Not connected</string>
     <string name="connection_running_task_left">Tests running: %s</string>
 
@@ -571,18 +607,54 @@
     <string name="toast_malformed_json_detail">Invalid configuration: %1$s</string>
     <string name="acc_add_asset">Add asset source</string>
     <string name="acc_download_file">Download asset files</string>
+    <string name="acc_asset_file_details">File size %1$s. Updated on %2$s</string>
+    <string name="acc_edit_asset_named">Edit %1$s</string>
+    <string name="acc_delete_asset_named">Delete %1$s</string>
     <string name="acc_qr_code">QR code</string>
-    <string name="acc_copy_log">Copy log</string>
+    <string name="acc_copy_log">Copy log to clipboard</string>
     <string name="acc_clear_log">Clear log</string>
     <string name="acc_add_rule">Add routing rule</string>
+    <string name="acc_routing_rule_summary">%1$s. %2$s</string>
+    <string name="acc_routing_rule_locked_summary">%1$s. Locked</string>
+    <string name="acc_routing_rule_blocked">is blocked</string>
+    <string name="acc_routing_rule_routed_through">routed through %1$s</string>
+    <string name="acc_routing_rule_routed_directly">routed directly</string>
+    <string name="acc_routing_rule_enabled">The rule is on</string>
+    <string name="acc_routing_rule_disabled">The rule is off</string>
+    <string name="acc_enable_routing_rule">Enable rule</string>
+    <string name="acc_disable_routing_rule">Disable rule</string>
+    <string name="acc_edit_routing_rule_named">Edit %1$s</string>
+    <string name="acc_delete_routing_rule_named">Delete %1$s</string>
     <string name="acc_start">Start service</string>
     <string name="acc_stop">Stop service</string>
+    <string name="acc_connect">Connect</string>
+    <string name="acc_disconnect">Disconnect</string>
     <string name="acc_back">Back</string>
     <string name="acc_search">Search</string>
+    <string name="acc_clear_search">Clear search</string>
     <string name="acc_add">Add configuration</string>
     <string name="acc_more">More options</string>
+    <string name="acc_move_to_top">Move to top</string>
+    <string name="acc_move_up">Move up</string>
+    <string name="acc_move_down">Move down</string>
+    <string name="acc_move_to_bottom">Move to bottom</string>
+    <string name="acc_moved">Moved</string>
     <string name="acc_selected_server">Selected</string>
+    <string name="acc_select_server">Select</string>
     <string name="acc_share_subscription">Share subscription link</string>
+    <string name="acc_last_updated">Last updated on %1$s</string>
+    <string name="acc_subscription_update_on">Update is on</string>
+    <string name="acc_subscription_update_off">Update is off</string>
+    <string name="acc_enable_subscription_update">Enable update</string>
+    <string name="acc_disable_subscription_update">Disable update</string>
+    <string name="acc_enable_subscription_auto_update">Enable periodic auto-update</string>
+    <string name="acc_disable_subscription_auto_update">Disable periodic auto-update</string>
+    <string name="acc_subscription_auto_update_enabled">Periodic auto-update enabled</string>
+    <string name="acc_subscription_auto_update_disabled">Periodic auto-update disabled</string>
+    <string name="acc_unnamed_subscription">Unnamed.</string>
+    <string name="acc_share_named">Share %1$s</string>
+    <string name="acc_edit_named">Edit %1$s</string>
+    <string name="acc_delete_named">Delete %1$s</string>
     <string name="acc_share_log">Share log</string>
     <string name="acc_remove">Remove proxy chain member</string>
     <string name="acc_add_member">Add proxy chain member</string>
@@ -592,12 +664,20 @@
     <string name="acc_turn_torch_off">Turn flashlight off</string>
     <string name="acc_select_image">Select image to scan</string>
     <string name="acc_locked">This rule is kept when importing presets</string>
+    <string name="acc_settings_group_expanded">%1$s. Group is expanded</string>
+    <string name="acc_settings_group_collapsed">%1$s. Group is collapsed</string>
     <string name="acc_open_menu">Open navigation menu</string>
     <string name="acc_edit">Edit</string>
     <string name="acc_delete">Delete</string>
     <string name="acc_save">Save</string>
     <string name="acc_update_subscriptions">Update subscriptions</string>
     <string name="acc_per_app_proxy_information">Per-app proxy information</string>
+    <string name="acc_app_checked">Checked</string>
+    <string name="acc_app_not_checked">Not checked</string>
+    <string name="acc_app_routing_state">%1$s. %2$s</string>
+    <string name="acc_app_routed_directly">routed directly</string>
+    <string name="acc_app_routed_through">routed through the app</string>
+    <string name="acc_per_app_routing_disabled">per-app routing is not enabled</string>
     <string name="permission_camera">Camera</string>
     <string name="permission_notification">Notification</string>
     <string name="permission_local_network">Local network</string>
@@ -612,4 +692,6 @@
     <string name="title_pref_remember_routes_per_wifi_network">Remember viable routes per Wi-Fi network</string>
     <string name="summary_pref_remember_routes_per_wifi_network">Uses the connected Wi-Fi name to keep separate route histories. Requires precise location permission because Android protects Wi-Fi names as location information.</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">Precise location permission is required to read the Wi-Fi network name</string>
+    <string name="acc_toggle_on">On</string>
+    <string name="acc_toggle_off">Off</string>
 </resources>

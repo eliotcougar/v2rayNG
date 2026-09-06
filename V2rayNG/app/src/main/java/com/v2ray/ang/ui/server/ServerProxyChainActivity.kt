@@ -28,19 +28,22 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isComplexType
-import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
@@ -50,6 +53,8 @@ import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
+import com.v2ray.ang.ui.compose.reorderAccessibilityActions
+import com.v2ray.ang.ui.compose.rememberAccessibilityActionFeedback
 import com.v2ray.ang.ui.compose.reorderableDragHandle
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
@@ -204,22 +209,41 @@ fun ProxyChainScreen(
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
     var members by rememberSaveable { mutableStateOf(initialMembers) }
     var memberKeys by rememberSaveable { mutableStateOf(List(initialMembers.size) { UUID.randomUUID().toString() }) }
-    var showProfileDeleteConfirm by remember { mutableStateOf(false) }
-    var memberToDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var showProfileDeleteConfirm by rememberSaveable { mutableStateOf(false) }
+    var memberToDeleteKey by rememberSaveable { mutableStateOf<String?>(null) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
     val lazyListState = rememberLazyListState()
+    val actionFeedback = rememberAccessibilityActionFeedback()
+    val moveMember: (String, String) -> Boolean = { fromKey, toKey ->
+        val reordered = moveProxyChainMember(members, memberKeys, fromKey, toKey)
+        if (reordered == null) {
+            false
+        } else {
+            members = reordered.first
+            memberKeys = reordered.second
+            true
+        }
+    }
+    val requestMemberRemoval: (String) -> Boolean = { memberKey ->
+        val index = memberKeys.indexOf(memberKey)
+        if (index < 0) {
+            false
+        } else if (members[index].isBlank()) {
+            val (remainingMembers, remainingKeys) = withoutProxyChainMember(members, memberKeys, memberKey)
+            members = remainingMembers
+            memberKeys = remainingKeys
+            true
+        } else {
+            memberToDeleteKey = memberKey
+            true
+        }
+    }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-        val fromIndex = memberKeys.indexOf(from.key)
-        val toIndex = memberKeys.indexOf(to.key)
-        if (fromIndex != -1 && toIndex != -1) {
-            val reordered = members.toMutableList()
-            val reorderedKeys = memberKeys.toMutableList()
-            if (reordered.moveItem(fromIndex, toIndex)) {
-                reorderedKeys.moveItem(fromIndex, toIndex)
-                members = reordered
-                memberKeys = reorderedKeys
-            }
+        val fromKey = from.key as? String
+        val toKey = to.key as? String
+        if (fromKey != null && toKey != null) {
+            moveMember(fromKey, toKey)
         }
     }
 
@@ -287,7 +311,17 @@ fun ProxyChainScreen(
             }
 
             itemsIndexed(items = members, key = { index, _ -> memberKeys[index] }) { index, member ->
-                ReorderableItem(reorderableState, key = memberKeys[index]) { isDragging ->
+                val memberKey = memberKeys[index]
+                val accessibilityActions = listOf(
+                    CustomAccessibilityAction(
+                        label = stringResource(R.string.acc_remove),
+                        action = { requestMemberRemoval(memberKey) },
+                    )
+                ) + reorderAccessibilityActions(index, members.size, actionFeedback) { command ->
+                    val targetIndex = command.targetIndex(memberKeys.indexOf(memberKey), memberKeys.size)
+                    targetIndex != null && moveMember(memberKey, memberKeys[targetIndex])
+                }
+                ReorderableItem(reorderableState, key = memberKey) { isDragging ->
                     val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp)
                     Surface(shadowElevation = elevation) {
                         Row(
@@ -302,6 +336,7 @@ fun ProxyChainScreen(
                                 modifier = Modifier
                                     .padding(start = 16.dp)
                                     .width(10.dp)
+                                    .semantics { hideFromAccessibility() }
                             )
                             FormDropdownField(
                                 label = stringResource(R.string.server_lab_remarks),
@@ -312,16 +347,15 @@ fun ProxyChainScreen(
                                     members = members.toMutableList().also { it[index] = newVal }
                                 },
                                 editable = true,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                fieldModifier = Modifier.semantics {
+                                    customActions = accessibilityActions
+                                },
                             )
-                            IconButton(onClick = {
-                                if (member.isBlank()) {
-                                    members = members.toMutableList().also { it.removeAt(index) }
-                                    memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
-                                } else {
-                                    memberToDeleteIndex = index
-                                }
-                            }) {
+                            IconButton(
+                                onClick = { requestMemberRemoval(memberKey) },
+                                modifier = Modifier.clearAndSetSemantics {},
+                            ) {
                                 Icon(
                                     painterResource(R.drawable.ic_delete_24dp),
                                     contentDescription = stringResource(R.string.acc_remove)
@@ -336,20 +370,22 @@ fun ProxyChainScreen(
 
     if (showProfileDeleteConfirm) {
         DeleteConfirmDialog(
-            message = stringResource(R.string.confirm_delete_profile),
+            message = stringResource(R.string.confirm_delete_profile_named, initialRemarks),
             onConfirm = { showProfileDeleteConfirm = false; onDelete() },
             onDismiss = { showProfileDeleteConfirm = false }
         )
     }
-    memberToDeleteIndex?.let { index ->
+    memberToDeleteKey?.let { memberKey ->
+        val memberName = members.getOrNull(memberKeys.indexOf(memberKey)).orEmpty()
         DeleteConfirmDialog(
-            message = stringResource(R.string.confirm_delete_proxy_chain_member),
+            message = stringResource(R.string.confirm_delete_proxy_chain_member_named, memberName),
             onConfirm = {
-                members = members.toMutableList().also { it.removeAt(index) }
-                memberKeys = memberKeys.toMutableList().also { it.removeAt(index) }
-                memberToDeleteIndex = null
+                val (remainingMembers, remainingKeys) = withoutProxyChainMember(members, memberKeys, memberKey)
+                members = remainingMembers
+                memberKeys = remainingKeys
+                memberToDeleteKey = null
             },
-            onDismiss = { memberToDeleteIndex = null }
+            onDismiss = { memberToDeleteKey = null }
         )
     }
 }

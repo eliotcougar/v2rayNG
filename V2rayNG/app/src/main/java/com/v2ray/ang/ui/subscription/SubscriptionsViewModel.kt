@@ -1,6 +1,7 @@
 package com.v2ray.ang.ui.subscription
 
 import android.app.Application
+import android.graphics.Bitmap
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
@@ -12,25 +13,44 @@ import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.handler.SubscriptionUpdater
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.util.LogUtil
+import com.v2ray.ang.util.QRCodeDecoder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+internal fun subscriptionAutoUpdateChange(
+    current: SubscriptionItem?,
+    enabled: Boolean,
+): SubscriptionItem? = current
+    ?.takeIf { it.url.isNotEmpty() && it.autoUpdate != enabled }
+    ?.copy(autoUpdate = enabled)
 
 class SubscriptionsViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : BaseViewModel(application) {
     private val _subsFlow = MutableStateFlow<List<SubscriptionCache>>(emptyList())
+    private val subscriptions: List<SubscriptionCache> get() = _subsFlow.value
+    private val pendingAutoUpdates = mutableSetOf<String>()
+    private val _autoUpdateChanges = MutableSharedFlow<Boolean>()
+    internal val autoUpdateChanges = _autoUpdateChanges.asSharedFlow()
+    private var qrCodeJob: Job? = null
+    private val _qrCode = MutableStateFlow<Bitmap?>(null)
+    internal val qrCode = _qrCode.asStateFlow()
     val subsFlow: StateFlow<List<SubscriptionCache>> = _subsFlow.asStateFlow()
     private var orderPersistenceJob: Job? = null
     private var reloadJob: Job? = null
@@ -82,9 +102,60 @@ class SubscriptionsViewModel @JvmOverloads constructor(
         }
     }
 
-    fun move(fromPosition: Int, toPosition: Int) {
+    internal fun setAutoUpdate(subId: String, enabled: Boolean): Boolean {
+        if (!pendingAutoUpdates.add(subId)) return false
+        viewModelScope.launch {
+            try {
+                val current = withContext(ioDispatcher) { MmkvManager.decodeSubscription(subId) }
+                val updated = subscriptionAutoUpdateChange(current, enabled) ?: return@launch
+                if (enabled && updated.updateInterval < AppConfig.SUBSCRIPTION_MIN_INTERVAL_MINUTES) {
+                    toastError(R.string.toast_invalid_update_interval)
+                    return@launch
+                }
+                val saved = withContext(ioDispatcher) {
+                    MmkvManager.updateSubscription(subId, checkNotNull(current), updated).also {
+                        if (it) SubscriptionUpdater.syncOne(subId = subId)
+                    }
+                }
+                if (!saved) {
+                    toastError(R.string.toast_failure)
+                    reload()
+                    return@launch
+                }
+                reload()
+                reloadJob?.join()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Subscription periodic update change failed: $subId", e)
+                toastError(R.string.toast_failure)
+                return@launch
+            } finally {
+                pendingAutoUpdates.remove(subId)
+            }
+            _autoUpdateChanges.emit(enabled)
+        }
+        return true
+    }
+
+    internal fun shareQRCode(url: String) {
+        dismissQRCode()
+        qrCodeJob = viewModelScope.launch {
+            val bitmap = withContext(Dispatchers.Default) { QRCodeDecoder.createQRCode(url) }
+            if (bitmap == null) toastError(R.string.toast_failure)
+            _qrCode.value = bitmap
+        }
+    }
+
+    internal fun dismissQRCode() {
+        qrCodeJob?.cancel()
+        qrCodeJob = null
+        _qrCode.value = null
+    }
+
+    fun move(fromPosition: Int, toPosition: Int): Boolean {
         val subscriptions = _subsFlow.value.toMutableList()
-        if (!subscriptions.moveItem(fromPosition, toPosition)) return
+        if (!subscriptions.moveItem(fromPosition, toPosition)) return false
 
         _subsFlow.value = subscriptions
         val previous = orderPersistenceJob
@@ -100,6 +171,13 @@ class SubscriptionsViewModel @JvmOverloads constructor(
                 reload()
             }
         }
+        return true
+    }
+
+    internal fun move(subId: String, command: ReorderCommand): Boolean {
+        val fromPosition = subscriptions.indexOfFirst { it.guid == subId }
+        val toPosition = command.targetIndex(fromPosition, subscriptions.size) ?: return false
+        return move(fromPosition, toPosition)
     }
 
     fun updateSubscriptions() {
@@ -130,10 +208,24 @@ class SubscriptionsViewModel @JvmOverloads constructor(
                         toast(R.string.title_update_subscription_no_subscription)
 
                     result.successCount > 0 && result.failureCount + result.skipCount == 0 ->
-                        toast(getString(R.string.title_update_config_count, result.configCount))
+                        toast(
+                            getQuantityString(
+                                R.plurals.title_update_config_count,
+                                result.configCount,
+                                result.configCount,
+                            ),
+                        )
 
                     else ->
-                        toast(getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
+                        toast(
+                            getString(
+                                R.string.title_update_subscription_result,
+                                result.configCount,
+                                result.successCount,
+                                result.failureCount,
+                                result.skipCount,
+                            ),
+                        )
                 }
                 reload()
                 if (result.configCount > 0) {

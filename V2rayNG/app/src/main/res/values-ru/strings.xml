@@ -17,11 +17,23 @@
     <string name="notification_action_stop_v2ray">Остановить</string>
     <string name="toast_permission_denied">Разрешение не получено</string>
     <string name="toast_permission_denied_notification">Разрешение на отображение уведомлений не получено</string>
+    <string name="notification_channel_service">Служба v2rayNG</string>
+    <string name="notification_channel_subscription_updates">Обновления подписок</string>
+    <string name="notification_channel_connection_checks">Проверки соединения</string>
+    <string name="notification_channel_other">Другие уведомления</string>
     <string name="notification_action_more">Ещё…</string>
     <string name="toast_services_start">Запуск служб</string>
-    <string name="toast_services_stop">Остановка служб</string>
+    <string name="toast_services_stop">Служба остановлена</string>
     <string name="toast_services_success">Службы успешно запущены</string>
+    <string name="acc_service_started_connected_to">Службы успешно запущены. Установлено подключение к серверу «%1$s».</string>
     <string name="toast_services_failure">Сбой при запуске служб</string>
+
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s. Содержит %2$d сервер</item>
+        <item quantity="few">%1$s. Содержит %2$d сервера</item>
+        <item quantity="many">%1$s. Содержит %2$d серверов</item>
+        <item quantity="other">%1$s. Содержит %2$d серверов</item>
+    </plurals>
 
     <!--ServerActivity-->
     <string name="title_server">Профиль</string>
@@ -46,12 +58,18 @@
     <string name="confirm_delete_duplicate_profiles">Удалить все отображаемые дубликаты профилей?</string>
     <string name="confirm_delete_invalid_profiles">Выполните проверку перед удалением! Удалить все отображаемые нерабочие профили?</string>
     <string name="confirm_delete_profile">Удалить этот профиль?</string>
+    <string name="confirm_delete_profile_named">Удалить этот профиль?\n%1$s</string>
     <string name="confirm_delete_policy_group">Удалить эту политику группы?</string>
+    <string name="confirm_delete_policy_group_named">Удалить эту группу политик?\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">Удалить этого участника цепочки прокси?</string>
+    <string name="confirm_delete_proxy_chain_member_named">Удалить этого участника цепочки прокси?\n%1$s</string>
     <string name="confirm_delete_routing_rule">Удалить это правило маршрутизации?</string>
+    <string name="confirm_delete_routing_rule_named">Удалить это правило маршрутизации?\n%1$s</string>
     <string name="confirm_delete_subscription_group">Удалить эту подписку?</string>
+    <string name="confirm_delete_subscription_group_named">Удалить эту подписку?\n%1$s</string>
     <string name="confirm_delete_asset_file">Удалить файл ресурсов «%1$s»?</string>
     <string name="confirm_delete_asset_source">Удалить этот источник ресурсов?</string>
+    <string name="confirm_delete_asset_source_named">Удалить этот источник ресурсов?\n%1$s</string>
     <string name="server_lab_remarks">Название</string>
     <string name="server_lab_address">Адрес</string>
     <string name="server_lab_port">Порт</string>
@@ -351,8 +369,18 @@
     <string name="title_del_config_count">Удалено профилей: %d</string>
     <string name="title_import_config_count">Импортировано профилей: %d</string>
     <string name="title_export_config_count">Экспортировано профилей: %d</string>
-    <string name="title_update_config_count">Обновлено профилей: %d</string>
-    <string name="title_update_asset_count">Обновлено файлов ресурсов: %d</string>
+    <plurals name="title_update_config_count">
+        <item quantity="one">Обновлён %1$d профиль</item>
+        <item quantity="few">Обновлено %1$d профиля</item>
+        <item quantity="many">Обновлено %1$d профилей</item>
+        <item quantity="other">Обновлено %1$d профиля</item>
+    </plurals>
+    <plurals name="title_update_asset_count">
+        <item quantity="one">Обновлён %1$d файл ресурсов</item>
+        <item quantity="few">Обновлено %1$d файла ресурсов</item>
+        <item quantity="many">Обновлено %1$d файлов ресурсов</item>
+        <item quantity="other">Обновлено %1$d файла ресурсов</item>
+    </plurals>
     <string name="title_update_subscription_result">Обновлено профилей: %1$d (успешно: %2$d, ошибки: %3$d, пропущено: %4$d)</string>
     <string name="title_update_subscription_no_subscription">Нет подписок</string>
     <string name="toast_server_not_found_in_group">Выбранный профиль не найден в текущей группе</string>
@@ -389,14 +417,32 @@
 
     <string name="connection_test_pending">Проверить соединение</string>
     <string name="connection_test_testing">Проверка…</string>
+    <string name="connection_test_complete">Проверка завершена</string>
     <string name="connection_test_testing_count">Проверка профилей (%d)…</string>
     <string name="connection_test_available">Соединение установлено за %1$s</string>
+    <plurals name="connection_test_delay_accessibility_value">
+        <item quantity="one">%1$d миллисекунду</item>
+        <item quantity="few">%1$d миллисекунды</item>
+        <item quantity="many">%1$d миллисекунд</item>
+        <item quantity="other">%1$d миллисекунды</item>
+    </plurals>
     <string name="server_test_delay_value">%1$d мс</string>
+    <string name="acc_server_test_failed">Проверка соединения не удалась</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d миллисекунда</item>
+        <item quantity="few">%1$d миллисекунды</item>
+        <item quantity="many">%1$d миллисекунд</item>
+        <item quantity="other">%1$d миллисекунды</item>
+    </plurals>
+    <string name="acc_share_config_named">Поделиться конфигурацией %1$s</string>
+    <string name="acc_edit_config_named">Изменить конфигурацию %1$s</string>
+    <string name="acc_delete_config_named">Удалить конфигурацию %1$s</string>
     <string name="connection_test_error">Ошибка проверки соединения: %s</string>
     <string name="connection_test_fail">Интернет недоступен</string>
     <string name="connection_test_error_status_code">Код ошибки: #%d</string>
     <string name="connection_connected">Подключено.\nНажмите, чтобы проверить соединение.</string>
     <string name="connection_connected_via">Соединено через %s</string>
+    <string name="connection_connected_accessibility">Подключено</string>
     <string name="connection_not_connected">Нет соединения</string>
     <string name="connection_running_task_left">Выполняется проверок: %s</string>
 
@@ -571,18 +617,54 @@
     <string name="toast_malformed_json_detail">Некорректная конфигурация: %1$s</string>
     <string name="acc_add_asset">Добавить источник ресурсов</string>
     <string name="acc_download_file">Загрузить файлы ресурсов</string>
+    <string name="acc_asset_file_details">Размер файла: %1$s. Обновлено %2$s</string>
+    <string name="acc_edit_asset_named">Изменить %1$s</string>
+    <string name="acc_delete_asset_named">Удалить %1$s</string>
     <string name="acc_qr_code">QR-код</string>
-    <string name="acc_copy_log">Копировать журнал</string>
+    <string name="acc_copy_log">Копировать журнал в буфер обмена</string>
     <string name="acc_clear_log">Очистить журнал</string>
     <string name="acc_add_rule">Добавить правило маршрутизации</string>
+    <string name="acc_routing_rule_summary">%1$s. %2$s</string>
+    <string name="acc_routing_rule_locked_summary">%1$s. Закреплено</string>
+    <string name="acc_routing_rule_blocked">заблокировано</string>
+    <string name="acc_routing_rule_routed_through">маршрутизируется через %1$s</string>
+    <string name="acc_routing_rule_routed_directly">маршрутизируется напрямую</string>
+    <string name="acc_routing_rule_enabled">Правило включено</string>
+    <string name="acc_routing_rule_disabled">Правило выключено</string>
+    <string name="acc_enable_routing_rule">Включить правило</string>
+    <string name="acc_disable_routing_rule">Выключить правило</string>
+    <string name="acc_edit_routing_rule_named">Изменить %1$s</string>
+    <string name="acc_delete_routing_rule_named">Удалить %1$s</string>
     <string name="acc_start">Запустить службу</string>
     <string name="acc_stop">Остановить службу</string>
+    <string name="acc_connect">Подключиться</string>
+    <string name="acc_disconnect">Отключиться</string>
     <string name="acc_back">Назад</string>
     <string name="acc_search">Поиск</string>
+    <string name="acc_clear_search">Очистить поиск</string>
     <string name="acc_add">Добавить профиль</string>
     <string name="acc_more">Дополнительные параметры</string>
-    <string name="acc_selected_server">Selected</string>
+    <string name="acc_move_to_top">Переместить в начало</string>
+    <string name="acc_move_up">Переместить выше</string>
+    <string name="acc_move_down">Переместить ниже</string>
+    <string name="acc_move_to_bottom">Переместить в конец</string>
+    <string name="acc_moved">Перемещено</string>
+    <string name="acc_selected_server">Выбрано</string>
+    <string name="acc_select_server">Выбрать</string>
     <string name="acc_share_subscription">Поделиться ссылкой на подписку</string>
+    <string name="acc_last_updated">Последний раз обновлено %1$s</string>
+    <string name="acc_subscription_update_on">Обновление включено</string>
+    <string name="acc_subscription_update_off">Обновление выключено</string>
+    <string name="acc_enable_subscription_update">Включить обновление</string>
+    <string name="acc_disable_subscription_update">Выключить обновление</string>
+    <string name="acc_enable_subscription_auto_update">Включить периодическое автообновление</string>
+    <string name="acc_disable_subscription_auto_update">Выключить периодическое автообновление</string>
+    <string name="acc_subscription_auto_update_enabled">Периодическое автообновление включено</string>
+    <string name="acc_subscription_auto_update_disabled">Периодическое автообновление выключено</string>
+    <string name="acc_unnamed_subscription">Без названия.</string>
+    <string name="acc_share_named">Поделиться: %1$s</string>
+    <string name="acc_edit_named">Изменить: %1$s</string>
+    <string name="acc_delete_named">Удалить: %1$s</string>
     <string name="acc_share_log">Поделиться журналом</string>
     <string name="acc_remove">Удалить участника цепочки прокси</string>
     <string name="acc_add_member">Добавить участника цепочки прокси</string>
@@ -592,12 +674,20 @@
     <string name="acc_turn_torch_off">Выключить фонарик</string>
     <string name="acc_select_image">Выбрать изображение для сканирования</string>
     <string name="acc_locked">Правило сохраняется при импорте предустановок</string>
+    <string name="acc_settings_group_expanded">%1$s. Группа развёрнута</string>
+    <string name="acc_settings_group_collapsed">%1$s. Группа свёрнута</string>
     <string name="acc_open_menu">Открыть меню навигации</string>
     <string name="acc_edit">Изменить</string>
     <string name="acc_delete">Удалить</string>
     <string name="acc_save">Сохранить</string>
     <string name="acc_update_subscriptions">Обновить подписки</string>
     <string name="acc_per_app_proxy_information">Сведения о прокси для приложений</string>
+    <string name="acc_app_checked">Отмечено</string>
+    <string name="acc_app_not_checked">Не отмечено</string>
+    <string name="acc_app_routing_state">%1$s. %2$s</string>
+    <string name="acc_app_routed_directly">маршрутизируется напрямую</string>
+    <string name="acc_app_routed_through">маршрутизируется через приложение</string>
+    <string name="acc_per_app_routing_disabled">маршрутизация по приложениям не включена</string>
     <string name="permission_camera">Камера</string>
     <string name="permission_notification">Уведомления</string>
     <string name="permission_local_network">Локальная сеть</string>
@@ -612,4 +702,6 @@
     <string name="title_pref_remember_routes_per_wifi_network">Запоминать рабочие маршруты для каждой сети Wi-Fi</string>
     <string name="summary_pref_remember_routes_per_wifi_network">Использует имя подключённой сети Wi-Fi, чтобы хранить отдельную историю маршрутов. Требуется доступ к точному местоположению, поскольку Android защищает имена сетей Wi-Fi как данные о местоположении.</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">Для чтения имени сети Wi-Fi требуется доступ к точному местоположению</string>
+    <string name="acc_toggle_on">Включено</string>
+    <string name="acc_toggle_off">Выключено</string>
 </resources>

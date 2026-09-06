@@ -1,5 +1,6 @@
 package com.v2ray.ang.ui.main
 
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -28,6 +29,8 @@ import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.onCompletion
 import java.util.concurrent.atomic.AtomicBoolean
 
 class MainRepository(
@@ -42,34 +45,44 @@ class MainRepository(
     // Probe results are finite and must remain lossless until the ViewModel coalesces them.
     private val mainServiceEventChannel = Channel<MainServiceEvent>(Channel.UNLIMITED)
 
+    private val eventConsumerActive = AtomicBoolean(false)
     override val mainServiceEvent: Flow<MainServiceEvent> = mainServiceEventChannel.receiveAsFlow()
+        .onStart { eventConsumerActive.set(true) }
+        .onCompletion { eventConsumerActive.set(false) }
 
     private val serviceReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             val safeIntent = intent ?: return
+            val requestId = safeIntent.getStringExtra(MessageHelper.EXTRA_REQUEST_ID).orEmpty()
             val event = when (safeIntent.getIntExtra("key", 0)) {
                 AppConfig.MSG_STATE_RUNNING -> MainServiceEvent.StateRunning
                 AppConfig.MSG_STATE_NOT_RUNNING -> MainServiceEvent.StateNotRunning
-                AppConfig.MSG_STATE_START_SUCCESS -> MainServiceEvent.StateStartSuccess
+                AppConfig.MSG_STATE_START_SUCCESS -> MainServiceEvent.StateStartSuccess(
+                    safeIntent.getStringExtra("content").orEmpty()
+                )
                 AppConfig.MSG_STATE_START_FAILURE -> MainServiceEvent.StateStartFailure
 
                 AppConfig.MSG_STATE_STOP_SUCCESS -> MainServiceEvent.StateStopSuccess
                 AppConfig.MSG_MEASURE_DELAY_RESULT -> safeIntent
                     .serializable<ConnectionTestResult>("content")
-                    ?.let { MainServiceEvent.MeasureDelayResult(it) }
+                    ?.let { MainServiceEvent.MeasureDelayResult(it, requestId) }
+                AppConfig.MSG_MEASURE_DELAY_CANCEL -> MainServiceEvent.MeasureDelayCancelled(requestId)
                 AppConfig.MSG_ACTIVE_OUTBOUND_CHANGED -> MainServiceEvent.ActiveOutboundChanged(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
 
                 AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> safeIntent
                     .serializable<RealPingResult>("content")
-                    ?.let { MainServiceEvent.MeasureConfigSuccess(it) }
+                    ?.let { MainServiceEvent.MeasureConfigSuccess(it, requestId) }
                 AppConfig.MSG_MEASURE_CONFIG_NOTIFY -> MainServiceEvent.MeasureConfigNotify(
-                    safeIntent.getStringExtra("content").orEmpty()
+                    safeIntent.getStringExtra("content").orEmpty(), requestId
                 )
 
                 AppConfig.MSG_MEASURE_CONFIG_FINISH -> MainServiceEvent.MeasureConfigFinish(
-                    safeIntent.getStringExtra("content")
+                    requestId
+                )
+                AppConfig.MSG_MEASURE_CONFIG_CANCEL -> MainServiceEvent.MeasureConfigCancelled(
+                    safeIntent.getStringExtra(MessageHelper.EXTRA_REQUEST_ID)
                 )
 
                 AppConfig.MSG_SUB_UPDATE_DATA_CHANGED -> safeIntent
@@ -81,7 +94,10 @@ class MainRepository(
 
                 else -> null
             }
-            event?.let { mainServiceEventChannel.trySend(it) }
+            val accepted = event?.let { mainServiceEventChannel.trySend(it).isSuccess } == true
+            if (isOrderedBroadcast && accepted && eventConsumerActive.get()) {
+                resultCode = Activity.RESULT_OK
+            }
         }
     }
 
@@ -134,6 +150,9 @@ class MainRepository(
 
     override fun getString(resId: Int, vararg formatArgs: Any): String =
         localizedContext.getString(resId, *formatArgs)
+
+    override fun getQuantityString(resId: Int, quantity: Int, vararg formatArgs: Any): String =
+        localizedContext.resources.getQuantityString(resId, quantity, *formatArgs)
 
     override fun getSubscriptions(): List<SubscriptionCache> {
         val result = mutableListOf<SubscriptionCache>()
@@ -215,8 +234,8 @@ class MainRepository(
     override fun sendMsg2Service(msgId: Int, content: String) =
         MessageHelper.sendMsg2Service(app, msgId, content)
 
-    override fun sendMsg2TestService(msg: TestServiceMessage) =
-        MessageHelper.sendMsg2TestService(app, msg)
+    override fun sendMsg2TestService(msg: TestServiceMessage, requestId: String?) =
+        MessageHelper.sendMsg2TestService(app, msg, requestId)
 
     override fun cancelAllPing() {
         sendMsg2TestService(
@@ -224,8 +243,10 @@ class MainRepository(
         )
     }
 
-    override fun testCurrentServerRealPing() {
-        sendMsg2Service(AppConfig.MSG_MEASURE_DELAY, "")
+    override fun testCurrentServerRealPing(requestId: String) {
+        MessageHelper.sendMsg2ServiceForResult(app, AppConfig.MSG_MEASURE_DELAY, requestId) { handled ->
+            if (!handled) mainServiceEventChannel.trySend(MainServiceEvent.MeasureDelayCancelled(requestId))
+        }
     }
 
     override fun syncSubscriptions() {

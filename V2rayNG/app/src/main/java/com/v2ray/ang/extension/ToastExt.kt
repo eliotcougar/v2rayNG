@@ -1,22 +1,28 @@
 package com.v2ray.ang.extension
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
+import com.v2ray.ang.R
+import com.v2ray.ang.helper.NotificationHelper
+import com.v2ray.ang.ui.compose.AppSnackbarMessage
 import com.v2ray.ang.ui.compose.AppSnackbarManager
 import com.v2ray.ang.ui.compose.ToastType
 
+enum class AccessibilityLiveRegionMode {
+    POLITE,
+    ASSERTIVE,
+}
+
 /**
  * Shows a toast message with the given resource ID.
  *
  * @param message The resource ID of the message to show.
  */
-fun Context.toast(message: Int) {
+fun Context.toast(
+    message: Int,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+) {
     val text = getString(message)
-    dispatchMessage(text, ToastType.NORMAL) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-    }
+    dispatchMessage(text, ToastType.NORMAL, liveRegionMode)
 }
 
 /**
@@ -24,10 +30,11 @@ fun Context.toast(message: Int) {
  *
  * @param message The text of the message to show.
  */
-fun Context.toast(message: CharSequence) {
-    dispatchMessage(message, ToastType.NORMAL) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
+fun Context.toast(
+    message: CharSequence,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+) {
+    dispatchMessage(message, ToastType.NORMAL, liveRegionMode)
 }
 
 /**
@@ -35,34 +42,13 @@ fun Context.toast(message: CharSequence) {
  *
  * @param message The resource ID of the message to show.
  */
-fun Context.toastSuccess(message: Int) {
+fun Context.toastSuccess(
+    message: Int,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+    accessibilityMessage: CharSequence? = null,
+) {
     val text = getString(message)
-    dispatchMessage(text, ToastType.SUCCESS) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-    }
-}
-
-/**
- * Shows a toast message with the given text.
- *
- * @param message The text of the message to show.
- */
-fun Context.toastSuccess(message: CharSequence) {
-    dispatchMessage(message, ToastType.SUCCESS) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-}
-
-/**
- * Shows a toast message with the given resource ID.
- *
- * @param message The resource ID of the message to show.
- */
-fun Context.toastError(message: Int) {
-    val text = getString(message)
-    dispatchMessage(text, ToastType.ERROR) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-    }
+    dispatchMessage(text, ToastType.SUCCESS, liveRegionMode, accessibilityMessage)
 }
 
 /**
@@ -82,55 +68,64 @@ fun Context.toastErrorLong(message: Int) {
  *
  * @param message The text of the message to show.
  */
-fun Context.toastError(message: CharSequence) {
-    dispatchMessage(message, ToastType.ERROR) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
+fun Context.toastSuccess(
+    message: CharSequence,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+    accessibilityMessage: CharSequence? = null,
+) {
+    dispatchMessage(message, ToastType.SUCCESS, liveRegionMode, accessibilityMessage)
 }
 
 /**
- * Shows an info toast message with the given resource ID.
+ * Shows a toast message with the given resource ID.
  *
  * @param message The resource ID of the message to show.
  */
-fun Context.toastInfo(message: Int) {
+fun Context.toastError(
+    message: Int,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+) {
     val text = getString(message)
-    dispatchMessage(text, ToastType.INFO) {
-        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
-    }
+    dispatchMessage(text, ToastType.ERROR, liveRegionMode)
 }
 
 /**
- * Shows an info toast message with the given text.
+ * Shows a toast message with the given text.
  *
  * @param message The text of the message to show.
  */
-fun Context.toastInfo(message: CharSequence) {
-    dispatchMessage(message, ToastType.INFO) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
+fun Context.toastError(
+    message: CharSequence,
+    liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+) {
+    dispatchMessage(message, ToastType.ERROR, liveRegionMode)
 }
 
-private inline fun runOnMain(crossinline block: () -> Unit) {
-    if (Looper.myLooper() == Looper.getMainLooper()) {
-        block()
+/** Shared text for the service's background notification and foreground live region. */
+internal fun Context.serviceStartedMessage(serverName: String): String {
+    val name = serverName.trim()
+    return if (name.isEmpty()) {
+        getString(R.string.toast_services_success)
     } else {
-        Handler(Looper.getMainLooper()).post { block() }
+        getString(R.string.acc_service_started_connected_to, name)
     }
 }
 
-private inline fun dispatchMessage(
+private fun Context.dispatchMessage(
     message: CharSequence,
     type: ToastType,
-    long: Boolean = false,
-    crossinline fallback: () -> Unit
+    liveRegionMode: AccessibilityLiveRegionMode,
+    accessibilityMessage: CharSequence? = null,
 ) {
-    val handledBySnackbar = AppSnackbarManager.show(
+    val event = AppSnackbarMessage(
         message = message,
         type = type,
-        long = long
+        liveRegionMode = liveRegionMode,
+        accessibilityMessage = accessibilityMessage,
     )
-    if (!handledBySnackbar) {
-        runOnMain { fallback() }
+    if (AppSnackbarManager.show(event)) {
+        NotificationHelper.cancelTransientMessage(this)
+    } else {
+        NotificationHelper.notifyTransientMessage(this, accessibilityMessage ?: message)
     }
 }

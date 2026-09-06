@@ -17,11 +17,21 @@
     <string name="notification_action_stop_v2ray">বন্ধ করুন</string>
     <string name="toast_permission_denied">অনুমতি পাওয়া যাচ্ছে না</string>
     <string name="toast_permission_denied_notification">বিজ্ঞপ্তির অনুমতি পাওয়া যায়নি</string>
+    <string name="notification_channel_service">v2rayNG সার্ভিস</string>
+    <string name="notification_channel_subscription_updates">সাবস্ক্রিপশন আপডেট</string>
+    <string name="notification_channel_connection_checks">সংযোগ পরীক্ষা</string>
+    <string name="notification_channel_other">অন্যান্য বিজ্ঞপ্তি</string>
     <string name="notification_action_more">আরও দেখতে ক্লিক করুন</string>
     <string name="toast_services_start">সার্ভিস শুরু করুন</string>
-    <string name="toast_services_stop">সার্ভিস বন্ধ করুন</string>
+    <string name="toast_services_stop">সার্ভিস বন্ধ হয়েছে</string>
     <string name="toast_services_success">সার্ভিস সফলভাবে শুরু হয়েছে</string>
+    <string name="acc_service_started_connected_to">সার্ভিস সফলভাবে শুরু হয়েছে। এখন %1$s-এর সাথে সংযুক্ত।</string>
     <string name="toast_services_failure">সার্ভিস শুরু হতে ব্যর্থ হয়েছে</string>
+
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s। এতে %2$dটি সার্ভার রয়েছে</item>
+        <item quantity="other">%1$s। এতে %2$dটি সার্ভার রয়েছে</item>
+    </plurals>
 
     <!--ServerActivity-->
     <string name="title_server">কনফিগারেশন ফাইল</string>
@@ -46,12 +56,18 @@
     <string name="confirm_delete_duplicate_profiles">আপনি কি বর্তমানে প্রদর্শিত সব সদৃশ প্রোফাইল মুছে ফেলতে চান?</string>
     <string name="confirm_delete_invalid_profiles">প্রথমে প্রোফাইলগুলো পরীক্ষা করুন। আপনি কি বর্তমানে প্রদর্শিত সব অবৈধ প্রোফাইল মুছে ফেলতে চান?</string>
     <string name="confirm_delete_profile">আপনি কি এই প্রোফাইলটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_profile_named">আপনি কি এই প্রোফাইলটি মুছে ফেলতে চান?\n%1$s</string>
     <string name="confirm_delete_policy_group">আপনি কি এই পলিসি গ্রুপটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_policy_group_named">আপনি কি এই পলিসি গ্রুপটি মুছে ফেলতে চান?\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">আপনি কি এই প্রক্সি চেইন সদস্যটিকে মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_proxy_chain_member_named">আপনি কি এই প্রক্সি চেইন সদস্যটিকে মুছে ফেলতে চান?\n%1$s</string>
     <string name="confirm_delete_routing_rule">আপনি কি এই রাউটিং নিয়মটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_routing_rule_named">আপনি কি এই রাউটিং নিয়মটি মুছে ফেলতে চান?\n%1$s</string>
     <string name="confirm_delete_subscription_group">আপনি কি এই সাবস্ক্রিপশন গ্রুপটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_subscription_group_named">আপনি কি এই সাবস্ক্রিপশন গ্রুপটি মুছে ফেলতে চান?\n%1$s</string>
     <string name="confirm_delete_asset_file">আপনি কি \"%1$s\" অ্যাসেট ফাইলটি মুছে ফেলতে চান?</string>
     <string name="confirm_delete_asset_source">আপনি কি এই অ্যাসেট উৎসটি মুছে ফেলতে চান?</string>
+    <string name="confirm_delete_asset_source_named">আপনি কি এই অ্যাসেট উৎসটি মুছে ফেলতে চান?\n%1$s</string>
     <string name="server_lab_remarks">মন্তব্য</string>
     <string name="server_lab_address">ঠিকানা</string>
     <string name="server_lab_port">পোর্ট</string>
@@ -351,8 +367,14 @@
     <string name="title_del_config_count">%dটি কনফিগারেশন মুছুন</string>
     <string name="title_import_config_count">%dটি কনফিগারেশন আমদানি করুন</string>
     <string name="title_export_config_count">%dটি কনফিগারেশন রপ্তানি করুন</string>
-    <string name="title_update_config_count">%dটি কনফিগারেশন আপডেট করুন</string>
-    <string name="title_update_asset_count">%dটি অ্যাসেট ফাইল আপডেট হয়েছে</string>
+    <plurals name="title_update_config_count">
+        <item quantity="one">%1$dটি কনফিগারেশন আপডেট হয়েছে</item>
+        <item quantity="other">%1$dটি কনফিগারেশন আপডেট হয়েছে</item>
+    </plurals>
+    <plurals name="title_update_asset_count">
+        <item quantity="one">%1$dটি অ্যাসেট ফাইল আপডেট হয়েছে</item>
+        <item quantity="other">%1$dটি অ্যাসেট ফাইল আপডেট হয়েছে</item>
+    </plurals>
     <string name="title_update_subscription_result">%1$dটি কনফিগ আপডেট হয়েছে (%2$d সফল, %3$d ব্যর্থ, %4$d এড়ানো)</string>
     <string name="title_update_subscription_no_subscription">কোনো সাবস্ক্রিপশন নেই</string>
     <string name="toast_server_not_found_in_group">বর্তমান গ্রুপে নির্বাচিত সার্ভারটি পাওয়া যায়নি</string>
@@ -389,14 +411,28 @@
 
     <string name="connection_test_pending">সংযোগ পরীক্ষা করুন</string>
     <string name="connection_test_testing">পরীক্ষা চলছে…</string>
+    <string name="connection_test_complete">পরীক্ষা সম্পন্ন হয়েছে</string>
     <string name="connection_test_testing_count">%dটি কনফিগারেশন পরীক্ষা করা হচ্ছে…</string>
     <string name="connection_test_available">সংযোগ সফল হয়েছে; সময় লেগেছে %1$s</string>
+    <plurals name="connection_test_delay_accessibility_value">
+        <item quantity="one">%1$d মিলিসেকেন্ড</item>
+        <item quantity="other">%1$d মিলিসেকেন্ড</item>
+    </plurals>
     <string name="server_test_delay_value">%1$d মিলিসেকেন্ড</string>
+    <string name="acc_server_test_failed">সংযোগ পরীক্ষা ব্যর্থ</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d মিলিসেকেন্ড</item>
+        <item quantity="other">%1$d মিলিসেকেন্ড</item>
+    </plurals>
+    <string name="acc_share_config_named">%1$s কনফিগারেশন শেয়ার করুন</string>
+    <string name="acc_edit_config_named">%1$s কনফিগারেশন সম্পাদনা করুন</string>
+    <string name="acc_delete_config_named">%1$s কনফিগারেশন মুছুন</string>
     <string name="connection_test_error">সংযোগ পরীক্ষা ব্যর্থ: %s</string>
     <string name="connection_test_fail">ইন্টারনেট উপলব্ধ নয়</string>
     <string name="connection_test_error_status_code">ত্রুটি কোড: #%d</string>
     <string name="connection_connected">সংযুক্ত।\nসংযোগ পরীক্ষা করতে ট্যাপ করুন।</string>
     <string name="connection_connected_via">সংযুক্ত: %s এর মাধ্যমে</string>
+    <string name="connection_connected_accessibility">সংযুক্ত</string>
     <string name="connection_not_connected">সংযুক্ত নয়</string>
     <string name="connection_running_task_left">চলমান পরীক্ষা: %s</string>
 
@@ -571,18 +607,54 @@
     <string name="toast_malformed_json_detail">কনফিগারেশন ফরম্যাট সঠিক নয়: %1$s</string>
     <string name="acc_add_asset">অ্যাসেট উৎস যোগ করুন</string>
     <string name="acc_download_file">অ্যাসেট ফাইল ডাউনলোড করুন</string>
+    <string name="acc_asset_file_details">ফাইলের আকার %1$s। আপডেট করা হয়েছে %2$s-এ</string>
+    <string name="acc_edit_asset_named">%1$s সম্পাদনা করুন</string>
+    <string name="acc_delete_asset_named">%1$s মুছুন</string>
     <string name="acc_qr_code">QR কোড</string>
-    <string name="acc_copy_log">লগ কপি করুন</string>
+    <string name="acc_copy_log">ক্লিপবোর্ডে লগ কপি করুন</string>
     <string name="acc_clear_log">লগ মুছুন</string>
     <string name="acc_add_rule">রাউটিং নিয়ম যোগ করুন</string>
+    <string name="acc_routing_rule_summary">%1$s। %2$s</string>
+    <string name="acc_routing_rule_locked_summary">%1$s। লক করা</string>
+    <string name="acc_routing_rule_blocked">ব্লক করা হয়েছে</string>
+    <string name="acc_routing_rule_routed_through">%1$s-এর মাধ্যমে রাউট করা হয়েছে</string>
+    <string name="acc_routing_rule_routed_directly">সরাসরি রাউট করা হয়েছে</string>
+    <string name="acc_routing_rule_enabled">নিয়মটি চালু</string>
+    <string name="acc_routing_rule_disabled">নিয়মটি বন্ধ</string>
+    <string name="acc_enable_routing_rule">নিয়ম চালু করুন</string>
+    <string name="acc_disable_routing_rule">নিয়ম বন্ধ করুন</string>
+    <string name="acc_edit_routing_rule_named">%1$s সম্পাদনা করুন</string>
+    <string name="acc_delete_routing_rule_named">%1$s মুছুন</string>
     <string name="acc_start">সার্ভিস শুরু করুন</string>
     <string name="acc_stop">সার্ভিস বন্ধ করুন</string>
+    <string name="acc_connect">সংযোগ করুন</string>
+    <string name="acc_disconnect">সংযোগ বিচ্ছিন্ন করুন</string>
     <string name="acc_back">ফিরে যান</string>
     <string name="acc_search">অনুসন্ধান করুন</string>
+    <string name="acc_clear_search">অনুসন্ধান মুছুন</string>
     <string name="acc_add">কনফিগারেশন যোগ করুন</string>
     <string name="acc_more">আরও বিকল্প</string>
-    <string name="acc_selected_server">Selected</string>
+    <string name="acc_move_to_top">তালিকার শুরুতে সরান</string>
+    <string name="acc_move_up">উপরে সরান</string>
+    <string name="acc_move_down">নিচে সরান</string>
+    <string name="acc_move_to_bottom">তালিকার শেষে সরান</string>
+    <string name="acc_moved">সরানো হয়েছে</string>
+    <string name="acc_selected_server">নির্বাচিত</string>
+    <string name="acc_select_server">নির্বাচন করুন</string>
     <string name="acc_share_subscription">সাবস্ক্রিপশন লিংক শেয়ার করুন</string>
+    <string name="acc_last_updated">সর্বশেষ আপডেট করা হয়েছে %1$s-এ</string>
+    <string name="acc_subscription_update_on">আপডেট চালু</string>
+    <string name="acc_subscription_update_off">আপডেট বন্ধ</string>
+    <string name="acc_enable_subscription_update">আপডেট চালু করুন</string>
+    <string name="acc_disable_subscription_update">আপডেট বন্ধ করুন</string>
+    <string name="acc_enable_subscription_auto_update">নিয়মিত স্বয়ংক্রিয় আপডেট চালু করুন</string>
+    <string name="acc_disable_subscription_auto_update">নিয়মিত স্বয়ংক্রিয় আপডেট বন্ধ করুন</string>
+    <string name="acc_subscription_auto_update_enabled">নিয়মিত স্বয়ংক্রিয় আপডেট চালু হয়েছে</string>
+    <string name="acc_subscription_auto_update_disabled">নিয়মিত স্বয়ংক্রিয় আপডেট বন্ধ হয়েছে</string>
+    <string name="acc_unnamed_subscription">নামহীন।</string>
+    <string name="acc_share_named">%1$s শেয়ার করুন</string>
+    <string name="acc_edit_named">%1$s সম্পাদনা করুন</string>
+    <string name="acc_delete_named">%1$s মুছুন</string>
     <string name="acc_share_log">লগ শেয়ার করুন</string>
     <string name="acc_remove">প্রক্সি চেইনের সদস্য সরান</string>
     <string name="acc_add_member">প্রক্সি চেইনে সদস্য যোগ করুন</string>
@@ -592,12 +664,20 @@
     <string name="acc_turn_torch_off">ফ্ল্যাশলাইট বন্ধ করুন</string>
     <string name="acc_select_image">স্ক্যান করার জন্য ছবি নির্বাচন করুন</string>
     <string name="acc_locked">প্রিসেট আমদানি করলে নিয়মটি রাখা হবে</string>
+    <string name="acc_settings_group_expanded">%1$s। গ্রুপটি প্রসারিত</string>
+    <string name="acc_settings_group_collapsed">%1$s। গ্রুপটি সংকুচিত</string>
     <string name="acc_open_menu">নেভিগেশন মেনু খুলুন</string>
     <string name="acc_edit">সম্পাদনা করুন</string>
     <string name="acc_delete">মুছুন</string>
     <string name="acc_save">সংরক্ষণ করুন</string>
     <string name="acc_update_subscriptions">সাবস্ক্রিপশন আপডেট করুন</string>
     <string name="acc_per_app_proxy_information">প্রতি-অ্যাপ প্রক্সির তথ্য</string>
+    <string name="acc_app_checked">চিহ্নিত</string>
+    <string name="acc_app_not_checked">চিহ্নিত নয়</string>
+    <string name="acc_app_routing_state">%1$s। %2$s</string>
+    <string name="acc_app_routed_directly">সরাসরি রাউট করা হয়েছে</string>
+    <string name="acc_app_routed_through">অ্যাপের মাধ্যমে রাউট করা হয়েছে</string>
+    <string name="acc_per_app_routing_disabled">অ্যাপভিত্তিক রাউটিং চালু নেই</string>
     <string name="permission_camera">ক্যামেরা</string>
     <string name="permission_notification">বিজ্ঞপ্তি</string>
     <string name="permission_local_network">স্থানীয় নেটওয়ার্ক</string>
@@ -612,4 +692,6 @@
     <string name="title_pref_remember_routes_per_wifi_network">প্রতিটি Wi-Fi নেটওয়ার্কের জন্য কার্যকর রুট মনে রাখুন</string>
     <string name="summary_pref_remember_routes_per_wifi_network">আলাদা রুটের ইতিহাস রাখতে সংযুক্ত Wi-Fi নেটওয়ার্কের নাম ব্যবহার করে। সুনির্দিষ্ট লোকেশন অনুমতি প্রয়োজন, কারণ Android Wi-Fi নেটওয়ার্কের নামকে লোকেশন তথ্য হিসেবে সুরক্ষিত রাখে।</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">Wi-Fi নেটওয়ার্কের নাম পড়তে সুনির্দিষ্ট লোকেশন অনুমতি প্রয়োজন</string>
+    <string name="acc_toggle_on">চালু</string>
+    <string name="acc_toggle_off">বন্ধ</string>
 </resources>

@@ -27,11 +27,14 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.extension.serializable
 import com.v2ray.ang.handler.CoreDownloadManager
+import com.v2ray.ang.extension.serviceStartedMessage
+import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SpeedtestManager
 import com.v2ray.ang.helper.MessageHelper
+import com.v2ray.ang.helper.NotificationHelper
 import com.v2ray.ang.service.DialerNativeService
 import com.v2ray.ang.service.DialerWebviewService
 import com.v2ray.ang.service.NetworkIdentityResolver
@@ -40,6 +43,7 @@ import com.v2ray.ang.shizuku.TetheringCoreSync
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -49,6 +53,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.jvm.Volatile
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.withContext
 import libv2ray.CoreCallbackHandler
 import libv2ray.CoreController
 import libv2ray.ProcessFinder
@@ -77,6 +83,7 @@ object CoreServiceManager {
     private val teardownLock = Any()
     private var teardownExecutor: ExecutorService? = null
     private var receiversRegistered = false
+    private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var runningProfileGuid = ""
     private val networkResetMutex = Mutex()
@@ -167,6 +174,7 @@ object CoreServiceManager {
                         ""
                     }
                     TetheringCoreSync.onStopping(service)
+                    connectionTestScope.coroutineContext.cancelChildren()
                     when {
                         refreshedConfig != null && nextHasPrimaryBalancer -> {
                             coreController.resetNetworkStateWithConfigAndWarmRoute(
@@ -423,7 +431,7 @@ object CoreServiceManager {
             LogUtil.e(AppConfig.TAG, "StartCore-Manager: $message", e)
             TetheringCoreSync.onStartFailed(service, message)
             cleanupFailedStart(service)
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
+            reportStartFailure(service, message)
             NotificationManager.cancelNotification()
             return false
         }
@@ -517,7 +525,7 @@ object CoreServiceManager {
             result.content,
             usesHevTun,
         )
-        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
+        reportStartSuccess(service, config.remarks)
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
@@ -528,6 +536,8 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        connectionTestScope.coroutineContext.cancelChildren()
+        val wasRunning = isRunning()
         stopActiveOutboundPolling()
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
@@ -555,7 +565,9 @@ object CoreServiceManager {
             browserDialer = null
         }
 
-        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
+        if (wasRunning) {
+            reportStopSuccess(service)
+        }
         NotificationManager.cancelNotification()
 
         unregisterCoreReceivers(service)
@@ -606,6 +618,7 @@ object CoreServiceManager {
     }
 
     private fun cleanupFailedStart(service: Service) {
+        connectionTestScope.coroutineContext.cancelChildren()
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
         stopPolicyRoutePolling()
@@ -729,6 +742,42 @@ object CoreServiceManager {
         resetCoreNetworkState(service, previousNetworkKey, newNetworkKey, networkHandle)
     }
 
+    private fun reportStartSuccess(service: Service, serverName: String) {
+        val localizedContext = AppLocaleManager.localizedContext(service)
+        val message = localizedContext.serviceStartedMessage(serverName)
+        reportServiceEvent(service, AppConfig.MSG_STATE_START_SUCCESS, serverName, message)
+    }
+
+    internal fun reportStartFailure(service: Service, detail: String) {
+        val message = AppLocaleManager.localizedContext(service)
+            .getString(R.string.toast_services_failure)
+        reportServiceEvent(
+            service = service,
+            what = AppConfig.MSG_STATE_START_FAILURE,
+            content = detail,
+            fallbackMessage = message,
+        )
+    }
+
+    private fun reportStopSuccess(service: Service) {
+        val message = AppLocaleManager.localizedContext(service)
+            .getString(R.string.toast_services_stop)
+        reportServiceEvent(service, AppConfig.MSG_STATE_STOP_SUCCESS, "", message)
+    }
+
+    private fun reportServiceEvent(
+        service: Service,
+        what: Int,
+        content: String,
+        fallbackMessage: String,
+    ) {
+        MessageHelper.sendMsg2UIForResult(service, what, content) { handled ->
+            if (!handled) {
+                NotificationHelper.notifyTransientMessage(service, fallbackMessage)
+            }
+        }
+    }
+
     /**
      * Queries and resets all outbound traffic counters in one core call.
      * Go side format: tag,direction,value;tag,direction,value;
@@ -766,13 +815,15 @@ object CoreServiceManager {
      * Tests with primary URL first, then falls back to alternative URL if needed.
      * Also fetches remote IP information if the delay test was successful.
      */
-    private fun measureV2rayDelay() {
-        if (!isRunning()) {
+    private fun measureV2rayDelay(requestId: String) {
+        val service = getService() ?: return
+        if (!isRunning() || networkTransitions.get() != 0) {
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
             return
         }
 
-        urlDownloadScope?.launch {
-            val service = getService() ?: return@launch
+        connectionTestScope.coroutineContext.cancelChildren()
+        connectionTestScope.launch {
             var time = -1L
             var errorStr = ""
 
@@ -783,6 +834,7 @@ object CoreServiceManager {
                 errorStr = e.message?.substringAfter("\":").orEmpty()
             }
             if (time == -1L) {
+                ensureActive()
                 try {
                     time = coreController.measureDelay(SettingsManager.getDelayTestUrl(true))
                 } catch (e: Exception) {
@@ -803,7 +855,17 @@ object CoreServiceManager {
                 SpeedtestManager.getRemoteIPInfo(fetchViaCore)
             }
             ensureActive()
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
+            withContext(Dispatchers.Main.immediate) {
+                if (isRunning()) {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
+                } else {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
+                }
+            }
+        }.invokeOnCompletion { cause ->
+            if (cause is CancellationException) {
+                MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
+            }
         }
     }
 
@@ -984,7 +1046,8 @@ object CoreServiceManager {
                 }
 
                 AppConfig.MSG_MEASURE_DELAY -> {
-                    measureV2rayDelay()
+                    if (isOrderedBroadcast) resultCode = Activity.RESULT_OK
+                    measureV2rayDelay(intent.getStringExtra("content").orEmpty())
                 }
 
                 AppConfig.MSG_DOWNLOAD_URL -> {

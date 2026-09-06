@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.booleanResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
@@ -85,6 +87,8 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
+                    // The decorative Surface must not become an empty accessibility stop.
+                    .semantics { hideFromAccessibility() }
             ) {
                 Column(
                     modifier = Modifier
@@ -106,6 +110,7 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     )
                     Text(
                         text = stringResource(R.string.app_name),
+                        modifier = Modifier.semantics { hideFromAccessibility() },
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )

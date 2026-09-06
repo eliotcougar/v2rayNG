@@ -17,11 +17,21 @@
     <string name="notification_action_stop_v2ray">واڌاشتن</string>
     <string name="toast_permission_denied">گرؽڌن موجوز مومکن نؽڌ</string>
     <string name="toast_permission_denied_notification">گرؽڌن موجوز وارسۊوی مومکن نؽڌ</string>
+    <string name="notification_channel_service">سرویس v2rayNG</string>
+    <string name="notification_channel_subscription_updates">ورۊ کردن اشتراکا</string>
+    <string name="notification_channel_connection_checks">واجۊری منپیز</string>
+    <string name="notification_channel_other">وارسۊوی یل دی</string>
     <string name="notification_action_more">سی دووسمندیا قلوه کیلیک کوݩ</string>
     <string name="toast_services_start">ره وستن سرویس</string>
-    <string name="toast_services_stop">واڌاشتن سرویس</string>
+    <string name="toast_services_stop">واڌاشتن سرویس وا مووفقیت ٱنجوم وابی</string>
     <string name="toast_services_success">ره وستن سرویس وا مووفقیت ٱنجوم وابی</string>
+    <string name="acc_service_started_connected_to">ره وستن سرویس وا مووفقیت ٱنجوم وابی. هیم سکو وا %1$s منپیز هڌ.</string>
     <string name="toast_services_failure">ره وستن سرویس وا مووفقیت ٱنجوم نوابی</string>
+
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s. %2$d سرور منس هڌ</item>
+        <item quantity="other">%1$s. %2$d سرور منس هڌ</item>
+    </plurals>
 
     <!--ServerActivity-->
     <string name="title_server">فایل کانفیگ</string>
@@ -46,17 +56,29 @@
     <string name="confirm_delete_duplicate_profiles">پوی کانفیگا تکراری ک هیم سکو نشووݩ داڌه ابۊن پاک ابۊن، هنی هم اخۊی پاکسووݩ کۊنی؟</string>
     <string name="confirm_delete_invalid_profiles">ٱول کانفیگا ن آزمایش کۊنین. پوی کانفیگا نا موئتبر ک هیم سکو نشووݩ داڌه ابۊن پاک ابۊن، هنی هم اخۊی پاکسووݩ کۊنی؟</string>
     <string name="confirm_delete_profile">ای کانفیگ پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_profile_named">ای کانفیگ پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
     <string name="confirm_delete_policy_group">ای بونکۊ سیاست پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_policy_group_named">ای بونکۊ سیاست پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
     <string name="confirm_delete_proxy_chain_member">ای عوزو زنجیره پروکسی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_proxy_chain_member_named">ای عوزو زنجیره پروکسی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
     <string name="confirm_delete_routing_rule">ای قانووݩ تور جوستن پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_routing_rule_named">ای قانووݩ تور جوستن پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
     <string name="confirm_delete_subscription_group">ای بونکۊ اشتراک پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
-    <string name="confirm_delete_asset_file">فایل بونچک جغرافیایی «%1$s» پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
-    <string name="confirm_delete_asset_source">ای بونچک فایلا جغرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_asset_file">فایل بونچک جوقرافیایی «%1$s» پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
+    <string name="confirm_delete_asset_source">ای بونچک فایل جوقرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟</string>
     <string name="server_lab_remarks">نیشتنا</string>
     <string name="server_lab_address">نشۊوی</string>
     <string name="server_lab_port">پورت</string>
     <string name="server_lab_id">نوم منتوری</string>
     <string name="server_lab_alterid">شناسه جایگۊزین</string>
+    <string name="acc_server_test_failed">آزمایش منپیز مووفق نوابی</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d میلی‌سانیه</item>
+        <item quantity="other">%1$d میلی‌سانیه</item>
+    </plurals>
+    <string name="acc_share_config_named">یک رسۊوی کانفیگ %1$s</string>
+    <string name="acc_edit_config_named">آلشتکاری کانفیگ %1$s</string>
+    <string name="acc_delete_config_named">پاک کردن کانفیگ %1$s</string>
     <string name="server_lab_security">ٱمنیت</string>
     <string name="server_lab_network">شبکه</string>
     <string name="server_lab_more_function">جاگورو</string>
@@ -149,6 +171,7 @@
     <string name="msg_file_not_found">فایلن نجوست</string>
     <string name="msg_remark_is_duplicate">ای نوم ز زیتر بیڌس</string>
     <string name="asset_geo_files_sources">بونچک فایلا جغرافیایی (اختیاری)</string>
+    <string name="confirm_delete_asset_source_named">ای بونچک فایل جوقرافیایی پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
 
     <!-- PerAppProxyActivity -->
     <string name="msg_dialog_progress">هونی بار ونی ابۊ…</string>
@@ -328,6 +351,20 @@
     <string name="sub_setting_remarks">نیشتنا</string>
     <string name="sub_setting_url">نشۊوی اینترنتی اختیاری</string>
     <string name="sub_setting_user_agent" translatable="false">User Agent</string>
+    <string name="confirm_delete_subscription_group_named">ای بونکۊ اشتراک پاک ابۊ، هنی هم اخۊی پاکس کۊنی؟\n%1$s</string>
+    <string name="acc_last_updated">ورۊ رسۊوی نهایی من %1$s</string>
+    <string name="acc_subscription_update_on">ورۊ کردن روشن هڌ</string>
+    <string name="acc_subscription_update_off">ورۊ کردن خاموش هڌ</string>
+    <string name="acc_enable_subscription_update">روشن کردن ورۊ کردن</string>
+    <string name="acc_disable_subscription_update">خاموش کردن ورۊ کردن</string>
+    <string name="acc_enable_subscription_auto_update">روشن کردن ورۊ کردن خوتکار وا فاصله زمۊوی</string>
+    <string name="acc_disable_subscription_auto_update">خاموش کردن ورۊ کردن خوتکار وا فاصله زمۊوی</string>
+    <string name="acc_subscription_auto_update_enabled">ورۊ کردن خوتکار وا فاصله زمۊوی روشن هڌ</string>
+    <string name="acc_subscription_auto_update_disabled">ورۊ کردن خوتکار وا فاصله زمۊوی خاموش هڌ</string>
+    <string name="acc_unnamed_subscription">بی‌نوم.</string>
+    <string name="acc_share_named">یک رسۊوی %1$s</string>
+    <string name="acc_edit_named">آلشتکاری %1$s</string>
+    <string name="acc_delete_named">پاک کردن %1$s</string>
     <string name="sub_setting_request_headers">سرآیندا درخواست (قالوو JSON)</string>
     <string name="sub_setting_filter">فیلتر نیشتنا وا regex</string>
     <string name="sub_setting_enable">ره وندن ورۊ کردن</string>
@@ -351,8 +388,14 @@
     <string name="title_del_config_count">پاک کردن %d کانفیگ</string>
     <string name="title_import_config_count">و من ٱووردن %d کانفیگ</string>
     <string name="title_export_config_count">و در کشیڌن %d کانفیگ</string>
-    <string name="title_update_config_count">ورۊ کردن %d کانفیگ</string>
-    <string name="title_update_asset_count">%d فایل بونچک جغرافیایی ورۊ وابی</string>
+    <plurals name="title_update_config_count">
+        <item quantity="one">%1$d کانفیگ ورۊ وابی</item>
+        <item quantity="other">%1$d کانفیگ ورۊ وابی</item>
+    </plurals>
+    <plurals name="title_update_asset_count">
+        <item quantity="one">%1$d فایل بونچک جوقرافیایی ورۊ وابی</item>
+        <item quantity="other">%1$d فایل بونچک جوقرافیایی ورۊ وابی</item>
+    </plurals>
     <string name="title_update_subscription_result">%1$d کانفیگ ورۊ وابی (مووفق: %2$d، شکست خرده: %3$d، رڌ وابیڌه: %4$d)</string>
     <string name="title_update_subscription_no_subscription">بؽ اشتراک</string>
     <string name="toast_server_not_found_in_group">سرور پسند وابیڌه من بونکۊ سکویی نجۊرست</string>
@@ -389,14 +432,20 @@
 
     <string name="connection_test_pending">منپیزن واجۊری کوݩ</string>
     <string name="connection_test_testing">هونی آزمایش ابۊ…</string>
+    <string name="connection_test_complete">آزمایش ٱنجوم وابی</string>
     <string name="connection_test_testing_count">%d کانفیگ هونی آزمایش ابۊ…</string>
-    <string name="connection_test_available">مووفق بی: منپیز %1$s طۊل کشی</string>
-    <string name="server_test_delay_value">%1$d میلی‌ثانیه</string>
+    <string name="connection_test_available">مووفق بی: منپیز %1$s تۊل کشی</string>
+    <string name="server_test_delay_value">%1$d میلی‌سانیه</string>
     <string name="connection_test_error">منپیز و اینترنتن نجوست: %s</string>
     <string name="connection_test_fail">اینترنت من دسرس نؽ</string>
     <string name="connection_test_error_status_code">کود خطا: #%d</string>
+    <plurals name="connection_test_delay_accessibility_value">
+        <item quantity="one">%1$d میلی‌سانیه</item>
+        <item quantity="other">%1$d میلی‌سانیه</item>
+    </plurals>
     <string name="connection_connected">منپیز هڌ. سی واجۊری کیلیک کوݩ.</string>
     <string name="connection_connected_via">منپیز وا %s</string>
+    <string name="connection_connected_accessibility">منپیز هڌ</string>
     <string name="connection_not_connected">منپیز نؽڌ</string>
     <string name="connection_running_task_left">آزمایشا هونی ٱنجوم ابۊن: %s</string>
 
@@ -569,20 +618,43 @@
     <string name="toast_permission_denied_for">گرؽڌن موجوز مومکن نؽڌ: %1$s</string>
     <string name="acc_add_subscription">ٱووردن اشتراک</string>
     <string name="toast_malformed_json_detail">کانفیگ نا موئتبر هڌ: %1$s</string>
-    <string name="acc_add_asset">ٱووردن بونچک فایلا جغرافیایی</string>
-    <string name="acc_download_file">دانلود فایلا بونچک جغرافیایی</string>
+    <string name="acc_add_asset">ٱووردن بونچک فایلا جوقرافیایی</string>
+    <string name="acc_download_file">دانلود فایلا بونچک جوقرافیایی</string>
+    <string name="acc_asset_file_details">هجم فایل %1$s. ورۊ وابیڌه من %2$s</string>
+    <string name="acc_edit_asset_named">آلشتکاری %1$s</string>
+    <string name="acc_delete_asset_named">پاک کردن %1$s</string>
     <string name="acc_qr_code">کود QR</string>
-    <string name="acc_copy_log">لف گیری گوزارش</string>
+    <string name="acc_copy_log">لف گیری گوزارش من ویرگا</string>
     <string name="acc_clear_log">روفتن گوزارش</string>
     <string name="acc_add_rule">ٱووردن قانووݩ</string>
+    <string name="acc_routing_rule_summary">%1$s، %2$s</string>
+    <string name="acc_routing_rule_locked_summary">%1$s، چفت هڌ</string>
+    <string name="acc_routing_rule_blocked">مسدود هڌ</string>
+    <string name="acc_routing_rule_routed_through">وا %1$s ره اڌه</string>
+    <string name="acc_routing_rule_routed_directly">موستقیم ره اڌه</string>
+    <string name="acc_routing_rule_enabled">ای قانووݩ روشن هڌ</string>
+    <string name="acc_routing_rule_disabled">ای قانووݩ خاموش هڌ</string>
+    <string name="acc_enable_routing_rule">روشن کردن قانووݩ</string>
+    <string name="acc_disable_routing_rule">خاموش کردن قانووݩ</string>
+    <string name="acc_edit_routing_rule_named">آلشتکاری %1$s</string>
+    <string name="acc_delete_routing_rule_named">پاک کردن %1$s</string>
     <string name="acc_start">ره وستن سرویس</string>
     <string name="acc_stop">واڌاشتن سرویس</string>
+    <string name="acc_connect">منپیز کردن</string>
+    <string name="acc_disconnect">واڌاشتن منپیز</string>
     <string name="acc_back">برگشت</string>
     <string name="acc_search">پیتینیڌن</string>
+    <string name="acc_clear_search">روفتن پیتینیڌن</string>
     <string name="acc_add">ٱووردن کانفیگ</string>
-    <string name="acc_more">امکووݩا بؽتر</string>
-    <string name="acc_selected_server">Selected</string>
-    <string name="acc_share_subscription">یک رسۊوی لینک اشتراک</string>
+    <string name="acc_more">گۊزینه یل قلوه</string>
+    <string name="acc_move_to_top">آلشت و سر نومگه</string>
+    <string name="acc_move_up">آلشت و روء</string>
+    <string name="acc_move_down">آلشت و بلم</string>
+    <string name="acc_move_to_bottom">آلشت و ته نومگه</string>
+    <string name="acc_moved">آلشت وابید</string>
+    <string name="acc_selected_server">پسند وابیڌه</string>
+    <string name="acc_select_server">پسند کردن</string>
+    <string name="acc_share_subscription">یک رسۊوی لینگ اشتراک</string>
     <string name="acc_share_log">یک رسۊوی گوزارش</string>
     <string name="acc_remove">پاک کردن عوزو زنجیره پروکسی</string>
     <string name="acc_add_member">ٱووردن عوزو زنجیره پروکسی</string>
@@ -592,13 +664,21 @@
     <string name="acc_turn_torch_off">خاموش کردن چراغ</string>
     <string name="acc_select_image">پسند ٱکس سی اسکن</string>
     <string name="acc_locked">ای قانووݩ مجال و من ٱووردن ز پؽش سامووا زفت ابۊ</string>
+    <string name="acc_settings_group_expanded">%1$s. بونکۊ وا وابیڌه هڌ</string>
+    <string name="acc_settings_group_collapsed">%1$s. بونکۊ بسته وابیڌه هڌ</string>
     <string name="acc_open_menu">گۊشیڌن نومگه کشاری</string>
     <string name="acc_edit">آلشتکاری</string>
     <string name="acc_delete">پاک کردن</string>
     <string name="acc_save">زفت کردن</string>
     <string name="acc_update_subscriptions">ورۊ کردن اشتراکا</string>
     <string name="acc_per_app_proxy_information">دووسمندی پروکسی و ری برنومه</string>
-    <string name="permission_camera">دوربیݩ</string>
+    <string name="acc_app_checked">پسند وابیڌه</string>
+    <string name="acc_app_not_checked">پسند نوابیڌه</string>
+    <string name="acc_app_routing_state">%1$s. %2$s</string>
+    <string name="acc_app_routed_directly">موستقیم ره اڌه</string>
+    <string name="acc_app_routed_through">وا برنومه ره اڌه</string>
+    <string name="acc_per_app_routing_disabled">ره وندن و ری برنومه روون نید</string>
+    <string name="permission_camera">شؽواتگر</string>
     <string name="permission_notification">وارسۊوی</string>
     <string name="permission_local_network">شبکه محلی</string>
     <string name="subscription_update_updating">اشتراک %1$s هونی ورۊ ابۊ</string>
@@ -612,4 +692,6 @@
     <string name="title_pref_remember_routes_per_wifi_network">تورا کارا سی هر شبکه وای‌فای ن و یاد ودارین</string>
     <string name="summary_pref_remember_routes_per_wifi_network">نوم شبکه وای‌فای منپیز وابیڌه ن سی نگهداشتن تاریخچه تور جۊری و کار اگره. چۊ ٱندروید نوم وای‌فای ن دووسمندی جایونی دونسته، دسرسی جای دقیق لازوم هڌ.</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">دسرسی جای دقیق سی خوندن نوم شبکه وای‌فای لازوم هڌ</string>
+    <string name="acc_toggle_on">روشن</string>
+    <string name="acc_toggle_off">خاموش</string>
 </resources>
