@@ -714,4 +714,8 @@
     <string name="toast_precise_location_required_for_wifi_route_memory">讀取 Wi-Fi 網路名稱需要精確位置權限</string>
     <string name="acc_toggle_on">開啟</string>
     <string name="acc_toggle_off">關閉</string>
+    <string name="title_remote_control">自動化應用程式存取權限</string>
+    <string name="summary_remote_control">允許其他應用程式控制 v2rayNG</string>
+    <string name="remote_control_access_required">請在「設定 → 自動化應用程式存取權限」中允許此應用程式，然後重新開啟此操作。</string>
+    <string name="tasker_current_profile">目前設定檔</string>
 </resources>

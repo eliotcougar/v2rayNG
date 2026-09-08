@@ -95,6 +95,26 @@ object MmkvManager {
         }.onFailure { LogUtil.e(TAG, "Failed to notify selected profile change after persistence", it) }
     }
 
+    /** Remote grants are device-local credentials, excluded from system and configuration backups. */
+    private val remoteControlStorage by lazy {
+        MMKV.mmkvWithID(
+            "REMOTE_CONTROL", MMKV.MULTI_PROCESS_MODE, null,
+            AngApplication.application.noBackupFilesDir.resolve("remote-control").absolutePath
+        )
+    }
+
+    internal fun <T> withRemoteControlStorage(block: (MMKV) -> T): T {
+        val storage = remoteControlStorage
+        return synchronized(storage) {
+            storage.lock()
+            try {
+                block(storage)
+            } finally {
+                storage.unlock()
+            }
+        }
+    }
+
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
         return synchronized(mainStorage) {
             mainStorage.lock()

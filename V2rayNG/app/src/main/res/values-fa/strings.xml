@@ -719,4 +719,8 @@
     <string name="toast_precise_location_required_for_wifi_route_memory">برای خواندن نام شبکه Wi-Fi، مجوز مکان دقیق لازم است</string>
     <string name="acc_toggle_on">روشن</string>
     <string name="acc_toggle_off">خاموش</string>
+    <string name="title_remote_control">دسترسی برنامه‌های خودکارسازی</string>
+    <string name="summary_remote_control">اجازه به برنامه‌های دیگر برای کنترل v2rayNG</string>
+    <string name="remote_control_access_required">در تنظیمات ← دسترسی برنامه‌های خودکارسازی، به این برنامه اجازه دهید و سپس این عمل را دوباره باز کنید.</string>
+    <string name="tasker_current_profile">پروفایل فعلی</string>
 </resources>

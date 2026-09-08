@@ -729,4 +729,8 @@
     <string name="toast_precise_location_required_for_wifi_route_memory">Для чтения имени сети Wi-Fi требуется доступ к точному местоположению</string>
     <string name="acc_toggle_on">Включено</string>
     <string name="acc_toggle_off">Выключено</string>
+    <string name="title_remote_control">Доступ приложений автоматизации</string>
+    <string name="summary_remote_control">Разрешить другим приложениям управлять v2rayNG</string>
+    <string name="remote_control_access_required">Разрешите этому приложению доступ в разделе «Настройки → Доступ приложений автоматизации», затем снова откройте это действие.</string>
+    <string name="tasker_current_profile">Текущий профиль</string>
 </resources>

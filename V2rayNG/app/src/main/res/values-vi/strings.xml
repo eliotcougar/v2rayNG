@@ -714,4 +714,8 @@
     <string name="toast_precise_location_required_for_wifi_route_memory">Cần quyền vị trí chính xác để đọc tên mạng Wi-Fi</string>
     <string name="acc_toggle_on">Bật</string>
     <string name="acc_toggle_off">Tắt</string>
+    <string name="title_remote_control">Quyền truy cập cho ứng dụng tự động hóa</string>
+    <string name="summary_remote_control">Cho phép ứng dụng khác điều khiển v2rayNG</string>
+    <string name="remote_control_access_required">Cho phép ứng dụng này trong Cài đặt → Quyền truy cập cho ứng dụng tự động hóa, rồi mở lại tác vụ này.</string>
+    <string name="tasker_current_profile">Cấu hình hiện tại</string>
 </resources>
