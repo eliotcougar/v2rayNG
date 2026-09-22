@@ -50,7 +50,6 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvBool
 import com.v2ray.ang.handler.MmkvManager.rememberMmkvString
 import com.v2ray.ang.handler.SettingsChangeManager
-import com.v2ray.ang.extension.toastErrorLong
 import com.v2ray.ang.root.RootManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -238,7 +237,7 @@ fun SettingsScreen(
             context.hasFineLocationPermission()
         rememberRoutesPerWifiNetwork = fineLocationGranted
         if (!fineLocationGranted) {
-            context.toastErrorLong(R.string.toast_precise_location_required_for_wifi_route_memory)
+            context.toastError(R.string.toast_precise_location_required_for_wifi_route_memory, long = true)
         }
     }
 
