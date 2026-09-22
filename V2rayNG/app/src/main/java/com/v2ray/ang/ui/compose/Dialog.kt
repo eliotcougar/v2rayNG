@@ -41,38 +41,66 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 
 @Composable
-fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val isTelevision = isTelevisionDevice()
+fun ConfirmDialog(
+    title: String? = null,
+    message: String,
+    confirmText: String = stringResource(R.string.action_ok),
+    dismissText: String? = stringResource(R.string.action_cancel),
+    confirmIcon: @Composable (() -> Unit)? = null,
+    messageTextAlign: TextAlign = TextAlign.Start,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val confirmFocusRequester = remember { FocusRequester() }
     val dismissFocusRequester = remember { FocusRequester() }
-    val deleteText = stringResource(R.string.action_delete)
-    val cancelText = stringResource(android.R.string.cancel)
-    if (isTelevision) LaunchedEffect(Unit) { requestFocusWhenReady(dismissFocusRequester) }
+    LaunchedEffect(dismissText) {
+        requestFocusWhenReady(if (dismissText != null) dismissFocusRequester else confirmFocusRequester)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
-        confirmButton = {
-            AppDialogButton(
-                text = deleteText,
-                icon = painterResource(R.drawable.ic_delete_24dp),
-                onClick = { onConfirm(); onDismiss() }
-            )
+        title = title?.let { { Text(it) } },
+        text = {
+            Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
+                textAlign = messageTextAlign)
         },
-        dismissButton = {
-            AppDialogButton(text = cancelText, onClick = onDismiss, focusRequester = dismissFocusRequester)
+        confirmButton = {
+            AppDialogButton(confirmText, { onConfirm(); onDismiss() }, icon = confirmIcon,
+                focusRequester = confirmFocusRequester)
+        },
+        dismissButton = dismissText?.let { text ->
+            { AppDialogButton(text, onDismiss, focusRequester = dismissFocusRequester) }
         },
         containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+@Composable
+fun DeleteConfirmDialog(
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    itemName: String? = null
+) {
+    val iconSize = if (isTelevisionDevice()) 24.dp else 18.dp
+    ConfirmDialog(
+        message = if (itemName.isNullOrBlank()) message else "$message\n\n$itemName",
+        messageTextAlign = TextAlign.Center,
+        confirmText = stringResource(R.string.action_delete),
+        confirmIcon = { Icon(painterResource(R.drawable.ic_delete_24dp), null, Modifier.size(iconSize)) },
+        onConfirm = onConfirm,
+        onDismiss = onDismiss
     )
 }
 
@@ -81,7 +109,7 @@ internal fun AppDialogButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: Painter? = null,
+    icon: @Composable (() -> Unit)? = null,
     focusRequester: FocusRequester? = null
 ) {
     if (!isTelevisionDevice()) {
@@ -90,7 +118,7 @@ internal fun AppDialogButton(
             modifier = focusRequester?.let { modifier.focusRequester(it) } ?: modifier
         ) {
             if (icon != null) {
-                Icon(painter = icon, contentDescription = null, modifier = Modifier.size(18.dp))
+                icon()
                 Spacer(modifier = Modifier.width(8.dp))
             }
             Text(text)
@@ -112,7 +140,7 @@ internal fun AppDialogButton(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 0.dp)
     ) {
         if (icon != null) {
-            Icon(painter = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+            icon()
             Spacer(modifier = Modifier.width(8.dp))
         }
         Text(text = text, maxLines = 1, overflow = TextOverflow.Ellipsis)

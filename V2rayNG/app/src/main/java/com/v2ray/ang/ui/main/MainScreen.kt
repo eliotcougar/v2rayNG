@@ -32,6 +32,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.isTelevisionDevice
@@ -70,15 +71,18 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         else drawerScope.launch { drawerState?.open() }
     }
     var dialog by remember { mutableStateOf<MainDialog?>(null) }
+    var deleteTarget by rememberSaveable(stateSaver = ServerDeleteTarget.Saver) {
+        mutableStateOf<ServerDeleteTarget?>(null)
+    }
     var dialogFocusToRestore by remember { mutableStateOf<(() -> Boolean)?>(null) }
     LaunchedEffect(dialogFocusToRestore, isTelevision) {
         val restore = dialogFocusToRestore ?: return@LaunchedEffect
         if (isTelevision) restore()
         dialogFocusToRestore = null
     }
-    val requestRemoveServer: (String) -> Unit = { guid ->
+    val requestRemoveServer: (String, String) -> Unit = { guid, name ->
         if (confirmRemove) {
-            dialog = MainDialog.DeleteServer(guid)
+            deleteTarget = ServerDeleteTarget(guid, name)
         } else {
             onAction(MainAction.RemoveServer(guid))
         }
@@ -125,10 +129,18 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
             MainDialog.DeleteAll -> onAction(MainAction.RemoveAllServers)
             MainDialog.DeleteDuplicate -> onAction(MainAction.RemoveDuplicateServers)
             MainDialog.DeleteInvalid -> onAction(MainAction.RemoveInvalidServers)
-            is MainDialog.DeleteServer -> onAction(MainAction.RemoveServer(confirmed.guid))
             is MainDialog.Share -> Unit
         }
     })
+
+    deleteTarget?.let { target ->
+        DeleteConfirmDialog(
+            message = stringResource(R.string.confirm_delete_profile),
+            itemName = target.profileName,
+            onConfirm = { onAction(MainAction.RemoveServer(target.guid)) },
+            onDismiss = { deleteTarget = null }
+        )
+    }
 
     (dialog as? MainDialog.Share)?.target?.let { target ->
         ShareMethodDialog(

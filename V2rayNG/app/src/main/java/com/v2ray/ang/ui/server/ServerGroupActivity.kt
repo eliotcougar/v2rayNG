@@ -119,7 +119,6 @@ class ServerGroupActivity : BaseComponentActivity() {
         fallbackTag: String,
     ): Boolean {
         if (remarks.isBlank()) {
-            toast(R.string.server_lab_remarks)
             return false
         }
 
@@ -231,6 +230,7 @@ fun ServerGroupScreen(
     val scrollState = rememberScrollState()
 
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
+    var isRemarksError by rememberSaveable { mutableStateOf(false) }
     var filter by rememberSaveable { mutableStateOf(initialFilter) }
     var typeValue by rememberSaveable { mutableStateOf(typeEntries.getOrNull(initialType).orEmpty()) }
     var subValue by rememberSaveable { mutableStateOf(subDisplay.getOrNull(initialSubIndex).orEmpty()) }
@@ -261,7 +261,8 @@ fun ServerGroupScreen(
                         onClick = {
                             val typeIdx = typeEntries.indexOf(typeValue).coerceAtLeast(0)
                             val subIdx = subDisplay.indexOf(subValue).coerceAtLeast(0)
-                            onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
+                            isRemarksError = remarks.isBlank()
+                            if (!isRemarksError) onSave(remarks, filter, typeIdx, subIdx, testOutbounds, fallbackTag)
                         }
                     ))
                 }
@@ -279,7 +280,12 @@ fun ServerGroupScreen(
                 .verticalScrollbar(scrollState)
                 .padding(vertical = 8.dp)
         ) {
-            FormTextField(stringResource(R.string.server_lab_remarks), remarks, { remarks = it })
+            FormTextField(
+                label = stringResource(R.string.server_lab_remarks),
+                value = remarks,
+                onValueChange = { remarks = it },
+                isError = isRemarksError
+            )
             FormDropdownField(
                 label = stringResource(R.string.title_policy_group_type),
                 value = typeValue,
@@ -316,10 +322,8 @@ fun ServerGroupScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_policy_group),
-            onConfirm = {
-                showDeleteConfirm = false
-                onDelete()
-            },
+            itemName = initialRemarks,
+            onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false }
         )
     }

@@ -77,7 +77,9 @@ fun FormTextField(
     keyboardType: KeyboardType = KeyboardType.Text,
     placeholder: String? = null,
     maxLines: Int = 5,
-    tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation()
+    tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
+    isError: Boolean = false,
+    supportingText: String? = null,
 ) {
     val isTelevision = isTelevisionDevice()
     val tvFieldState = if (isTelevision) {
@@ -103,6 +105,8 @@ fun FormTextField(
             spec = OutlinedTextFieldSpec(
                 label = label,
                 placeholder = placeholder,
+                supportingText = supportingText,
+                isError = isError,
                 enabled = enabled,
                 maxLines = maxLines,
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType)

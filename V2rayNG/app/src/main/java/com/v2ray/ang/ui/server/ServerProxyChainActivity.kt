@@ -79,8 +79,6 @@ import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
-private data class ProxyChainMember(val id: Long, val remark: String) : java.io.Serializable
-
 private data class ProxyChainMemberFocusTargets(
     val field: FocusRequester = FocusRequester(),
     val remove: FocusRequester = FocusRequester()
@@ -127,7 +125,6 @@ class ServerProxyChainActivity : BaseComponentActivity() {
 
     private fun saveServer(remarks: String, members: List<String>): Boolean {
         if (remarks.isBlank()) {
-            toast(R.string.server_lab_remarks)
             return false
         }
 
@@ -215,6 +212,7 @@ fun ProxyChainScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
+    var isRemarksError by rememberSaveable { mutableStateOf(false) }
     var savedMembers by rememberSaveable {
         mutableStateOf(initialMembers.mapIndexed { index, remark -> ProxyChainMember(index.toLong(), remark) })
     }
@@ -276,7 +274,7 @@ fun ProxyChainScreen(
         val index = savedMembers.indexOfFirst { it.id == memberId }
         if (index < 0) return
         val nextFocusId = savedMembers.getOrNull(index + 1)?.id ?: savedMembers.getOrNull(index - 1)?.id
-        savedMembers = savedMembers.filterNot { it.id == memberId }
+        savedMembers = withoutProxyChainMember(savedMembers, memberId)
         pendingMemberFocusId = nextFocusId
         pendingAddFocus = nextFocusId == null
     }
@@ -296,7 +294,11 @@ fun ProxyChainScreen(
                     ))
                     add(AppTopBarAction(
                         painterResource(R.drawable.ic_fab_check), stringResource(R.string.menu_item_save_config),
-                        onClick = { onSave(remarks, savedMembers.map { it.remark }) }, focusRequester = saveFocusRequester
+                        onClick = {
+                            isRemarksError = remarks.isBlank()
+                            if (!isRemarksError) onSave(remarks, savedMembers.map { it.remark })
+                        },
+                        focusRequester = saveFocusRequester
                     ))
                 }
             )
@@ -350,6 +352,7 @@ fun ProxyChainScreen(
                     label = stringResource(R.string.server_lab_remarks),
                     value = remarks,
                     onValueChange = { remarks = it },
+                    isError = isRemarksError,
                     tvNavigation = TvTextFieldNavigation(
                         focusRequester = remarksFocusRequester,
                         onMoveUp = { backFocusRequester.requestFocus() },
@@ -471,6 +474,7 @@ fun ProxyChainScreen(
     if (showProfileDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_profile),
+            itemName = initialRemarks,
             onConfirm = { showProfileDeleteConfirm = false; onDelete() },
             onDismiss = { showProfileDeleteConfirm = false }
         )
@@ -478,6 +482,7 @@ fun ProxyChainScreen(
     memberToDeleteId?.let { memberId ->
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_proxy_chain_member),
+            itemName = members.firstOrNull { it.id == memberId }?.remark.orEmpty(),
             onConfirm = {
                 removeMember(memberId)
                 memberToDeleteId = null

@@ -45,12 +45,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.AppInfo
-import com.v2ray.ang.extension.toastInfo
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppListItem
+import com.v2ray.ang.ui.compose.ConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.dpadClickable
@@ -94,9 +94,6 @@ class PerAppProxyActivity : BaseComponentActivity() {
             onBackClick = { finish() },
             onPerAppProxyChanged = { viewModel.setPerAppProxyEnabled(it) },
             onBypassAppsChanged = { viewModel.setBypassAppsEnabled(it) },
-            onInfoClick = {
-                toastInfo(R.string.summary_pref_per_app_proxy)
-            },
             onToggleApp = { viewModel.toggle(it) },
             onSearch = { viewModel.filterApps(it) },
             onSelectAll = { viewModel.selectAll() },
@@ -125,7 +122,6 @@ fun PerAppProxyScreen(
     onBackClick: () -> Unit,
     onPerAppProxyChanged: (Boolean) -> Unit,
     onBypassAppsChanged: (Boolean) -> Unit,
-    onInfoClick: () -> Unit,
     onToggleApp: (String) -> Unit,
     onSearch: (String) -> Unit,
     onSelectAll: () -> Unit,
@@ -136,7 +132,7 @@ fun PerAppProxyScreen(
 ) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
-    var showInfoPopup by remember { mutableStateOf(false) }
+    var showInfoPopup by rememberSaveable { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val isTelevision = isTelevisionDevice()
@@ -230,9 +226,7 @@ fun PerAppProxyScreen(
                     AppIconButton(
                         icon = painterResource(R.drawable.ic_about_24dp),
                         label = stringResource(R.string.action_info),
-                        onClick = {
-                            if (isTelevision) showInfoPopup = true else onInfoClick()
-                        },
+                        onClick = { showInfoPopup = true },
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         contentDescription = stringResource(R.string.acc_per_app_proxy_information),
                         focusRequester = infoFocusRequester,
@@ -289,10 +283,19 @@ fun PerAppProxyScreen(
     }
 
     if (showInfoPopup) {
-        TvPerAppInfoPopup(
-            message = stringResource(R.string.summary_pref_per_app_proxy),
-            onDismiss = { showInfoPopup = false }
-        )
+        if (isTelevision) {
+            TvPerAppInfoPopup(
+                message = stringResource(R.string.summary_pref_per_app_proxy),
+                onDismiss = { showInfoPopup = false }
+            )
+        } else {
+            ConfirmDialog(
+                message = stringResource(R.string.summary_pref_per_app_proxy),
+                dismissText = null,
+                onConfirm = {},
+                onDismiss = { showInfoPopup = false }
+            )
+        }
     }
 }
 

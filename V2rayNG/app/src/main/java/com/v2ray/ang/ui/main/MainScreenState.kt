@@ -59,7 +59,6 @@ internal sealed interface MainDialog {
     data object DeleteAll : MainDialog
     data object DeleteDuplicate : MainDialog
     data object DeleteInvalid : MainDialog
-    data class DeleteServer(val guid: String) : MainDialog
     data class Share(val target: MainShareTarget) : MainDialog
 }
 
