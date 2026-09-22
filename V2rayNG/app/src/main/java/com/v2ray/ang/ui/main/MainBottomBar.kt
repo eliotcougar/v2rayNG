@@ -35,7 +35,6 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
-import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 
 @Composable
@@ -131,8 +130,7 @@ fun MainBottomBar(
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding()
-                .dpadFocusOutline(cornerRadius = 16.dp),
+                .navigationBarsPadding(),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight

@@ -38,6 +38,8 @@ import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
+import com.v2ray.ang.ui.compose.FormDropdownConfig
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
@@ -302,6 +304,7 @@ fun ServerGroupScreen(
                         label = stringResource(R.string.title_policy_group_fallback),
                         value = fallbackTag,
                         options = fallbackSuggestions,
+                        config = FormDropdownConfig(editable = !isTelevisionDevice()),
                         onValueChange = { fallbackTag = it }
                     )
                 }

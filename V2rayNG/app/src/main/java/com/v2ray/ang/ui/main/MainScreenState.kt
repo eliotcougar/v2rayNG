@@ -4,9 +4,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -14,55 +11,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.snapshots.SnapshotStateMap
-import androidx.compose.ui.focus.FocusRequester
 import androidx.tv.material3.DrawerState as TvDrawerState
 import androidx.tv.material3.DrawerValue as TvDrawerValue
 import androidx.tv.material3.rememberDrawerState as rememberTvDrawerState
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.entities.ProfileItem
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.launch
-
-@Stable
-internal class MainDrawerCoordinator(
-    val state: DrawerState,
-    private val coroutineScope: CoroutineScope
-) {
-    fun open() {
-        coroutineScope.launch { state.open() }
-    }
-}
-
-@Composable
-internal fun rememberMainDrawerCoordinator(): MainDrawerCoordinator {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
-    return remember(drawerState, coroutineScope) { MainDrawerCoordinator(drawerState, coroutineScope) }
-}
 
 @Stable
 internal class MainTvDrawerCoordinator(val state: TvDrawerState) {
-    var focusToRestore by mutableStateOf<FocusRequester?>(null)
+    var focusToRestore by mutableStateOf<(() -> Boolean)?>(null)
         private set
 
     val isOpen: Boolean
         get() = state.currentValue == TvDrawerValue.Open
 
-    fun openFrom(focusRequester: FocusRequester?) {
-        focusToRestore = focusRequester
+    fun openFrom(restoreFocus: (() -> Boolean)?) {
+        focusToRestore = restoreFocus
         state.setValue(TvDrawerValue.Open)
     }
 
     fun closeAndRestore() {
+        // MainScreen restores after the drawer state change, including activity resume.
         state.setValue(TvDrawerValue.Closed)
-        focusToRestore?.requestFocus()
     }
 }
 
@@ -76,7 +52,7 @@ internal data class MainShareTarget(
     val guid: String,
     val profile: ProfileItem,
     val more: Boolean,
-    val restoreFocusRequester: FocusRequester
+    val restoreFocus: () -> Boolean
 )
 
 internal sealed interface MainDialog {
@@ -86,22 +62,6 @@ internal sealed interface MainDialog {
     data class DeleteServer(val guid: String) : MainDialog
     data class Share(val target: MainShareTarget) : MainDialog
 }
-
-@Stable
-internal class MainDialogState {
-    var current by mutableStateOf<MainDialog?>(null)
-
-    fun show(dialog: MainDialog) {
-        current = dialog
-    }
-
-    fun dismiss() {
-        current = null
-    }
-}
-
-@Composable
-internal fun rememberMainDialogState(): MainDialogState = remember { MainDialogState() }
 
 @Stable
 internal class MainPagerCoordinator(

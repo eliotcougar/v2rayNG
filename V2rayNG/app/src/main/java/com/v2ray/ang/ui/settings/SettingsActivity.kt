@@ -652,8 +652,8 @@ fun SettingsScreen(
                 SettingsSwitchItem(
                     title = stringResource(R.string.title_pref_is_booted),
                     summary = stringResource(R.string.summary_pref_is_booted),
-                    checked = startupSettings.startOnBoot,
-                    enabled = startupSettings.isReady,
+                    checked = startupSettings == true,
+                    enabled = startupSettings != null,
                     onCheckedChange = viewModel::setStartOnBoot
                 )
                 if (systemVpnSettingsAvailable) {

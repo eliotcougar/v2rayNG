@@ -288,7 +288,7 @@ class MainActivity : HelperBaseComponentActivity() {
         val isTelevision = resources.configuration.uiMode and Configuration.UI_MODE_TYPE_MASK ==
             Configuration.UI_MODE_TYPE_TELEVISION
         if (!isTelevision &&
-            (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_BUTTON_B)
+            keyCode == KeyEvent.KEYCODE_BUTTON_B
         ) {
             moveTaskToBack(false)
             return true

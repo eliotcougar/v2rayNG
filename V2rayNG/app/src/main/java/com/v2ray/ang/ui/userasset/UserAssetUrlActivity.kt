@@ -184,9 +184,9 @@ fun UserAssetUrlScreen(
                 .padding(innerPadding)
                 .consumeWindowInsets(innerPadding)
                 .tvSafeAreaPadding()
+                .tvAwareImePadding()
                 .verticalScrollbar(scrollState)
                 .verticalScroll(scrollState)
-                .tvAwareImePadding()
                 .padding(vertical = 8.dp)
         ) {
             FormTextField(

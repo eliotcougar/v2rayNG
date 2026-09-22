@@ -29,7 +29,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -287,7 +286,7 @@ internal fun Modifier.tvPassiveTextFieldFocus(
         .onPreviewKeyEvent { event ->
             if (
                 event.type == KeyEventType.KeyDown &&
-                (event.key == Key.DirectionCenter || event.key == Key.Enter) &&
+                event.key.isDpadActivationKey() &&
                 !state.isEditing
             ) {
                 onActivate()

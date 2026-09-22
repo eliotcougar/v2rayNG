@@ -255,16 +255,6 @@ fun ServerCustomConfigScreen(
                     EditorConstants.LINE_NUMBER_HORIZONTAL_PADDING * 2
         }
     }
-    val lineNumberColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-    val measuredLineNumbers = remember(textLayoutResult?.lineCount, lineNumberStyle, lineNumberColor) {
-        List(textLayoutResult?.lineCount ?: 1) { index ->
-            textMeasurer.measure(
-                text = (index + 1).toString(),
-                style = lineNumberStyle.copy(color = lineNumberColor, textAlign = TextAlign.End)
-            )
-        }
-    }
-
     LaunchedEffect(textFieldState, verticalScroll, horizontalScroll) {
         snapshotFlow {
             Triple(
@@ -381,6 +371,8 @@ fun ServerCustomConfigScreen(
                         .fillMaxSize()
                         .verticalScroll(verticalScroll)
                 ) {
+                    val lineNumberColor =
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                     val layoutForLineNumbers = textLayoutResult
 
                     if (layoutForLineNumbers != null && layoutForLineNumbers.lineCount > 0) {
@@ -392,7 +384,14 @@ fun ServerCustomConfigScreen(
                         ) {
                             val lc = layoutForLineNumbers.lineCount
                             for (i in 0 until lc) {
-                                val measured = measuredLineNumbers[i]
+                                val lineLabel = (i + 1).toString()
+                                val measured = textMeasurer.measure(
+                                    text = lineLabel,
+                                    style = lineNumberStyle.copy(
+                                        color = lineNumberColor,
+                                        textAlign = TextAlign.End,
+                                    ),
+                                )
                                 val lineTop = layoutForLineNumbers.getLineTop(i)
                                 val lineBaseline = layoutForLineNumbers.getLineBaseline(i)
                                 val measuredBaseline = measured.firstBaseline

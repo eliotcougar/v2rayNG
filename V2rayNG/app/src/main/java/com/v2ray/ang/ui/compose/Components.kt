@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.compose
 
-import android.graphics.drawable.Drawable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -27,11 +26,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -40,7 +41,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -48,6 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.OutlinedTextField as MaterialOutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,7 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -86,7 +87,11 @@ import com.v2ray.ang.util.AppIconFetcher
 
 private const val TV_FOCUS_EXPANSION_DURATION_MILLIS = 100
 
-internal data class AppTopBarAction(val icon: Painter, val label: String, val onClick: () -> Unit, val enabled: Boolean = true)
+internal data class AppTopBarAction(
+    val icon: Painter, val label: String, val onClick: () -> Unit = {}, val enabled: Boolean = true,
+    val contentDescription: String = label, val key: Any = label,
+    val menuActions: List<AppSelectionMenuAction> = emptyList(), val focusRequester: FocusRequester? = null
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,13 +105,10 @@ internal fun AppTopBar(
     onSearchQueryChange: (String) -> Unit = {},
     onSearchClose: () -> Unit = {},
     searchPlaceholder: String? = null,
-    searchInputFocusRequester: FocusRequester? = null,
-    searchClearFocusRequester: FocusRequester? = null,
     titleContent: (@Composable () -> Unit)? = null,
     navigationFocusRequester: FocusRequester? = null,
     navigationIcon: @Composable ((FocusRequester) -> Unit)? = null,
     actionItems: List<AppTopBarAction> = emptyList(),
-    customActionFocusRequesters: List<FocusRequester> = emptyList(),
     onMoveDown: (() -> Boolean)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -116,14 +118,11 @@ internal fun AppTopBar(
     )
     val resolvedNavigationFocusRequester =
         navigationFocusRequester ?: defaultNavigationFocusRequester
-    val actionFocusRequesters = remember(actionItems.size) {
-        List(actionItems.size) { FocusRequester() }
-    }
-    val defaultSearchInputFocusRequester = remember { FocusRequester() }
-    val defaultSearchClearFocusRequester = remember { FocusRequester() }
-    val resolvedSearchInputFocusRequester = searchInputFocusRequester ?: defaultSearchInputFocusRequester
-    val resolvedSearchClearFocusRequester = searchClearFocusRequester ?: defaultSearchClearFocusRequester
-    val resolvedActionFocusRequesters = if (actionItems.isEmpty()) customActionFocusRequesters else actionFocusRequesters
+    val actionFocusRequesters = rememberDpadFocusTargets(actionItems.map { it.key }) { FocusRequester() }
+    val resolvedSearchInputFocusRequester = remember { FocusRequester() }
+    val resolvedSearchClearFocusRequester = remember { FocusRequester() }
+    fun actionFocus(action: AppTopBarAction) = action.focusRequester ?: actionFocusRequesters.getValue(action.key)
+    val resolvedActionFocusRequesters = actionItems.filter { it.enabled }.map(::actionFocus)
     val hasSearchQuery = searchQuery.isNotEmpty()
     val topBarFocusOrder = remember(
         resolvedNavigationFocusRequester, resolvedSearchInputFocusRequester,
@@ -178,20 +177,41 @@ internal fun AppTopBar(
                 }
             },
             actions = {
-                actionItems.forEachIndexed { index, action ->
-                    val focusRequester = actionFocusRequesters[index]
-                    AppIconButton(
-                        icon = action.icon,
-                        label = action.label,
-                        onClick = action.onClick,
-                        enabled = action.enabled,
-                        focusRequester = focusRequester,
-                        modifier = Modifier.dpadTopBarFocusNavigation(
-                            focusRequester,
-                            topBarFocusOrder,
-                            onMoveDown = { onMoveDown?.invoke() ?: false }
-                        )
-                    )
+                actionItems.forEach { action ->
+                    key(action.key) {
+                        var showMenu by remember { mutableStateOf(false) }
+                        val focusRequester = actionFocus(action)
+                        Box {
+                            AppIconButton(
+                                icon = action.icon,
+                                label = action.label,
+                                contentDescription = action.contentDescription,
+                                onClick = { if (action.menuActions.isEmpty()) action.onClick() else showMenu = true },
+                                enabled = action.enabled,
+                                focusRequester = focusRequester,
+                                modifier = Modifier.dpadTopBarFocusNavigation(
+                                    focusRequester, topBarFocusOrder, onMoveDown = { onMoveDown?.invoke() ?: false }
+                                )
+                            )
+                            if (action.menuActions.isNotEmpty()) {
+                                val previous = adjacentDpadFocusTarget(focusRequester, topBarFocusOrder, DpadHorizontalDirection.Previous)
+                                val next = adjacentDpadFocusTarget(focusRequester, topBarFocusOrder, DpadHorizontalDirection.Next)
+                                DropdownMenu(
+                                    expanded = showMenu,
+                                    onDismissRequest = { showMenu = false },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    modifier = Modifier.dpadPopupHorizontalNavigation(
+                                        onMovePrevious = { showMenu = false; previous?.requestFocus() },
+                                        onMoveNext = next?.let { { showMenu = false; it.requestFocus(); Unit } }
+                                    )
+                                ) {
+                                    action.menuActions.forEach { item ->
+                                        AppDropdownMenuItem(item.label, onClick = { showMenu = false; item.onClick() })
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 actions()
             },
@@ -249,6 +269,7 @@ fun AppIconButton(
     Row(
         modifier = modifier
             .height(48.dp)
+            .alpha(if (enabled) 1f else 0.38f)
             .background(containerColor, shape)
             .dpadFocusOutline(
                 focusRequester = focusRequester,
@@ -256,7 +277,6 @@ fun AppIconButton(
                 focusContainerColor = containerColor.takeUnless { it == Color.Transparent }
             )
             .onFocusChanged { isFocused = it.isFocused }
-            .clip(shape)
             .then(
                 contentDescription?.let { description ->
                     Modifier.semantics(mergeDescendants = true) { this.contentDescription = description }
@@ -278,37 +298,14 @@ fun AppIconButton(
             tint = resolvedContentColor,
             modifier = Modifier.size(24.dp)
         )
-        AnimatedVisibility(
-            visible = isFocused,
-            enter = expandHorizontally(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ) + fadeIn(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ),
-            exit = shrinkHorizontally(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ) + fadeOut(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = label,
-                    color = resolvedContentColor,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    modifier = Modifier.clearAndSetSemantics {}
-                )
-            }
-        }
+        FocusedActionLabel(isFocused, label, resolvedContentColor)
     }
 }
 
 /**
  * A compact television row switch. The Material switch track is scaled from 32 dp to the
  * same 24 dp height as an action icon, while the containing control keeps a remote-friendly
- * 48 dp focus target. An optional label expands inside the focused outline.
+ * 48 dp focus target. Its accessible label expands inside the focused outline.
  */
 @Composable
 fun AppRowSwitch(
@@ -316,11 +313,10 @@ fun AppRowSwitch(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     focusRequester: FocusRequester? = null,
-    label: String? = null,
+    label: String,
     enabled: Boolean = true
 ) {
     var isFocused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(24.dp)
     val interactionSource = remember { MutableInteractionSource() }
 
     Row(
@@ -328,17 +324,16 @@ fun AppRowSwitch(
             .height(48.dp)
             .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 24.dp)
             .onFocusChanged { isFocused = it.isFocused }
-            .clip(shape)
             .semantics(mergeDescendants = true) {
-                role = Role.Switch
-                toggleableState = ToggleableState(checked)
+                contentDescription = label
             }
-            .clickable(
+            .toggleable(
+                value = checked,
                 interactionSource = interactionSource,
                 indication = null,
                 enabled = enabled,
                 role = Role.Switch,
-                onClick = { onCheckedChange(!checked) }
+                onValueChange = onCheckedChange
             )
             .padding(start = 4.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -353,29 +348,21 @@ fun AppRowSwitch(
                 checkedTrackColor = colorFabActive
             )
         )
-        AnimatedVisibility(
-            visible = isFocused && label != null,
-            enter = expandHorizontally(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ) + fadeIn(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ),
-            exit = shrinkHorizontally(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            ) + fadeOut(
-                animationSpec = tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)
-            )
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = label.orEmpty(),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 1,
-                    modifier = Modifier.clearAndSetSemantics {}
-                )
-            }
+        FocusedActionLabel(isFocused, label, MaterialTheme.colorScheme.onSurface, gap = 4.dp)
+    }
+}
+
+@Composable
+private fun FocusedActionLabel(visible: Boolean, label: String, color: Color, gap: Dp = 8.dp) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandHorizontally(tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)) + fadeIn(tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)),
+        exit = shrinkHorizontally(tween(TV_FOCUS_EXPANSION_DURATION_MILLIS)) + fadeOut(tween(TV_FOCUS_EXPANSION_DURATION_MILLIS))
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Spacer(Modifier.width(gap))
+            Text(label, color = color, style = MaterialTheme.typography.labelLarge, maxLines = 1,
+                modifier = Modifier.clearAndSetSemantics {})
         }
     }
 }

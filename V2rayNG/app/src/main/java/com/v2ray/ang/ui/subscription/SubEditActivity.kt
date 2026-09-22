@@ -10,14 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -32,6 +30,7 @@ import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toast
+import com.v2ray.ang.extension.toLongEx
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
@@ -133,7 +132,6 @@ fun SubEditScreen(
     onSave: (SubscriptionItem) -> Boolean,
     onDelete: () -> Unit
 ) {
-    val context = LocalContext.current
     var remarks by rememberSaveable { mutableStateOf(initial.remarks.orEmpty()) }
     var url by rememberSaveable { mutableStateOf(initial.url.orEmpty()) }
     var userAgent by rememberSaveable { mutableStateOf(initial.userAgent.orEmpty()) }
@@ -152,12 +150,7 @@ fun SubEditScreen(
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
-    fun buildSubItem(): SubscriptionItem? {
-        val parsedUpdateInterval = updateInterval.toLongOrNull()
-        if (parsedUpdateInterval == null) {
-            context.toast(R.string.toast_invalid_update_interval)
-            return null
-        }
+    fun buildSubItem(): SubscriptionItem {
         val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
         subItem.remarks = remarks
         subItem.url = url
@@ -166,7 +159,7 @@ fun SubEditScreen(
         subItem.filter = filter
         subItem.enabled = enabled
         subItem.autoUpdate = autoUpdate
-        subItem.updateInterval = parsedUpdateInterval
+        subItem.updateInterval = updateInterval.toLongEx()
         subItem.prevProfile = prevProfile
         subItem.nextProfile = nextProfile
         subItem.allowInsecureUrl = allowInsecureUrl
@@ -184,7 +177,7 @@ fun SubEditScreen(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_fab_check),
                             label = stringResource(R.string.menu_item_save_config),
-                            onClick = { buildSubItem()?.let { onSave(it) } }
+                            onClick = { onSave(buildSubItem()) }
                         )
                     )
                     if (editSubId.isNotEmpty()) add(
@@ -200,7 +193,7 @@ fun SubEditScreen(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_fab_check),
                             label = stringResource(R.string.acc_save),
-                            onClick = { buildSubItem()?.let { onSave(it) } }
+                            onClick = { onSave(buildSubItem()) }
                         )
                     )
                 }

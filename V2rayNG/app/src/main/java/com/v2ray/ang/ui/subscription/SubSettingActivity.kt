@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -68,6 +67,8 @@ import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
+import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
+import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
@@ -137,12 +138,10 @@ fun SubSettingScreen(
     onShareClipboard: (String) -> Unit
 ) {
     val isTelevision = isTelevisionDevice()
-    val subscriptions by viewModel.subsFlow.collectAsStateWithLifecycle()
+    val subscriptions = viewModel.subsFlow.collectAsStateWithLifecycle().value
     val subscriptionIds = subscriptions.map { it.guid }
     var showUpdateDialog by remember { mutableStateOf(false) }
-    val rowFocusTargets = remember(subscriptionIds.toSet()) {
-        subscriptions.associate { it.guid to SubscriptionRowFocusTargets() }
-    }
+    val rowFocusTargets = rememberDpadFocusTargets(subscriptionIds) { SubscriptionRowFocusTargets() }
     var removeTarget by remember { mutableStateOf<String?>(null) }
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
@@ -151,6 +150,9 @@ fun SubSettingScreen(
     var showQRCodeBitmap by remember { mutableStateOf<Bitmap?>(null) }
 
     val lazyListState = rememberLazyListState()
+    val requestRowFocus = rememberLazyDpadFocus(subscriptions.map {
+        with(rowFocusTargets.getValue(it.guid)) { listOf(row, share, edit, delete, toggle) }
+    }) { lazyListState.scrollToItem(it) }
     val backFocusRequester = rememberDpadFocusRequester()
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(subscriptionIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
@@ -174,7 +176,7 @@ fun SubSettingScreen(
                 navigationFocusRequester = backFocusRequester,
                 onMoveDown = {
                     subscriptions.firstOrNull()?.let {
-                        rowFocusTargets[it.guid]?.row?.requestFocus()
+                        rowFocusTargets[it.guid]?.row?.let(requestRowFocus)
                     } ?: false
                 },
                 actionItems = listOf(
@@ -255,10 +257,10 @@ fun SubSettingScreen(
                                             )
                                             .dpadVerticalFocusNavigation(
                                                 onMoveUp = {
-                                                    previousTargets?.row?.requestFocus() ?: false
+                                                    previousTargets?.row?.let(requestRowFocus) ?: false
                                                 },
                                                 onMoveDown = {
-                                                    nextTargets?.row?.requestFocus() ?: true
+                                                    nextTargets?.row?.let(requestRowFocus) ?: true
                                                 }
                                             )
                                             .dpadLongPressToMove(
@@ -311,16 +313,16 @@ fun SubSettingScreen(
                                             ).dpadVerticalFocusNavigation(
                                                 onMoveUp = {
                                                     if (previousSub?.subscription?.url?.isNotEmpty() == true) {
-                                                        previousTargets?.share?.requestFocus() ?: false
+                                                        previousTargets?.share?.let(requestRowFocus) ?: false
                                                     } else {
-                                                        previousTargets?.edit?.requestFocus() ?: false
+                                                        previousTargets?.edit?.let(requestRowFocus) ?: false
                                                     }
                                                 },
                                                 onMoveDown = {
                                                     if (nextSub?.subscription?.url?.isNotEmpty() == true) {
-                                                        nextTargets?.share?.requestFocus() ?: true
+                                                        nextTargets?.share?.let(requestRowFocus) ?: true
                                                     } else {
-                                                        nextTargets?.edit?.requestFocus() ?: true
+                                                        nextTargets?.edit?.let(requestRowFocus) ?: true
                                                     }
                                                 }
                                             ),
@@ -333,12 +335,12 @@ fun SubSettingScreen(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
                                         label = stringResource(R.string.action_edit),
                                         focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadOrderedFocusNavigation(
+                                        modifier = Modifier.dpadRowActionNavigation(
                                             current = focusTargets.edit,
-                                            order = actionFocusOrder
-                                        ).dpadVerticalFocusNavigation(
-                                            onMoveUp = { previousTargets?.edit?.requestFocus() ?: false },
-                                            onMoveDown = { nextTargets?.edit?.requestFocus() ?: true }
+                                            order = actionFocusOrder,
+                                            previousRow = previousTargets?.edit,
+                                            nextRow = nextTargets?.edit,
+                                            requestFocus = requestRowFocus
                                         ),
                                         onClick = { onEditSub(subCache.guid) }
                                     )
@@ -350,7 +352,8 @@ fun SubSettingScreen(
                                             current = focusTargets.delete,
                                             order = actionFocusOrder,
                                             previousRow = previousTargets?.delete,
-                                            nextRow = nextTargets?.delete
+                                            nextRow = nextTargets?.delete,
+                                            requestFocus = requestRowFocus
                                         ),
                                         onClick = {
                                             if (confirmRemove) removeTarget = subCache.guid
@@ -371,7 +374,8 @@ fun SubSettingScreen(
                                             current = focusTargets.toggle,
                                             order = actionFocusOrder,
                                             previousRow = previousTargets?.toggle,
-                                            nextRow = nextTargets?.toggle
+                                            nextRow = nextTargets?.toggle,
+                                            requestFocus = requestRowFocus
                                         )
                                     )
                                 }

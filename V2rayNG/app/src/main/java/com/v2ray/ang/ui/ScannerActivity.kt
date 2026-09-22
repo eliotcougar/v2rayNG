@@ -162,6 +162,7 @@ fun ScannerScreen(
                 onBackClick = onBackClick,
                 actionItems = buildList {
                     add(AppTopBarAction(
+                        key = "scan",
                         icon = painterResource(
                             if (isScanning) R.drawable.ic_stop_24dp
                             else R.drawable.ic_scan_24dp
@@ -190,6 +191,8 @@ fun ScannerScreen(
                                 else R.drawable.ic_flash_off_24dp
                             ),
                             label = stringResource(R.string.action_torch),
+                            key = "torch",
+                            contentDescription = stringResource(if (torchEnabled) R.string.acc_turn_torch_off else R.string.acc_turn_torch_on),
                             onClick = {
                                 torchEnabled = !torchEnabled
                                 cameraControl?.enableTorch(torchEnabled)

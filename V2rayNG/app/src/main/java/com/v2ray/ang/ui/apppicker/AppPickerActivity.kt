@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -27,6 +26,8 @@ import com.v2ray.ang.ui.compose.AppSelectionMenuAction
 import com.v2ray.ang.ui.compose.AppSelectionTopBar
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
+import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
+import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.dto.AppInfo
@@ -116,11 +117,12 @@ fun AppPickerScreen(
     val listState = rememberLazyListState()
     val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val packageNames = apps.map { it.packageName }
-    val rowFocusRequesters = remember(packageNames) {
-        packageNames.associateWith { FocusRequester() }
+    val rowFocusRequesters = rememberDpadFocusTargets(packageNames) { FocusRequester() }
+    val requestRowFocus = rememberLazyDpadFocus(packageNames.map { listOf(rowFocusRequesters.getValue(it)) }) {
+        listState.scrollToItem(it)
     }
     val focusFirstApp = {
-        apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.requestFocus() } ?: false
+        apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.let(requestRowFocus) } ?: false
     }
     LaunchedEffect(searchQuery) {
         onSearch(searchQuery)
@@ -174,12 +176,12 @@ fun AppPickerScreen(
                     modifier = Modifier.dpadVerticalFocusNavigation(
                         onMoveUp = {
                             apps.getOrNull(index - 1)?.let {
-                                rowFocusRequesters[it.packageName]?.requestFocus()
+                                rowFocusRequesters[it.packageName]?.let(requestRowFocus)
                             } ?: false
                         },
                         onMoveDown = {
                             apps.getOrNull(index + 1)?.let {
-                                rowFocusRequesters[it.packageName]?.requestFocus()
+                                rowFocusRequesters[it.packageName]?.let(requestRowFocus)
                             } ?: true
                         }
                     )

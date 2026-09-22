@@ -170,9 +170,9 @@ fun InputDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .tvAwareImePadding()
                     .verticalScrollbar(contentScrollState)
-                    .verticalScroll(contentScrollState)
-                    .tvAwareImePadding(),
+                    .verticalScroll(contentScrollState),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 fields.forEachIndexed { index, field ->

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DrawerState
@@ -39,14 +40,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.Font
@@ -54,7 +54,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.DrawerState as TvDrawerState
 import androidx.tv.material3.DrawerValue as TvDrawerValue
@@ -237,18 +236,16 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
     Box(
         modifier = Modifier
             .fillMaxHeight()
-            .width(TvDrawerExpandedWidth)
-            .drawWithContent {
-                val visibleWidth = drawerWidth.toPx()
-                val left = if (layoutDirection == LayoutDirection.Ltr) 0f else size.width - visibleWidth
-                val right = if (layoutDirection == LayoutDirection.Ltr) visibleWidth else size.width
-                // Reveal the fixed drawer from its start edge so its icons never move with the animation.
-                clipRect(left = left, right = right) { this@drawWithContent.drawContent() }
-            }
+            .width(drawerWidth)
+            .clipToBounds()
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier
+                // Only the envelope changes width. Keep icons anchored at logical Start and
+                // constrain hit/semantic bounds to the visible drawer, without resizing the app.
+                .wrapContentWidth(Alignment.Start, unbounded = true)
+                .width(TvDrawerExpandedWidth)
                 .navigationBarsPadding()
                 .verticalScroll(drawerScrollState)
                 .verticalScrollbar(drawerScrollState)

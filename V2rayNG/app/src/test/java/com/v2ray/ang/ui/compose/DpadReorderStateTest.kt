@@ -6,6 +6,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DpadReorderStateTest {
+    @Test
+    fun oversizedMovingRowHasOneStableScrollAnchor() {
+        assertEquals(40f, dpadReorderScrollDelta(0, 200, 40, 300))
+        assertEquals(0f, dpadReorderScrollDelta(0, 200, 0, 300))
+        assertEquals(-20f, dpadReorderScrollDelta(0, 200, -20, 300))
+    }
+
+
+    @Test
+    fun canceledReleaseAndFocusLossNeverClick() {
+        val state = DpadReorderState()
+        state.onActivationKeyDown("a", 0, false, 0, 500)
+        assertEquals(DpadReorderActivation.None, state.onActivationKeyUp("a", 20, 500, canceled = true))
+        assertEquals(DpadReorderPhase.Idle, state.phase)
+        state.onActivationKeyDown("a", 0, false, 30, 500)
+        state.cancelPendingPress("a")
+        assertEquals(DpadReorderActivation.None, state.onActivationKeyUp("a", 50, 500))
+        assertEquals(DpadReorderActivation.None, state.onLongPressTimeout("a"))
+    }
 
     @Test
     fun shortPressClicksWithoutEnteringMovement() {

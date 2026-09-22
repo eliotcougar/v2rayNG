@@ -4,6 +4,10 @@ import android.content.ClipData
 import android.content.Intent
 import androidx.activity.viewModels
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -23,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -42,6 +49,13 @@ import com.v2ray.ang.R
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.AppDialogButton
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
+import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.LocalAppSnackbar
@@ -157,7 +171,18 @@ fun LogcatScreen(
     val snackbar = LocalAppSnackbar.current
     val successMessage = stringResource(R.string.toast_success)
     val listState = rememberLazyListState()
-    val firstRowFocusRequester = remember { FocusRequester() }
+    val backFocusRequester = rememberDpadFocusRequester()
+    val rowFocusTargets = rememberDpadFocusTargets(rows.map { it.key }) { FocusRequester() }
+    val requestRowFocus = rememberLazyDpadFocus(rows.map { listOf(rowFocusTargets.getValue(it.key)) }) {
+        listState.scrollToItem(it)
+    }
+    var detail by remember { mutableStateOf<LogcatRow?>(null) }
+    detail?.let { row ->
+        LogcatDetailDialog(row.raw) {
+            detail = null
+            rowFocusTargets[row.key]?.let(requestRowFocus)
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -178,7 +203,8 @@ fun LogcatScreen(
                     showSearch = false
                 },
                 searchPlaceholder = stringResource(R.string.menu_item_search),
-                onMoveDown = { if (rows.isEmpty()) false else firstRowFocusRequester.requestFocus() },
+                navigationFocusRequester = backFocusRequester,
+                onMoveDown = { rows.firstOrNull()?.let { requestRowFocus(rowFocusTargets.getValue(it.key)) } ?: false },
                 actionItems = buildList {
                     if (isTelevision) add(
                         AppTopBarAction(
@@ -237,13 +263,15 @@ fun LogcatScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                     .verticalScrollbar(listState),
                 contentPadding = NavigationBarsBottomPadding()
             ) {
                 itemsIndexed(items = rows, key = { _, row -> row.key }) { index, row ->
                     LogcatItem(
                         row = row,
-                        focusRequester = firstRowFocusRequester.takeIf { index == 0 },
+                        focusRequester = rowFocusTargets.getValue(row.key),
+                        onClick = { if (isTelevision) detail = row },
                         onLongClick = { Utils.setClipboard(context, row.raw) }
                     )
                     ItemDivider()
@@ -255,12 +283,12 @@ fun LogcatScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun LogcatItem(row: LogcatRow, focusRequester: FocusRequester?, onLongClick: () -> Unit) {
+private fun LogcatItem(row: LogcatRow, focusRequester: FocusRequester?, onClick: () -> Unit, onLongClick: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester)
-            .combinedClickable(onClick = {}, onLongClick = onLongClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(8.dp)
     ) {
         Text(text = row.tag, style = MaterialTheme.typography.bodySmall)
@@ -269,4 +297,43 @@ private fun LogcatItem(row: LogcatRow, focusRequester: FocusRequester?, onLongCl
             Text(text = row.content, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+/** A single log entry may be taller than the list viewport; Center opens its complete text. */
+@Composable
+private fun LogcatDetailDialog(text: String, onDismiss: () -> Unit) {
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    val textFocus = rememberDpadFocusRequester()
+    val closeFocus = remember { FocusRequester() }
+    val focusOrder = listOf(textFocus, closeFocus)
+    var viewportHeight by remember { mutableIntStateOf(0) }
+    fun scroll(forward: Boolean): Boolean {
+        if (if (forward) scrollState.canScrollForward else scrollState.canScrollBackward) {
+            scope.launch { scrollState.scrollBy(viewportHeight * if (forward) 0.75f else -0.75f) }
+        } else closeFocus.requestFocus()
+        return true
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.title_logcat)) },
+        text = {
+            Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier
+                .fillMaxWidth()
+                .onSizeChanged { viewportHeight = it.height }
+                .dpadFocusOutline(textFocus)
+                .dpadOrderedFocusNavigation(textFocus, focusOrder)
+                .dpadVerticalFocusNavigation(onMoveUp = { scroll(false) }, onMoveDown = { scroll(true) })
+                .focusable()
+                .verticalScroll(scrollState)
+                .padding(8.dp))
+        },
+        confirmButton = {
+            AppDialogButton(
+                stringResource(R.string.action_close), onDismiss, focusRequester = closeFocus,
+                modifier = Modifier.dpadOrderedFocusNavigation(closeFocus, focusOrder)
+                    .dpadVerticalFocusNavigation(onMoveUp = { textFocus.requestFocus() }, onMoveDown = { true })
+            )
+        }
+    )
 }

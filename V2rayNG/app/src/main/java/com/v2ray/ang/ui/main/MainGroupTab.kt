@@ -4,13 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
@@ -21,7 +19,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
@@ -83,8 +84,7 @@ fun GroupTabBar(
     ) {
         itemsIndexed(items = groups, key = { _, group -> group.id }) { index, group ->
             val focusRequester = tabFocusRequesters[index]
-            val tabModifier = if (isTelevision) {
-                Modifier
+            val tabModifier = Modifier
                     .dpadFocusOutline(focusRequester = focusRequester, cornerRadius = 20.dp)
                     .onFocusChanged { if (it.isFocused && index != selectedIndex) onTabClick(index) }
                     .dpadOrderedFocusNavigation(
@@ -96,13 +96,9 @@ fun GroupTabBar(
                         onMoveUp = { onMoveUp(); true },
                         onMoveDown = { false }
                     )
-            } else {
-                Modifier
-            }
             GroupTabItem(
                 group = group,
                 selected = index == selectedIndex,
-                showInactiveIndicator = isTelevision,
                 modifier = tabModifier,
                 onClick = { onTabClick(index) }
             )
@@ -113,30 +109,22 @@ fun GroupTabBar(
 @Composable
 private fun GroupTabItem(
     group: GroupMapItem, selected: Boolean,
-    showInactiveIndicator: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit
+    modifier: Modifier = Modifier, onClick: () -> Unit
 ) {
     val text = if (group.id.isEmpty()) stringResource(R.string.filter_config_all)
     else "${group.remarks} (${group.serverCount})"
 
-    Box(Modifier.widthIn(min = 56.dp)) {
+    val indicatorColor = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
+    Box(Modifier.widthIn(min = 56.dp).drawWithContent {
+        drawContent()
+        val thickness = 3.dp.toPx()
+        drawRoundRect(indicatorColor, Offset(0f, size.height - thickness), Size(size.width, thickness), CornerRadius(thickness))
+    }, propagateMinConstraints = true) {
         Tab(
             selected = selected,
             onClick = onClick,
             modifier = modifier.heightIn(min = 48.dp),
             text = { Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
         )
-        if (selected || showInactiveIndicator) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.secondary
-                        else MaterialTheme.colorScheme.outlineVariant
-                    )
-            )
-        }
     }
 }

@@ -13,65 +13,58 @@ import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-internal interface StartupSettingsStore {
-    fun startOnBoot(): Boolean
-    fun setStartOnBoot(enabled: Boolean): Boolean
-}
-
-private object MmkvStartupSettingsStore : StartupSettingsStore {
-    override fun startOnBoot(): Boolean = MmkvManager.decodeStartOnBoot()
-    override fun setStartOnBoot(enabled: Boolean): Boolean {
-        if (!MmkvManager.encodeSettings(AppConfig.PREF_START_ON_BOOT, enabled)) {
-            LogUtil.e(AppConfig.TAG, "Settings: failed to save start-on-boot preference")
-            return false
-        }
-        SettingsChangeManager.notifySettingChanged(AppConfig.PREF_START_ON_BOOT)
-        return true
-    }
-}
-
-data class StartupSettingsState(val startOnBoot: Boolean = false, val isReady: Boolean = false)
-
-class SettingsViewModel private constructor(
+class SettingsViewModel internal constructor(
     application: Application,
-    private val startupSettingsStore: StartupSettingsStore,
+    private val readStartOnBoot: () -> Boolean,
+    private val writeStartOnBoot: (Boolean) -> Boolean,
     private val ioDispatcher: CoroutineDispatcher
 ) : BaseViewModel(application) {
 
-    constructor(application: Application) : this(application, MmkvStartupSettingsStore, Dispatchers.IO)
+    constructor(application: Application) : this(
+        application, MmkvManager::decodeStartOnBoot,
+        { enabled ->
+            MmkvManager.encodeSettings(AppConfig.PREF_START_ON_BOOT, enabled).also { saved ->
+                if (saved) SettingsChangeManager.notifySettingChanged(AppConfig.PREF_START_ON_BOOT)
+            }
+        },
+        Dispatchers.IO
+    )
 
-    internal companion object {
-        fun createForTest(
-            application: Application,
-            startupSettingsStore: StartupSettingsStore,
-            ioDispatcher: CoroutineDispatcher
-        ) = SettingsViewModel(application, startupSettingsStore, ioDispatcher)
+    // Null means the persisted choice (including migration for old TV installs) is not loaded yet.
+    private val _startupSettings = MutableStateFlow<Boolean?>(null)
+    val startupSettings = _startupSettings.asStateFlow()
+    private var startupWrite: Job = viewModelScope.launch(ioDispatcher) {
+        accessStartupSetting { _startupSettings.value = readStartOnBoot() }
     }
 
-    private val _startupSettings = MutableStateFlow(StartupSettingsState())
-    val startupSettings: StateFlow<StartupSettingsState> = _startupSettings.asStateFlow()
-    private val startupSettingsWrites = Channel<Boolean>(Channel.UNLIMITED)
-
-    init {
-        viewModelScope.launch(ioDispatcher) {
-            _startupSettings.value = StartupSettingsState(startupSettingsStore.startOnBoot(), isReady = true)
-            for (enabled in startupSettingsWrites) {
-                if (startupSettingsStore.setStartOnBoot(enabled)) {
-                    _startupSettings.value = StartupSettingsState(enabled, isReady = true)
-                }
+    fun setStartOnBoot(enabled: Boolean) {
+        if (startupSettings.value == null) return
+        val previous = startupWrite
+        startupWrite = viewModelScope.launch(ioDispatcher) {
+            previous.join()
+            accessStartupSetting {
+                if (writeStartOnBoot(enabled)) _startupSettings.value = enabled
+                else LogUtil.e(AppConfig.TAG, "Settings: failed to save start-on-boot preference")
             }
         }
     }
 
-    fun setStartOnBoot(enabled: Boolean) {
-        if (startupSettings.value.isReady) startupSettingsWrites.trySend(enabled)
+    private inline fun accessStartupSetting(action: () -> Unit) {
+        try {
+            action()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A failed write must not kill the writer or publish an unsaved toggle value.
+            LogUtil.e(AppConfig.TAG, "Settings: start-on-boot preference access failed", e)
+        }
     }
 
     private val _systemVpnSettingsAvailable = MutableStateFlow(false)

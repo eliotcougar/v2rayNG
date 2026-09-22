@@ -1,5 +1,9 @@
 package com.v2ray.ang.ui.settings
 
+import com.v2ray.ang.util.LogUtil
+import android.util.Log
+import org.mockito.MockedStatic
+import org.mockito.Mockito.mockStatic
 import android.app.Application
 import android.content.ComponentName
 import android.content.Intent
@@ -26,11 +30,18 @@ import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
+    private lateinit var androidLog: MockedStatic<Log>
+    private val logLevel = LogUtil::class.java.getDeclaredField("cachedMinPriority").apply { isAccessible = true }
+    private var previousLogLevel = 0
     private val dispatcher = StandardTestDispatcher()
     private val viewModels = mutableListOf<SettingsViewModel>()
 
     @Before
     fun setUp() {
+        androidLog = mockStatic(Log::class.java)
+        // Keep platform logging from initializing native MMKV in a preference-store unit test.
+        previousLogLevel = logLevel.getInt(null)
+        logLevel.setInt(null, Log.WARN)
         Dispatchers.setMain(dispatcher)
     }
 
@@ -38,18 +49,20 @@ class SettingsViewModelTest {
     fun tearDown() {
         viewModels.forEach { it.viewModelScope.cancel() }
         Dispatchers.resetMain()
+        androidLog.close()
+        logLevel.setInt(null, previousLogLevel)
     }
 
     @Test
     fun startupSettingsLoadAndPersistInActionOrder() = runTest(dispatcher) {
         val store = FakeStartupSettingsStore(startOnBoot = true)
         val viewModel = createViewModel(store)
-        assertEquals(StartupSettingsState(), viewModel.startupSettings.value)
+        assertEquals(null, viewModel.startupSettings.value)
         assertEquals(0, store.reads)
 
         viewModel.setStartOnBoot(false)
         dispatcher.scheduler.runCurrent()
-        assertEquals(StartupSettingsState(true, isReady = true), viewModel.startupSettings.value)
+        assertEquals(true, viewModel.startupSettings.value)
         assertEquals(emptyList<Boolean>(), store.writes)
 
         viewModel.setStartOnBoot(false)
@@ -57,7 +70,7 @@ class SettingsViewModelTest {
         assertEquals(emptyList<Boolean>(), store.writes)
         dispatcher.scheduler.runCurrent()
         assertEquals(listOf(false, true), store.writes)
-        assertEquals(StartupSettingsState(true, isReady = true), viewModel.startupSettings.value)
+        assertEquals(true, viewModel.startupSettings.value)
 
         val reopened = createViewModel(store)
         dispatcher.scheduler.runCurrent()
@@ -73,14 +86,42 @@ class SettingsViewModelTest {
         store.canWrite = false
         viewModel.setStartOnBoot(false)
         dispatcher.scheduler.runCurrent()
-        assertEquals(StartupSettingsState(true, isReady = true), viewModel.startupSettings.value)
+        assertEquals(true, viewModel.startupSettings.value)
         assertEquals(true, store.startOnBoot())
 
         store.canWrite = true
         viewModel.setStartOnBoot(false)
         dispatcher.scheduler.runCurrent()
-        assertEquals(StartupSettingsState(false, isReady = true), viewModel.startupSettings.value)
+        assertEquals(false, viewModel.startupSettings.value)
         assertEquals(false, store.startOnBoot())
+    }
+
+    @Test
+    fun thrownWriteDoesNotBlockTheNextChoice() = runTest(dispatcher) {
+        val store = FakeStartupSettingsStore(true)
+        val viewModel = createViewModel(store)
+        dispatcher.scheduler.runCurrent()
+        store.failure = IllegalStateException("storage unavailable")
+        viewModel.setStartOnBoot(false)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(true, viewModel.startupSettings.value)
+
+        store.failure = null
+        viewModel.setStartOnBoot(false)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(false, viewModel.startupSettings.value)
+    }
+
+    @Test
+    fun failedInitialReadKeepsTheControlDisabled() = runTest(dispatcher) {
+        var writes = 0
+        val viewModel = SettingsViewModel(mock<Application>(), { error("storage unavailable") }, { writes++; true }, dispatcher)
+            .also(viewModels::add)
+        dispatcher.scheduler.runCurrent()
+        viewModel.setStartOnBoot(true)
+        dispatcher.scheduler.runCurrent()
+        assertEquals(null, viewModel.startupSettings.value)
+        assertEquals(0, writes)
     }
 
     @Test
@@ -94,7 +135,7 @@ class SettingsViewModelTest {
             assertEquals(listOf(Settings.ACTION_VPN_SETTINGS), context.arguments())
             whenever(intent.resolveActivity(packageManager)).thenAnswer { activity }
         }.use {
-            val viewModel = SettingsViewModel.createForTest(application, FakeStartupSettingsStore(false), dispatcher)
+            val viewModel = SettingsViewModel(application, { false }, { true }, dispatcher)
                 .also(viewModels::add)
             assertFalse(viewModel.systemVpnSettingsAvailable.value)
             viewModel.refreshSystemVpnSettingsAvailability()
@@ -110,19 +151,21 @@ class SettingsViewModelTest {
         }
     }
 
-    private fun createViewModel(store: StartupSettingsStore) =
-        SettingsViewModel.createForTest(mock<Application>(), store, dispatcher).also(viewModels::add)
+    private fun createViewModel(store: FakeStartupSettingsStore) =
+        SettingsViewModel(mock<Application>(), store::startOnBoot, store::setStartOnBoot, dispatcher).also(viewModels::add)
 
-    private class FakeStartupSettingsStore(private var startOnBoot: Boolean) : StartupSettingsStore {
+    private class FakeStartupSettingsStore(private var startOnBoot: Boolean) {
         var reads = 0
         var canWrite = true
+        var failure: RuntimeException? = null
         val writes = mutableListOf<Boolean>()
-        override fun startOnBoot(): Boolean {
+        fun startOnBoot(): Boolean {
             reads++
             return startOnBoot
         }
-        override fun setStartOnBoot(enabled: Boolean): Boolean {
+        fun setStartOnBoot(enabled: Boolean): Boolean {
             writes += enabled
+            failure?.let { throw it }
             if (canWrite) startOnBoot = enabled
             return canWrite
         }

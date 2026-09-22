@@ -54,11 +54,11 @@ internal enum class ServerMenuAction(
 
 internal enum class BulkDeleteTarget { All, Duplicate, Invalid }
 
-internal fun serverMenuActions(isComplexProfile: Boolean, includeManagementActions: Boolean): List<ServerMenuAction> {
-    return ServerMenuAction.entries.filter { action ->
-        (includeManagementActions || action.isShareAction) &&
-            (!isComplexProfile || action.supportsComplexProfiles)
-    }
+internal fun serverMenuActions(
+    isComplexProfile: Boolean,
+    includeManagementActions: Boolean,
+): List<ServerMenuAction> = ServerMenuAction.entries.filter { action ->
+    (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
 }
 
 @Composable

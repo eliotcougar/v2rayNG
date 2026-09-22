@@ -39,6 +39,8 @@ import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -132,12 +134,14 @@ fun TaskerScreen(
     val isTelevision = isTelevisionDevice()
     val listState = rememberLazyListState()
     val switchFocusRequester = remember { FocusRequester() }
+    val backFocusRequester = rememberDpadFocusRequester()
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             AppTopBar(
                 title = "",
                 onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester,
                 onMoveDown = switchFocusRequester::requestFocus,
                 actionItems = listOf(
                     AppTopBarAction(
@@ -165,6 +169,7 @@ fun TaskerScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                     .verticalScrollbar(listState),
                 contentPadding = NavigationBarsBottomPadding()
             ) {

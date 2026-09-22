@@ -32,7 +32,6 @@ data class MainUiState(
     val shareQRCodeBitmap: android.graphics.Bitmap? = null
 )
 
-data class ServiceStatusMessage(val stringRes: Int, val formatArgs: List<Any> = emptyList(), val isError: Boolean = false)
 
 /**
  * All possible user interaction intents

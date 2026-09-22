@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -18,11 +20,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -30,12 +32,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.LocalAppSnackbar
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
-import com.v2ray.ang.ui.compose.ToastType
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,33 +61,24 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val confirmRemove = isTelevision || uiState.confirmRemove
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
 
-    val resources = LocalResources.current
-    val snackbar = LocalAppSnackbar.current
-    LaunchedEffect(mainViewModel, resources) {
-        mainViewModel.serviceStatusMessages.collect { message ->
-            val text = resources.getString(message.stringRes, *message.formatArgs.toTypedArray())
-            snackbar.show(text, if (message.isError) ToastType.ERROR else ToastType.SUCCESS)
-        }
-    }
-
     val isDarkTheme = LocalDarkTheme.current
-    val drawerCoordinator = rememberMainDrawerCoordinator()
-    val tvDrawerCoordinator = rememberMainTvDrawerCoordinator()
-    val openDrawer: (FocusRequester?) -> Unit = if (isTelevision) {
-        tvDrawerCoordinator::openFrom
-    } else {
-        { drawerCoordinator.open() }
+    val drawerState = if (!isTelevision) rememberDrawerState(DrawerValue.Closed) else null
+    val drawerScope = rememberCoroutineScope()
+    val tvDrawerCoordinator = if (isTelevision) rememberMainTvDrawerCoordinator() else null
+    val openDrawer: (FocusRequester?) -> Unit = { requester ->
+        if (tvDrawerCoordinator != null) tvDrawerCoordinator.openFrom { requester?.requestFocus() ?: false }
+        else drawerScope.launch { drawerState?.open() }
     }
-    val dialogState = rememberMainDialogState()
-    var dialogFocusToRestore by remember { mutableStateOf<FocusRequester?>(null) }
+    var dialog by remember { mutableStateOf<MainDialog?>(null) }
+    var dialogFocusToRestore by remember { mutableStateOf<(() -> Boolean)?>(null) }
     LaunchedEffect(dialogFocusToRestore, isTelevision) {
-        val requester = dialogFocusToRestore ?: return@LaunchedEffect
-        if (isTelevision) requestFocusWhenReady(requester)
+        val restore = dialogFocusToRestore ?: return@LaunchedEffect
+        if (isTelevision) restore()
         dialogFocusToRestore = null
     }
     val requestRemoveServer: (String) -> Unit = { guid ->
         if (confirmRemove) {
-            dialogState.show(MainDialog.DeleteServer(guid))
+            dialog = MainDialog.DeleteServer(guid)
         } else {
             onAction(MainAction.RemoveServer(guid))
         }
@@ -103,21 +96,21 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(tvDrawerCoordinator.isOpen, resumeFocusGeneration, isTelevision) {
-        if (!isTelevision || tvDrawerCoordinator.isOpen) return@LaunchedEffect
-        val requester = tvDrawerCoordinator.focusToRestore ?: topBarFocus.start
-        requestFocusWhenReady(requester, topBarFocus.start)
+    LaunchedEffect((tvDrawerCoordinator?.isOpen == true), resumeFocusGeneration, isTelevision) {
+        if (!isTelevision || (tvDrawerCoordinator?.isOpen == true)) return@LaunchedEffect
+        if (tvDrawerCoordinator?.focusToRestore?.invoke() != true) requestFocusWhenReady(topBarFocus.start)
     }
 
     BackHandler(enabled = isTelevision && showSearch) {
         onAction(MainAction.Search(""))
         showSearch = false
     }
-    BackHandler(enabled = isTelevision && tvDrawerCoordinator.isOpen) {
-        tvDrawerCoordinator.closeAndRestore()
+    BackHandler(enabled = isTelevision && (tvDrawerCoordinator?.isOpen == true)) {
+        tvDrawerCoordinator?.closeAndRestore()
     }
 
-    val groupTabFocusRequesters = remember(groups.map { it.id }) { List(groups.size) { FocusRequester() } }
+    val groupTabTargets = rememberDpadFocusTargets(groups.map { it.id }) { FocusRequester() }
+    val groupTabFocusRequesters = groups.map { groupTabTargets.getValue(it.id) }
     val pagerCoordinator = rememberMainPagerCoordinator(
         groups = groups,
         selectedGroupId = uiState.selectedGroupId,
@@ -126,27 +119,27 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     )
     val selectedGroupIndex = mainSelectedGroupIndex(groups, uiState.selectedGroupId)
 
-    MainDialogs(dialog = dialogState.current, onDismiss = dialogState::dismiss, onConfirm = { dialog ->
-        dialogState.dismiss()
-        when (dialog) {
+    MainDialogs(dialog = dialog, onDismiss = { dialog = null }, onConfirm = { confirmed ->
+        dialog = null
+        when (confirmed) {
             MainDialog.DeleteAll -> onAction(MainAction.RemoveAllServers)
             MainDialog.DeleteDuplicate -> onAction(MainAction.RemoveDuplicateServers)
             MainDialog.DeleteInvalid -> onAction(MainAction.RemoveInvalidServers)
-            is MainDialog.DeleteServer -> onAction(MainAction.RemoveServer(dialog.guid))
+            is MainDialog.DeleteServer -> onAction(MainAction.RemoveServer(confirmed.guid))
             is MainDialog.Share -> Unit
         }
     })
 
-    (dialogState.current as? MainDialog.Share)?.target?.let { target ->
+    (dialog as? MainDialog.Share)?.target?.let { target ->
         ShareMethodDialog(
             guid = target.guid,
             profile = target.profile,
             more = target.more,
             onDismiss = {
-                dialogState.dismiss()
-                dialogFocusToRestore = target.restoreFocusRequester
+                dialog = null
+                dialogFocusToRestore = target.restoreFocus
             },
-            onActionSelected = dialogState::dismiss,
+            onActionSelected = { dialog = null },
             onAction = onAction,
             onRemove = requestRemoveServer
         )
@@ -182,11 +175,11 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                         },
                         onAction = onAction,
                         onBulkDelete = { target ->
-                            dialogState.show(when (target) {
+                            dialog = when (target) {
                                 BulkDeleteTarget.All -> MainDialog.DeleteAll
                                 BulkDeleteTarget.Duplicate -> MainDialog.DeleteDuplicate
                                 BulkDeleteTarget.Invalid -> MainDialog.DeleteInvalid
-                            })
+                            }
                         }
                     )
                 },
@@ -231,32 +224,11 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                 onEditServer = { guid, profile ->
                                     onAction(MainAction.EditServer(guid, profile))
                                 },
-                                onShareServer = { guid, profile, restoreFocusRequester ->
-                                    dialogState.show(
-                                        MainDialog.Share(
-                                            MainShareTarget(
-                                                guid,
-                                                profile,
-                                                more = false,
-                                                restoreFocusRequester
-                                            )
-                                        )
-                                    )
-                                },
-                                onMoreServer = { guid, profile, restoreFocusRequester ->
-                                    dialogState.show(
-                                        MainDialog.Share(
-                                            MainShareTarget(
-                                                guid,
-                                                profile,
-                                                more = true,
-                                                restoreFocusRequester
-                                            )
-                                        )
-                                    )
+                                onShareServer = { guid, profile, more, restore ->
+                                    dialog = MainDialog.Share(MainShareTarget(guid, profile, more, restore))
                                 },
                                 onRemoveServer = requestRemoveServer,
-                                onOpenDrawer = openDrawer,
+                                onOpenDrawer = { restore -> tvDrawerCoordinator?.openFrom(restore) },
                                 onBackFromList = { topBarFocus.start.requestFocus() },
                                 onMoveUpFromFirstRow = if (groups.size > 1) {
                                     { groupTabFocusRequesters.getOrNull(page)?.requestFocus() }
@@ -275,7 +247,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         }
     }
 
-    if (isTelevision) {
+    if (tvDrawerCoordinator != null) {
         TvMainNavigationDrawer(
             drawerState = tvDrawerCoordinator.state,
             focusGeneration = resumeFocusGeneration,
@@ -285,10 +257,10 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         )
     } else {
         ModalNavigationDrawer(
-            drawerState = drawerCoordinator.state,
+            drawerState = requireNotNull(drawerState),
             drawerContent = {
                 MainDrawerContent(
-                    drawerState = drawerCoordinator.state,
+                    drawerState = requireNotNull(drawerState),
                     onNavigate = onNavigate
                 )
             },

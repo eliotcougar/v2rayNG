@@ -136,9 +136,14 @@ internal class DpadReorderState {
     internal fun onActivationKeyUp(
         key: Any,
         eventTimeMillis: Long,
-        repeatReleaseGuardMillis: Long
+        repeatReleaseGuardMillis: Long,
+        canceled: Boolean = false
     ): DpadReorderActivation {
         if (activeKey != key) return DpadReorderActivation.None
+        if (canceled && phase == DpadReorderPhase.Pressed) {
+            reset()
+            return DpadReorderActivation.None
+        }
 
         return when (phase) {
             DpadReorderPhase.Idle -> DpadReorderActivation.None
@@ -246,6 +251,7 @@ internal fun rememberSyncedDpadReorderState(
     onMovingItem: suspend (key: Any, index: Int) -> Unit
 ): DpadReorderState {
     val state = rememberDpadReorderState(stateKey)
+    if (!isTelevisionDevice()) return state
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(state, lifecycleOwner) {
         // Row focus can move transiently while an item is reordered. End the interaction only
@@ -317,6 +323,8 @@ internal fun dpadReorderScrollDelta(
     itemSize: Int
 ): Float {
     val viewportSize = (viewportEnd - viewportStart).coerceAtLeast(0)
+    // Oversized rows cannot expose both edges; consistently anchor the leading edge instead of oscillating.
+    if (itemSize >= viewportSize) return (itemStart - viewportStart).toFloat()
     val edgePadding = minOf(itemSize / 2, ((viewportSize - itemSize).coerceAtLeast(0)) / 2)
     val safeStart = viewportStart + edgePadding
     val safeEnd = viewportEnd - edgePadding
@@ -440,7 +448,7 @@ internal fun Modifier.dpadLongPressToMove(
         .onPreviewKeyEvent { event ->
             if (!isItemFocused) return@onPreviewKeyEvent false
 
-            val isActivationKey = event.key == Key.DirectionCenter || event.key == Key.Enter
+            val isActivationKey = event.key.isDpadActivationKey()
             if (suppressedKeyUp == event.key) {
                 if (event.type == KeyEventType.KeyUp) suppressedKeyUp = null
                 true
@@ -502,7 +510,8 @@ internal fun Modifier.dpadLongPressToMove(
                             item.state.onActivationKeyUp(
                                 key = item.key,
                                 eventTimeMillis = event.nativeKeyEvent.eventTime,
-                                repeatReleaseGuardMillis = repeatReleaseGuardMillis
+                                repeatReleaseGuardMillis = repeatReleaseGuardMillis,
+                                canceled = event.nativeKeyEvent.isCanceled
                             )
                         )
                         true

@@ -18,6 +18,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -41,8 +43,59 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 private const val TvFocusAttachmentRetryFrames = 30
+
+/** Retain focus identity when siblings are inserted, removed, filtered, or reordered. */
+internal class DpadFocusTargets<K, T> {
+    private val targets = mutableMapOf<K, T>()
+
+    fun snapshot(keys: List<K>, create: () -> T): Map<K, T> {
+        targets.keys.retainAll(keys.toSet())
+        return keys.associateWith { targets.getOrPut(it, create) }
+    }
+}
+
+@Composable
+internal fun <K, T> rememberDpadFocusTargets(keys: List<K>, create: () -> T): Map<K, T> {
+    val store = remember { DpadFocusTargets<K, T>() }
+    return remember(keys) { store.snapshot(keys, create) }
+}
+
+/**
+ * A lazy focus chain owns its item-to-target mapping, including headers. Attached targets take
+ * the immediate path; detached ones must be scrolled into composition before attachment retries.
+ * Keeping the latest mapping also makes restored handles follow their item after reordering.
+ */
+@Composable
+internal fun rememberLazyDpadFocus(
+    itemTargets: List<List<FocusRequester>>,
+    scrollToItem: suspend (Int) -> Unit
+): (FocusRequester) -> Boolean {
+    val scope = rememberCoroutineScope()
+    val indices = rememberUpdatedState(remember(itemTargets) {
+        buildMap { itemTargets.forEachIndexed { index, targets -> targets.forEach { put(it, index) } } }
+    })
+    val scroll = rememberUpdatedState(scrollToItem)
+    return remember {
+        var pendingRequest: Job? = null
+        { target: FocusRequester ->
+            pendingRequest?.cancel()
+            if (target.requestFocus()) true
+            else if (target !in indices.value) false
+            else {
+                pendingRequest = scope.launch {
+                    val index = indices.value[target] ?: return@launch
+                    scroll.value(index)
+                    requestFocusWhenReady(target)
+                }
+                true
+            }
+        }
+    }
+}
 
 @Composable
 internal fun isTelevisionDevice(): Boolean =
@@ -130,10 +183,8 @@ internal fun Modifier.dpadFocusOutline(
 @Composable
 internal fun Modifier.tvMenuItemFocus(): Modifier {
     if (!isTelevisionDevice()) return this
-    val shape = RoundedCornerShape(10.dp)
     return padding(horizontal = 8.dp, vertical = 2.dp)
         .dpadFocusOutline(cornerRadius = 10.dp)
-        .clip(shape)
 }
 
 /** Applies the fixed television safe-area inset without changing touch UIs. */
@@ -184,6 +235,9 @@ internal fun Modifier.dpadClickable(enabled: Boolean = true, role: Role? = null,
     val interactionSource = remember { MutableInteractionSource() }
     return clickable(interactionSource = interactionSource, indication = null, enabled = enabled, role = role, onClick = onClick)
 }
+
+internal fun Key.isDpadActivationKey(): Boolean =
+    this == Key.DirectionCenter || this == Key.Enter || this == Key.NumPadEnter || this == Key.Spacebar
 
 internal enum class DpadHorizontalDirection {
     Previous,
@@ -377,14 +431,15 @@ internal fun Modifier.dpadRowActionNavigation(
     current: FocusRequester,
     order: List<FocusRequester>,
     previousRow: FocusRequester?,
-    nextRow: FocusRequester?
+    nextRow: FocusRequester?,
+    requestFocus: (FocusRequester) -> Boolean = { it.requestFocus() }
 ): Modifier {
     return dpadOrderedFocusNavigation(
         current = current,
         order = order
     ).dpadVerticalFocusNavigation(
-        onMoveUp = { previousRow?.requestFocus() ?: false },
-        onMoveDown = { nextRow?.requestFocus() ?: true }
+        onMoveUp = { previousRow?.let(requestFocus) ?: false },
+        onMoveDown = { nextRow?.let(requestFocus) ?: true }
     )
 }
 
