@@ -447,12 +447,38 @@ object CoreConfigManager {
     private fun postProcessForSpeedtest(v2rayConfig: V2rayConfig) {
         v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.inbounds.clear()
-        v2rayConfig.routing.rules.clear()
+        prepareSpeedtestRouting(v2rayConfig)
         v2rayConfig.dns = null
         v2rayConfig.fakedns = null
         v2rayConfig.stats = null
         v2rayConfig.policy = null
         v2rayConfig.outbounds.forEach { key -> key.mux = null }
+    }
+
+    internal fun prepareSpeedtestRouting(v2rayConfig: V2rayConfig) {
+        val primary = v2rayConfig.routing.balancers.orEmpty()
+            .firstOrNull { it.tag == AppConfig.TAG_BALANCER }
+        v2rayConfig.routing.rules.clear()
+        v2rayConfig.routing.balancers = primary?.let { listOf(it) }
+        if (primary != null) {
+            v2rayConfig.routing.rules.add(
+                V2rayConfig.RoutingBean.RulesBean(network = "tcp,udp", balancerTag = primary.tag)
+            )
+        }
+        // Probe only the tested group. Unrelated routing groups can use a different
+        // observer type and must not supply the tested balancer's observations.
+        v2rayConfig.observatory = (v2rayConfig.observatory as? V2rayConfig.ObservatoryObject)
+            ?.let { observer ->
+                observer.subjectSelector.filter { it in primary?.selector.orEmpty() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { observer.copy(subjectSelector = it, enableConcurrency = true) }
+            }
+        v2rayConfig.burstObservatory = (v2rayConfig.burstObservatory as? V2rayConfig.BurstObservatoryObject)
+            ?.let { observer ->
+                observer.subjectSelector.filter { it in primary?.selector.orEmpty() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { observer.copy(subjectSelector = it) }
+            }
     }
 
     /**
