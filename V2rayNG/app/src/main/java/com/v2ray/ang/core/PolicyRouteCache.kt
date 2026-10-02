@@ -20,6 +20,11 @@ object PolicyRouteCache {
     @Synchronized
     fun snapshot(): Snapshot = Snapshot(currentNetworkKey, currentNetworkHandle, generation)
 
+    /** Fences queued work against both a network change and a service restart. */
+    @Synchronized
+    fun isCurrent(snapshot: Snapshot): Boolean =
+        snapshot == Snapshot(currentNetworkKey, currentNetworkHandle, generation)
+
     @Synchronized
     fun setCurrentNetwork(networkKey: String, networkHandle: Long) {
         currentNetworkKey = networkKey
