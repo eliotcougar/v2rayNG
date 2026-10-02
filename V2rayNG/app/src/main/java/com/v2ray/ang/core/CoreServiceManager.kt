@@ -122,7 +122,6 @@ object CoreServiceManager {
      */
     private fun resetCoreNetworkState(
         service: Service,
-        previousNetworkKey: String?,
         newNetworkKey: String,
         newNetworkHandle: Long,
     ) {
@@ -149,14 +148,6 @@ object CoreServiceManager {
                         return@withLock
                     }
                     val currentHasPrimaryBalancer = primaryPolicyBalancerAvailable.get()
-                    if (currentHasPrimaryBalancer) {
-                        PolicyRouteCache.remember(
-                            previousNetworkKey,
-                            profileGuid,
-                            currentPrimaryBalancerTarget(),
-                            transitionSnapshot.generation,
-                        )
-                    }
                     val refreshedConfig = buildRefreshedCoreConfig(service, profileGuid)
                     val latestTransition = PolicyRouteCache.snapshot()
                     if (!coreRecoveryEnabled.get() ||
@@ -170,36 +161,17 @@ object CoreServiceManager {
                     }
                     val nextHasPrimaryBalancer = refreshedConfig?.hasPrimaryBalancer
                         ?: currentHasPrimaryBalancer
-                    val warmTarget = if (nextHasPrimaryBalancer) {
-                        PolicyRouteCache.lookup(latestTransition.networkKey, profileGuid).orEmpty()
-                    } else {
-                        ""
-                    }
                     TetheringCoreSync.onStopping(service)
                     connectionTests.started(profileGuid)
                     connectionTestScope.coroutineContext.cancelChildren()
-                    when {
-                        refreshedConfig != null && nextHasPrimaryBalancer -> {
-                            coreController.resetNetworkStateWithConfigAndWarmRoute(
-                                refreshedConfig.content,
-                                AppConfig.TAG_BALANCER,
-                                warmTarget,
-                            )
-                        }
-
-                        refreshedConfig != null -> {
-                            coreController.resetNetworkStateWithConfig(refreshedConfig.content)
-                        }
-
-                        nextHasPrimaryBalancer -> {
-                            coreController.resetNetworkStateWithWarmRoute(AppConfig.TAG_BALANCER, warmTarget)
-                        }
-
-                        else -> coreController.resetNetworkState()
-                    }
+                    val restoredObservers = coreController.resetNetworkStateWithConfigAndObservatoryState(
+                        refreshedConfig?.content.orEmpty(),
+                        latestTransition.networkKey.orEmpty(),
+                        newNetworkHandle,
+                    )
                     // A stop can race the native reset. Never reattach a tethering lease
                     // after the lifecycle owner has invalidated this running profile.
-                    if (!coreRecoveryEnabled.get() || runningProfileGuid != profileGuid) {
+                    if (!coreRecoveryEnabled.get() || runningProfileGuid != profileGuid || !coreController.isRunning) {
                         return@withLock
                     }
                     TetheringCoreSync.onStarted(
@@ -209,12 +181,11 @@ object CoreServiceManager {
                     primaryPolicyBalancerAvailable.set(nextHasPrimaryBalancer)
                     reconcilePolicyRouteTracking()
                     serviceControl?.get()?.let {
-                        emitActiveOutbound(it, if (nextHasPrimaryBalancer) warmTarget else "")
+                        emitActiveOutbound(it, if (nextHasPrimaryBalancer) currentPrimaryBalancerTarget() else "")
                     }
                     LogUtil.i(
                         AppConfig.TAG,
-                        "StartCore-Manager: Core network state reset" +
-                            if (warmTarget.isNotEmpty()) " with cached policy route" else "",
+                        "StartCore-Manager: Core network state reset; restored $restoredObservers observer snapshots",
                     )
                 } catch (e: Exception) {
                     TetheringCoreSync.onStartFailed(service, e.message.orEmpty())
@@ -277,8 +248,22 @@ object CoreServiceManager {
         val previous = PolicyRouteCache.snapshot()
         if (previous.networkKey == newNetworkKey && previous.networkHandle == newNetworkHandle) return
         PolicyRouteCache.setCurrentNetwork(newNetworkKey, newNetworkHandle)
-        if (coreController.isRunning && isPolicyRouteTrackingActive()) {
-            coreScope.launch { refreshFreshPolicyRoute() }
+        val snapshot = PolicyRouteCache.snapshot()
+        val profileGuid = runningProfileGuid
+        if (coreController.isRunning && coreRecoveryEnabled.get()) {
+            coreScope.launch {
+                networkResetMutex.withLock {
+                    if (!coreRecoveryEnabled.get() || runningProfileGuid != profileGuid ||
+                        !PolicyRouteCache.isCurrent(snapshot) || !coreController.isRunning || networkTransitions.get() != 0
+                    ) return@withLock
+                    try {
+                        coreController.updateNetworkIdentity(newNetworkKey, newNetworkHandle)
+                        refreshFreshPolicyRoute()
+                    } catch (e: Exception) {
+                        LogUtil.w(AppConfig.TAG, "StartCore-Manager: Underlay identity update failed for profile $profileGuid", e)
+                    }
+                }
+            }
         }
     }
 
@@ -737,7 +722,6 @@ object CoreServiceManager {
             return
         }
 
-        val previousNetworkKey = PolicyRouteCache.snapshot().networkKey
         // Capabilities normally arrive before the one-second debounce expires. A handle-scoped
         // fallback still guarantees recovery without accidentally borrowing another network's
         // cached route if Android withholds them.
@@ -746,7 +730,7 @@ object CoreServiceManager {
             AppConfig.TAG,
             "NetworkMonitor: Recovering core on ${newNetworkKey.substringBefore(':')} handover",
         )
-        resetCoreNetworkState(service, previousNetworkKey, newNetworkKey, networkHandle)
+        resetCoreNetworkState(service, newNetworkKey, networkHandle)
     }
 
     private fun reportStartSuccess(service: Service, serverName: String) {
