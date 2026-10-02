@@ -603,11 +603,13 @@ private fun ServerListItem(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         model.typeDescription,
+                        modifier = Modifier.weight(1f, fill = false),
                         style = MaterialTheme.typography.bodySmall,
                         color = colorConfigType,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(Modifier.width(8.dp))
                     TestResult(model.testDelayMillis)
                 }
             }

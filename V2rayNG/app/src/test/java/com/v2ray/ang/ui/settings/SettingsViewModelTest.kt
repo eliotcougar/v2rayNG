@@ -18,12 +18,12 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mockConstruction
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -36,7 +36,7 @@ class SettingsViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val viewModels = mutableListOf<SettingsViewModel>()
 
-    @Before
+    @BeforeEach
     fun setUp() {
         androidLog = mockStatic(Log::class.java)
         // Keep platform logging from initializing native MMKV in a preference-store unit test.
@@ -45,7 +45,7 @@ class SettingsViewModelTest {
         Dispatchers.setMain(dispatcher)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         viewModels.forEach { it.viewModelScope.cancel() }
         Dispatchers.resetMain()

@@ -9,13 +9,13 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
@@ -28,7 +28,7 @@ class MainConnectionStatusTest {
     private lateinit var viewModel: MainViewModel
     private lateinit var requestId: String
 
-    @Before
+    @BeforeEach
     fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         `when`(source.mainServiceEvent).thenReturn(events)
@@ -38,7 +38,7 @@ class MainConnectionStatusTest {
         viewModel = MainViewModel(mock(Application::class.java), source)
     }
 
-    @After
+    @AfterEach
     fun tearDown() {
         viewModel.viewModelScope.cancel()
         Dispatchers.resetMain()
