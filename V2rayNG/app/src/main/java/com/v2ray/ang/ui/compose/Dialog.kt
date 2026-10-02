@@ -107,11 +107,12 @@ fun ConfirmDialog(
 }
 
 @Composable
-fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () -> Unit, itemName: String? = null) {
+    val displayMessage = if (itemName.isNullOrBlank()) message else "$message\n\n$itemName"
     val isTelevision = isTelevisionDevice()
     if (!isTelevision) {
         ConfirmDialog(
-            message = message,
+            message = displayMessage,
             messageTextAlign = TextAlign.Center,
             confirmText = stringResource(R.string.action_delete),
             confirmIcon = {
@@ -133,7 +134,7 @@ fun DeleteConfirmDialog(message: String, onConfirm: () -> Unit, onDismiss: () ->
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        text = { Text(message, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) },
+        text = { Text(displayMessage, modifier = Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center) },
         confirmButton = {
             AppDialogButton(
                 text = deleteText,

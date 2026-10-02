@@ -2,9 +2,9 @@ package com.v2ray.ang.ui.main
 
 import android.content.res.Configuration
 import com.v2ray.ang.ui.isTetheringAvailable
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Test
 
 class MainDrawerTest {
     @Test

@@ -32,6 +32,7 @@ import com.v2ray.ang.ui.compose.tvAwareImePadding
 import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.toast
+import com.v2ray.ang.extension.toLongEx
 import com.v2ray.ang.extension.toastSuccess
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsChangeManager
@@ -153,13 +154,16 @@ fun SubEditScreen(
 ) {
     val context = LocalContext.current
     var remarks by rememberSaveable { mutableStateOf(initial.remarks.orEmpty()) }
+    var isRemarksError by rememberSaveable { mutableStateOf(false) }
     var url by rememberSaveable { mutableStateOf(initial.url.orEmpty()) }
+    var isUrlError by rememberSaveable { mutableStateOf(false) }
     var userAgent by rememberSaveable { mutableStateOf(initial.userAgent.orEmpty()) }
     var requestHeaders by rememberSaveable { mutableStateOf(initial.requestHeaders.orEmpty()) }
     var filter by rememberSaveable { mutableStateOf(initial.filter ?: "") }
     var enabled by rememberSaveable { mutableStateOf(initial.enabled) }
     var autoUpdate by rememberSaveable { mutableStateOf(initial.autoUpdate) }
     var updateInterval by rememberSaveable { mutableStateOf(initial.updateInterval.toString()) }
+    var isUpdateIntervalError by rememberSaveable { mutableStateOf(false) }
     var allowInsecureUrl by rememberSaveable { mutableStateOf(initial.allowInsecureUrl) }
     var prevProfile by rememberSaveable { mutableStateOf(initial.prevProfile ?: "") }
     var nextProfile by rememberSaveable { mutableStateOf(initial.nextProfile ?: "") }
@@ -173,11 +177,15 @@ fun SubEditScreen(
 
     fun buildSubItem(): SubscriptionItem? {
         val parsedUpdateInterval = updateInterval.toLongOrNull()
-        if (parsedUpdateInterval == null) {
-            context.toast(R.string.toast_invalid_update_interval)
+        isRemarksError = remarks.isBlank()
+        isUrlError = url.isNotEmpty() &&
+            (!Utils.isValidUrl(url) || (!Utils.isValidSubUrl(url) && !allowInsecureUrl))
+        isUpdateIntervalError = parsedUpdateInterval == null ||
+            (autoUpdate && parsedUpdateInterval < AppConfig.SUBSCRIPTION_MIN_INTERVAL_MINUTES)
+        if (isRemarksError || isUrlError || isUpdateIntervalError) {
             return null
         }
-        val subItem = MmkvManager.decodeSubscription(editSubId) ?: SubscriptionItem()
+        val subItem = initial.copy()
         subItem.remarks = remarks
         subItem.url = url
         subItem.userAgent = userAgent
@@ -185,7 +193,7 @@ fun SubEditScreen(
         subItem.filter = filter
         subItem.enabled = enabled
         subItem.autoUpdate = autoUpdate
-        subItem.updateInterval = parsedUpdateInterval
+        subItem.updateInterval = checkNotNull(parsedUpdateInterval)
         subItem.prevProfile = prevProfile
         subItem.nextProfile = nextProfile
         subItem.allowInsecureUrl = allowInsecureUrl
@@ -238,8 +246,19 @@ fun SubEditScreen(
                 .padding(vertical = 8.dp)
                 .padding(bottom = 36.dp)
         ) {
-            FormTextField(stringResource(R.string.sub_setting_remarks), remarks, { remarks = it })
-            FormTextField(stringResource(R.string.sub_setting_url), url, { url = it })
+            FormTextField(
+                label = stringResource(R.string.sub_setting_remarks),
+                value = remarks,
+                onValueChange = { remarks = it },
+                isError = isRemarksError
+            )
+            FormTextField(
+                label = stringResource(R.string.sub_setting_url),
+                value = url,
+                onValueChange = { url = it },
+                isError = isUrlError,
+                supportingText = if (isUrlError) stringResource(R.string.toast_invalid_url) else null
+            )
             FormTextField(stringResource(R.string.sub_setting_user_agent), userAgent, { userAgent = it })
             FormTextField(stringResource(R.string.sub_setting_request_headers), requestHeaders, { requestHeaders = it })
             FormTextField(stringResource(R.string.sub_setting_filter), filter, { filter = it })
@@ -256,8 +275,12 @@ fun SubEditScreen(
             )
 
             FormTextField(
-                stringResource(R.string.title_pref_auto_update_interval),
-                updateInterval, { updateInterval = it }, keyboardType = KeyboardType.Number
+                label = stringResource(R.string.title_pref_auto_update_interval),
+                value = updateInterval,
+                onValueChange = { updateInterval = it },
+                keyboardType = KeyboardType.Number,
+                isError = isUpdateIntervalError,
+                supportingText = if (isUpdateIntervalError) stringResource(R.string.toast_invalid_update_interval) else null
             )
 
             SettingsSwitchItem(

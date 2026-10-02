@@ -125,6 +125,7 @@ class MainViewModel(
 
     private var mainUiVisible = false
     private val testRequests = MainTestRequests()
+    private var bulkTestJob: Job? = null
 
     private val initialPageReady = CompletableDeferred<Unit>()
 
@@ -155,11 +156,12 @@ class MainViewModel(
                 updateRunningState(true)
             }
 
-            MainServiceEvent.StateStartFailure -> {
-                toastError(
-                    R.string.toast_services_failure,
-                    liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE,
-                )
+            is MainServiceEvent.StateStartFailure -> {
+                if (event.message.isNullOrBlank()) {
+                    toastError(R.string.toast_services_failure, liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE)
+                } else {
+                    toastError(event.message, liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE)
+                }
                 updateRunningState(false)
             }
 
@@ -191,7 +193,8 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
-                if (event.requestId == testRequests.bulk?.id) queueTestResult(event.result)
+                val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
+                queueTestResult(event.result, request)
             }
 
             is MainServiceEvent.MeasureConfigNotify -> {
@@ -201,13 +204,13 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigFinish -> {
-                if (event.requestId != testRequests.bulk?.id) return
+                val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
                 val scheduledFlush = testResultFlushJob
                 testResultFlushJob = viewModelScope.launch {
                     scheduledFlush?.cancelAndJoin()
-                    if (event.requestId != testRequests.bulk?.id) return@launch
-                    flushPendingTestResults()
-                    onTestsFinished(event.requestId)
+                    if (testRequests.bulk?.id != request.id) return@launch
+                    flushPendingTestResults(request)
+                    onTestsFinished(request.id)
                 }
             }
 
@@ -234,32 +237,33 @@ class MainViewModel(
         }
     }
 
-    private fun queueTestResult(result: RealPingResult) {
+    private fun queueTestResult(result: RealPingResult, request: MainTestRequests.Bulk) {
         pendingTestResults[result.guid] = result.delayMillis
         if (testResultFlushJob?.isActive == true) return
 
         testResultFlushJob = viewModelScope.launch {
             while (pendingTestResults.isNotEmpty()) {
                 delay(TEST_RESULT_FLUSH_INTERVAL_MS)
-                flushPendingTestResults()
+                flushPendingTestResults(request)
             }
         }
     }
 
-    private suspend fun flushPendingTestResults() {
+    private suspend fun flushPendingTestResults(request: MainTestRequests.Bulk) {
         if (pendingTestResults.isEmpty()) return
+        if (testRequests.bulk?.id != request.id) return
 
-        val groupId = testRequests.bulk?.groupId ?: return
         val updates = cacheMutex.withLock {
             val drained = pendingTestResults.toMap()
             pendingTestResults.clear()
-            groupDataCache[groupId]?.let { cached ->
-                groupDataCache[groupId] = applyTestDelayResults(cached, drained)
+            groupDataCache[request.groupId]?.let { cached ->
+                groupDataCache[request.groupId] = applyTestDelayResults(cached, drained)
             }
             drained
         }
         if (updates.isEmpty()) return
-        mutableServerGroupState(groupId).update { current ->
+        if (testRequests.bulk?.id != request.id) return
+        mutableServerGroupState(request.groupId).update { current ->
             current.copy(
                 servers = applyTestDelayResults(current.servers, updates),
                 rows = applyTestDelayResultsToRows(current.rows, updates),
@@ -997,6 +1001,8 @@ class MainViewModel(
 
     // ---------- Testing ----------
     fun cancelAllPing() {
+        bulkTestJob?.cancel()
+        bulkTestJob = null
         cancelPendingTestResults()
         testRequests.cancelBulk()
         testRequests.invalidateCurrent()
@@ -1030,7 +1036,7 @@ class MainViewModel(
         val request = testRequests.beginBulk(groupId)
         _uiState.update { it.copy(isTesting = true, testStatus = MainStatus.Testing) }
         publishTestAnnouncement(MainStatus.Testing)
-        viewModelScope.launch(ioDispatcher) {
+        bulkTestJob = viewModelScope.launch(ioDispatcher) {
             val resetGuids = serverGuids.toHashSet()
             cacheMutex.withLock {
                 groupDataCache[groupId]?.let { cached ->

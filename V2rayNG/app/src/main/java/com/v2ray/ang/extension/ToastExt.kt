@@ -58,7 +58,7 @@ fun Context.toastSuccess(
  */
 fun Context.toastErrorLong(message: Int) {
     val text = getString(message)
-    dispatchMessage(text, ToastType.ERROR, AccessibilityLiveRegionMode.POLITE)
+    dispatchMessage(text, ToastType.ERROR, AccessibilityLiveRegionMode.POLITE, long = true)
 }
 
 /**
@@ -114,16 +114,98 @@ private fun Context.dispatchMessage(
     type: ToastType,
     liveRegionMode: AccessibilityLiveRegionMode,
     accessibilityMessage: CharSequence? = null,
+    long: Boolean = false,
 ) {
     val event = AppSnackbarMessage(
         message = message,
         type = type,
         liveRegionMode = liveRegionMode,
         accessibilityMessage = accessibilityMessage,
+        duration = if (long) androidx.compose.material3.SnackbarDuration.Long else androidx.compose.material3.SnackbarDuration.Short,
     )
     if (AppSnackbarManager.show(event)) {
         NotificationHelper.cancelTransientMessage(this)
     } else {
         NotificationHelper.notifyTransientMessage(this, accessibilityMessage ?: message)
     }
+}
+
+/**
+ * Shows a toast message with the given resource ID.
+ *
+ * @param message The resource ID of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toast(message: Int, long: Boolean) {
+    dispatchMessage(getString(message), ToastType.NORMAL, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows a toast message with the given text.
+ *
+ * @param message The text of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toast(message: CharSequence, long: Boolean) {
+    dispatchMessage(message, ToastType.NORMAL, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows a success toast message with the given resource ID.
+ *
+ * @param message The resource ID of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastSuccess(message: Int, long: Boolean) {
+    dispatchMessage(getString(message), ToastType.SUCCESS, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows a success toast message with the given text.
+ *
+ * @param message The text of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastSuccess(message: CharSequence, long: Boolean) {
+    dispatchMessage(message, ToastType.SUCCESS, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows an error toast message with the given resource ID.
+ *
+ * @param message The resource ID of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastError(message: Int, long: Boolean) {
+    dispatchMessage(getString(message), ToastType.ERROR, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows an error toast message with the given text.
+ *
+ * @param message The text of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastError(message: CharSequence, long: Boolean) {
+    dispatchMessage(message, ToastType.ERROR, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows an info toast message with the given resource ID.
+ *
+ * @param message The resource ID of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastInfo(message: Int, long: Boolean = false) {
+    dispatchMessage(getString(message), ToastType.INFO, AccessibilityLiveRegionMode.POLITE, long = long)
+}
+
+/**
+ * Shows an info toast message with the given text.
+ *
+ * @param message The text of the message to show.
+ * @param long Whether to display the message for a longer duration.
+ */
+fun Context.toastInfo(message: CharSequence, long: Boolean = false) {
+    dispatchMessage(message, ToastType.INFO, AccessibilityLiveRegionMode.POLITE, long = long)
 }

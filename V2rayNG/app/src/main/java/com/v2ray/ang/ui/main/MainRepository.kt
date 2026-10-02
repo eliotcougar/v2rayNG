@@ -60,7 +60,7 @@ class MainRepository(
                 AppConfig.MSG_STATE_START_SUCCESS -> MainServiceEvent.StateStartSuccess(
                     safeIntent.getStringExtra("content").orEmpty()
                 )
-                AppConfig.MSG_STATE_START_FAILURE -> MainServiceEvent.StateStartFailure
+                AppConfig.MSG_STATE_START_FAILURE -> MainServiceEvent.StateStartFailure(safeIntent.getStringExtra("content"))
 
                 AppConfig.MSG_STATE_STOP_SUCCESS -> MainServiceEvent.StateStopSuccess
                 AppConfig.MSG_MEASURE_DELAY_RESULT -> safeIntent
@@ -77,6 +77,7 @@ class MainRepository(
                 AppConfig.MSG_MEASURE_CONFIG_NOTIFY -> MainServiceEvent.MeasureConfigNotify(
                     safeIntent.getStringExtra("content").orEmpty(), requestId
                 )
+                AppConfig.MSG_MEASURE_CONFIG_CANCEL -> MainServiceEvent.MeasureConfigCancelled(requestId)
 
                 AppConfig.MSG_MEASURE_CONFIG_FINISH -> MainServiceEvent.MeasureConfigFinish(
                     requestId

@@ -4,11 +4,11 @@ import android.content.Context
 import com.v2ray.ang.R
 import com.v2ray.ang.core.CoreConnectionState
 import com.v2ray.ang.dto.ConnectionTestResult
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
@@ -16,7 +16,7 @@ class LauncherWidgetPresentationTest {
     private val context = mock<Context>()
     private val profile = WidgetProfile("a", "Profile A")
 
-    @Before
+    @BeforeEach
     fun strings() {
         mapOf(
             R.string.widget_status_connected to "Connected",

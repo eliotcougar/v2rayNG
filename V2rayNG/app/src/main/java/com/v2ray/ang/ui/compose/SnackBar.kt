@@ -45,7 +45,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 enum class ToastType {
-    NORMAL, SUCCESS, ERROR
+    NORMAL, SUCCESS, ERROR, INFO
 }
 
 data class AppSnackbarMessage(
@@ -53,6 +53,7 @@ data class AppSnackbarMessage(
     val type: ToastType = ToastType.NORMAL,
     val liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
     val accessibilityMessage: CharSequence? = null,
+    val duration: SnackbarDuration = SnackbarDuration.Short,
 )
 
 object AppSnackbarManager {
@@ -79,7 +80,7 @@ class AppSnackbarController(
     private var currentId = 0
     private var currentShowTime = 0L
 
-    fun show(message: CharSequence, type: ToastType = ToastType.NORMAL) {
+    fun show(message: CharSequence, type: ToastType = ToastType.NORMAL, duration: SnackbarDuration = SnackbarDuration.Short) {
         val id = ++currentId
         scope.launch {
             if (currentShowTime != 0L) {
@@ -96,6 +97,7 @@ class AppSnackbarController(
                     AppSnackbarVisuals(
                         message = message.toString(),
                         type = type,
+                        duration = duration,
                     )
                 )
                 if (id == currentId) {
@@ -137,6 +139,7 @@ fun AppSnackbarBridge(
                     controller.show(
                         message = event.message,
                         type = event.type,
+                        duration = event.duration,
                     )
                     liveRegionMessages.offer(event)
                 }
@@ -258,6 +261,7 @@ fun AppSnackbarHost(
                 ToastType.NORMAL -> if (isDark) toastNormalBgDark else toastNormalBgLight
                 ToastType.SUCCESS -> toastSuccessBg
                 ToastType.ERROR -> toastErrorBg
+                ToastType.INFO -> toastInfoBg
             }
 
             Box(

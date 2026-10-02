@@ -132,7 +132,6 @@ class ServerProxyChainActivity : BaseComponentActivity() {
 
     private fun saveServer(remarks: String, members: List<String>): Boolean {
         if (remarks.isBlank()) {
-            toast(R.string.server_lab_remarks)
             return false
         }
 
@@ -226,6 +225,7 @@ fun ProxyChainScreen(
 ) {
     val isTelevision = isTelevisionDevice()
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
+    var isRemarksError by rememberSaveable { mutableStateOf(false) }
     var members by rememberSaveable { mutableStateOf(initialMembers.toList()) }
     var memberIds by rememberSaveable { mutableStateOf(initialMembers.indices.map(Int::toLong)) }
     var nextMemberId by rememberSaveable { mutableLongStateOf(initialMembers.size.toLong()) }
@@ -368,7 +368,10 @@ fun ProxyChainScreen(
                             topBarFocusOrder,
                             remarksFocusRequester::requestFocus
                         ),
-                        onClick = { onSave(remarks, members) }
+                        onClick = {
+                            isRemarksError = remarks.isBlank()
+                            if (!isRemarksError) onSave(remarks, members)
+                        }
                     )
                 }
             )
@@ -422,6 +425,7 @@ fun ProxyChainScreen(
                     label = stringResource(R.string.server_lab_remarks),
                     value = remarks,
                     onValueChange = { remarks = it },
+                    isError = isRemarksError,
                     tvNavigation = TvTextFieldNavigation(
                         focusRequester = remarksFocusRequester,
                         onMoveUp = { backFocusRequester.requestFocus() },

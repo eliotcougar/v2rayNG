@@ -2,10 +2,10 @@ package com.v2ray.ang.handler
 
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.util.JsonUtil
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class RoutingRulesetIdentityTest {
     @Test

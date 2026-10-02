@@ -2,11 +2,11 @@ package com.v2ray.ang.ui.routing
 
 import android.app.Application
 import com.v2ray.ang.dto.entities.RulesetItem
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import kotlinx.coroutines.test.runTest
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 
 class RoutingSettingsViewModelTest {

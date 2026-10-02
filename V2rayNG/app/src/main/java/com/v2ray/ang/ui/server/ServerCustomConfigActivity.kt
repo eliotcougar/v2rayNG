@@ -211,6 +211,7 @@ fun ServerCustomConfigScreen(
     onDelete: () -> Unit
 ) {
     var remarks by rememberSaveable { mutableStateOf(initialRemarks) }
+    var isRemarksError by rememberSaveable { mutableStateOf(false) }
     val textFieldState = rememberTextFieldState(initialText = initialContent)
     val isTelevision = isTelevisionDevice()
     val editorTvState = if (isTelevision) rememberTvTextFieldState() else null
@@ -342,7 +343,10 @@ fun ServerCustomConfigScreen(
                     add(AppTopBarAction(
                         icon = painterResource(R.drawable.ic_fab_check),
                         label = stringResource(R.string.acc_save),
-                        onClick = { onSave(remarks, textFieldState.text.toString()) }
+                        onClick = {
+                            isRemarksError = remarks.isBlank()
+                            if (!isRemarksError) onSave(remarks, textFieldState.text.toString())
+                        }
                     ))
                 }
             )
@@ -359,7 +363,8 @@ fun ServerCustomConfigScreen(
             FormTextField(
                 label = stringResource(R.string.server_lab_remarks),
                 value = remarks,
-                onValueChange = { remarks = it }
+                onValueChange = { remarks = it },
+                isError = isRemarksError
             )
 
             Box(

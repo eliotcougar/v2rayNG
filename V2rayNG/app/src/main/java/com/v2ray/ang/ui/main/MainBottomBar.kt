@@ -2,6 +2,8 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.ui.text.style.TextOverflow
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,11 +29,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -58,6 +62,7 @@ import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainBottomBar(
@@ -71,6 +76,9 @@ fun MainBottomBar(
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val rotationAnim = remember { Animatable(0f) }
+    LaunchedEffect(isRunning) { if (!isRunning) rotationAnim.snapTo(0f) }
     val isTelevision = isTelevisionDevice()
     val announcements = remember { MainTestAnnouncements() }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -158,7 +166,12 @@ fun MainBottomBar(
             onPublished = { publishedId = it },
         )
         if (!isTelevision) FloatingActionButton(
-            onClick = { onAction(MainAction.ToggleService) },
+            onClick = {
+                if (!isRunning) scope.launch {
+                    rotationAnim.animateTo(720f, animationSpec = tween(durationMillis = 3000))
+                }
+                onAction(MainAction.ToggleService)
+            },
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
@@ -176,7 +189,9 @@ fun MainBottomBar(
                     if (isRunning) R.string.acc_stop else R.string.acc_start
                 ),
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .size(24.dp)
+                    .graphicsLayer { rotationZ = rotationAnim.value }
             )
         }
     }

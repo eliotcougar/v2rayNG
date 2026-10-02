@@ -149,6 +149,8 @@ fun UserAssetUrlScreen(
     onSave: (String, String) -> Boolean,
     onDelete: () -> Unit
 ) {
+    var isRemarksError by rememberSaveable(editAssetId) { mutableStateOf(false) }
+    var isUrlError by rememberSaveable(editAssetId) { mutableStateOf(false) }
     var remarks by rememberSaveable(editAssetId, initialRemarks) { mutableStateOf(initialRemarks) }
     var url by rememberSaveable(editAssetId, initialUrl) { mutableStateOf(initialUrl) }
     var showDeleteConfirm by rememberSaveable(editAssetId) { mutableStateOf(false) }
@@ -174,7 +176,11 @@ fun UserAssetUrlScreen(
                         AppTopBarAction(
                         icon = painterResource(R.drawable.ic_fab_check),
                         label = stringResource(R.string.acc_save),
-                        onClick = { onSave(remarks, url) }
+                        onClick = {
+                            isRemarksError = remarks.isBlank()
+                            isUrlError = url.isBlank()
+                            if (!isRemarksError && !isUrlError) onSave(remarks, url)
+                        }
                     )
                     )
                 }
@@ -197,6 +203,7 @@ fun UserAssetUrlScreen(
                 label = stringResource(R.string.sub_setting_remarks),
                 value = remarks,
                 onValueChange = { remarks = it },
+                isError = isRemarksError,
                 tvNavigation = TvTextFieldNavigation(
                     focusRequester = remarksFocusRequester,
                     onMoveUp = { false },
@@ -207,6 +214,7 @@ fun UserAssetUrlScreen(
                 label = stringResource(R.string.title_url),
                 value = url,
                 onValueChange = { url = it },
+                isError = isUrlError,
                 tvNavigation = TvTextFieldNavigation(
                     focusRequester = urlFocusRequester,
                     onMoveUp = remarksFocusRequester::requestFocus,

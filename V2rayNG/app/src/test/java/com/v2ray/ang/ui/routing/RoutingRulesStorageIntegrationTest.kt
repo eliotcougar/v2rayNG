@@ -10,11 +10,11 @@ import com.v2ray.ang.util.JsonUtil
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
-import org.junit.Before
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mockStatic
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -30,7 +30,7 @@ class RoutingRulesStorageIntegrationTest {
     private lateinit var viewModel: RoutingSettingsViewModel
     private var saved: String? = null
 
-    @Before
+    @BeforeEach
     fun prepareStorage() {
         mockStatic(MMKV::class.java).use { factory ->
             factory.`when`<MMKV> { MMKV.mmkvWithID("SETTING", MMKV.MULTI_PROCESS_MODE) }.thenReturn(mock())
