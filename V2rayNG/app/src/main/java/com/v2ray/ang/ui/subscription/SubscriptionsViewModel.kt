@@ -171,7 +171,6 @@ class SubscriptionsViewModel @JvmOverloads constructor(
     }
 
     fun updateSubscriptionsMore() {
-        SettingsChangeManager.makeSetupGroupTab()
         val subIds = MmkvManager.decodeSubscriptions()
             .filter { it.subscription.enabled && it.subscription.url.isNotEmpty() }
             .map { it.guid }

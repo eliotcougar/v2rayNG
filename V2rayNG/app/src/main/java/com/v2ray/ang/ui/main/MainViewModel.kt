@@ -75,6 +75,7 @@ class MainViewModel(
     private val dataSource: MainDataSource,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val serviceEventDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
 ) : BaseViewModel(application) {
 
     private val preloadDispatcher: CoroutineDispatcher = ioDispatcher.limitedParallelism(1)
@@ -122,7 +123,7 @@ class MainViewModel(
     }
 
     private fun collectServiceEvents() {
-        viewModelScope.launch {
+        viewModelScope.launch(serviceEventDispatcher) {
             dataSource.mainServiceEvent.collect { event ->
                 handleServiceEvent(event)
             }
@@ -198,6 +199,16 @@ class MainViewModel(
                     resetTestStatus()
                 }
             }
+
+            is MainServiceEvent.SubscriptionDataChanged -> {
+                refreshSubscriptionGroupData(event.subscriptionIds)
+            }
+        }
+    }
+
+    private fun refreshSubscriptionGroupData(subscriptionIds: Collection<String>) {
+        viewModelScope.launch(preloadDispatcher) {
+            populateSubscriptionGroupData(subscriptionIds)
         }
     }
 
@@ -830,6 +841,42 @@ class MainViewModel(
         }
     }
 
+    internal suspend fun populateSubscriptionGroupData(subscriptionIds: Collection<String>) {
+        initialPageReady.await()
+        val refreshOrder = subscriptionGroupRefreshOrder(
+            visibleGroupIds = uiState.value.groups.map { it.id },
+            selectedGroupId = uiState.value.selectedGroupId,
+            changedSubscriptionIds = subscriptionIds,
+        )
+        refreshOrder.forEach { groupId ->
+            try {
+                updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
+                if (groupId.isNotEmpty()) {
+                    val subscription = dataSource.getSubscriptionItem(groupId)
+                    if (subscription != null) {
+                        val usageInfo = subscription.usageInfo?.let { info ->
+                            SubscriptionInfoParser.withWebPageFallback(info, subscription.url)
+                        }
+                        _uiState.update { current ->
+                            current.copy(groups = current.groups.map { group ->
+                                if (group.id == groupId) {
+                                    group.copy(remarks = subscription.remarks, usageInfo = usageInfo)
+                                } else {
+                                    group
+                                }
+                            })
+                        }
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to refresh subscription group: $groupId", error)
+            }
+        }
+        refreshSelectedGuid()
+    }
+
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
         keywordFilter = keyword
@@ -1070,5 +1117,25 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+    }
+}
+
+internal fun subscriptionGroupRefreshOrder(
+    visibleGroupIds: List<String>,
+    selectedGroupId: String,
+    changedSubscriptionIds: Collection<String>,
+): List<String> {
+    val changedIds = changedSubscriptionIds.filterTo(LinkedHashSet()) { it.isNotBlank() }
+    if (changedIds.isEmpty()) return emptyList()
+
+    val affectedIds = visibleGroupIds.filterTo(LinkedHashSet()) {
+        it.isNotEmpty() && it in changedIds
+    }
+    if (visibleGroupIds.any { it.isEmpty() }) affectedIds += ""
+    if (affectedIds.isEmpty()) return emptyList()
+
+    return buildList(affectedIds.size) {
+        if (selectedGroupId in affectedIds) add(selectedGroupId)
+        addAll(affectedIds.filter { it != selectedGroupId })
     }
 }

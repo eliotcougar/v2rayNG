@@ -77,6 +77,13 @@ class MainRepository(
                 )
                 AppConfig.MSG_MEASURE_CONFIG_CANCEL -> MainServiceEvent.MeasureConfigCancelled(requestId)
 
+                AppConfig.MSG_SUB_UPDATE_DATA_CHANGED -> safeIntent
+                    .serializable<ArrayList<String>>("content")
+                    ?.filter { it.isNotBlank() }
+                    ?.distinct()
+                    ?.takeIf { it.isNotEmpty() }
+                    ?.let(MainServiceEvent::SubscriptionDataChanged)
+
                 else -> null
             }
             event?.let { mainServiceEventChannel.trySend(it) }
