@@ -50,6 +50,8 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.booleanResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -147,6 +149,8 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(180.dp)
+                    // The decorative Surface must not become an empty accessibility stop.
+                    .semantics { hideFromAccessibility() }
             ) {
                 Column(
                     modifier = Modifier
@@ -168,6 +172,7 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                     )
                     Text(
                         text = stringResource(R.string.app_name),
+                        modifier = Modifier.semantics { hideFromAccessibility() },
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -257,7 +262,10 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 .padding(horizontal = 8.dp, vertical = 12.dp)
         ) {
             if (drawerValue == TvDrawerValue.Open) {
-                Box(modifier = Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(48.dp).semantics { hideFromAccessibility() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         val isDarkTheme = LocalDarkTheme.current
                         Image(
@@ -273,7 +281,10 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                     }
                 }
             } else {
-                Box(modifier = Modifier.width(64.dp).height(48.dp), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.width(64.dp).height(48.dp).semantics { hideFromAccessibility() },
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_menu_24dp),
                         contentDescription = null,

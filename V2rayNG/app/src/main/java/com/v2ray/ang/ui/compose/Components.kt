@@ -158,7 +158,10 @@ internal fun AppTopBar(
                 } else if (titleContent != null) {
                     titleContent()
                 } else {
-                    Text(text = title)
+                    Text(
+                        text = title,
+                        modifier = Modifier.accessibilityTraversalIndex(-1f)
+                    )
                 }
             },
             navigationIcon = {
@@ -437,7 +440,7 @@ private fun SearchInputField(
         if (query.isNotEmpty()) {
             AppIconButton(
                 icon = painterResource(android.R.drawable.ic_menu_close_clear_cancel),
-                label = stringResource(R.string.action_clear),
+                label = stringResource(R.string.acc_clear_search),
                 focusRequester = clearFocusRequester,
                 modifier = Modifier.dpadTopBarFocusNavigation(clearFocusRequester, focusOrder, onMoveDown),
                 onClick = {

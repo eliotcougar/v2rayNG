@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
@@ -35,6 +37,7 @@ import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DpadHorizontalDirection
 import com.v2ray.ang.ui.compose.adjacentDpadFocusTarget
+import com.v2ray.ang.ui.compose.accessibilityTraversalIndex
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadPopupHorizontalNavigation
@@ -84,6 +87,8 @@ internal fun MainTopBar(
     val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     val maxMenuHeight = windowHeight - statusBarHeight - navBarHeight - 20.dp
     val moveDownModifier = Modifier.dpadVerticalFocusNavigation(onMoveUp = { false }, onMoveDown = onMoveDown)
+    val menuLabel = stringResource(R.string.acc_open_menu)
+    val serviceActionLabel = stringResource(if (isRunning) R.string.acc_disconnect else R.string.acc_connect)
     val focusOrder = remember(isRunning, focusRequesters) {
         buildList {
             add(focusRequesters.start)
@@ -149,6 +154,7 @@ internal fun MainTopBar(
             {
                 Box(modifier = Modifier.height(48.dp), contentAlignment = Alignment.CenterStart) {
                     AppBrandTitle(
+                        modifier = Modifier.accessibilityTraversalIndex(-1f),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 40.sp,
                             lineHeight = 48.sp
@@ -169,10 +175,10 @@ internal fun MainTopBar(
 
                 !isTelevision -> AppIconButton(
                     icon = painterResource(R.drawable.ic_menu_24dp),
-                    label = stringResource(R.string.action_menu),
+                    label = menuLabel,
                     onClick = { onOpenDrawer(null) },
                     focusRequester = navigationFocusRequester,
-                    modifier = moveDownModifier
+                    modifier = moveDownModifier.semantics { onClick(label = menuLabel, action = null) }
                 )
             }
         },
@@ -191,7 +197,9 @@ internal fun MainTopBar(
                     },
                     onClick = { onAction(MainAction.ToggleService) },
                     focusRequester = focusRequesters.start,
-                    modifier = moveDownModifier.dpadOrderedFocusNavigation(
+                    modifier = moveDownModifier.semantics {
+                        onClick(label = serviceActionLabel, action = null)
+                    }.dpadOrderedFocusNavigation(
                         current = focusRequesters.start,
                         order = focusOrder,
                         onBeforeFirst = { onOpenDrawer(focusRequesters.start) }
