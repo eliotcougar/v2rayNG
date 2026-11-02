@@ -37,7 +37,7 @@ object NotificationHelper {
 
     /** Routine background feedback is replaced; long errors remain independently dismissible. */
     fun notifyTransientMessage(context: Context, message: UserMessage) {
-        val content = message.text
+        val content = message.accessibilityText ?: message.text
         if (content.isBlank()) return
         val appContext = context.applicationContext
         if (!NotificationManagerCompat.from(appContext).areNotificationsEnabled()) return
@@ -49,23 +49,19 @@ object NotificationHelper {
         val localizedContext = AppLocaleManager.localizedContext(appContext)
         val manager = getNotificationManager(appContext)
         try {
-            ensureNotificationChannel(
-                context = appContext,
-                channelId = TRANSIENT_MESSAGE_CHANNEL_ID,
-                channelNameRes = R.string.notification_channel_other,
-                importance = NotificationManager.IMPORTANCE_LOW,
-            )
+            val channelType = NotificationChannelType.TRANSIENT_MESSAGE
+            ensureChannelCreated(channelType, appContext)
             val notificationTag = if (message.requiresDismissal) UUID.randomUUID().toString() else null
             val target = Intent(appContext, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             val contentIntent = PendingIntent.getActivity(
                 appContext,
-                TRANSIENT_MESSAGE_NOTIFICATION_ID,
+                channelType.notificationId,
                 target,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-            val notification = NotificationCompat.Builder(appContext, TRANSIENT_MESSAGE_CHANNEL_ID)
+            val notification = NotificationCompat.Builder(appContext, channelType.channelId)
                 .setSmallIcon(R.drawable.ic_stat_name)
                 .setContentTitle(localizedContext.getString(R.string.app_name))
                 .setContentText(content)
@@ -77,7 +73,7 @@ object NotificationHelper {
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
                 .setTimeoutAfter(if (message.requiresDismissal) 0L else TRANSIENT_MESSAGE_TIMEOUT_MS)
                 .build()
-            manager.notify(notificationTag, TRANSIENT_MESSAGE_NOTIFICATION_ID, notification)
+            manager.notify(notificationTag, channelType.notificationId, notification)
         } catch (e: SecurityException) {
             LogUtil.w(message = "NotificationHelper: failed to post transient message", throwable = e)
         }
@@ -85,7 +81,7 @@ object NotificationHelper {
 
     /** New foreground feedback supersedes the last routine notification, but not undismissed errors. */
     fun cancelTransientMessage(context: Context) {
-        getNotificationManager(context.applicationContext).cancel(TRANSIENT_MESSAGE_NOTIFICATION_ID)
+        getNotificationManager(context.applicationContext).cancel(NotificationChannelType.TRANSIENT_MESSAGE.notificationId)
     }
 
     /**
@@ -241,7 +237,7 @@ object NotificationHelper {
             ""
         }
 
-        val displayTitle = title.ifEmpty { context.getString(R.string.app_name) }
+        val displayTitle = title.ifEmpty { AppLocaleManager.localizedContext(context).getString(R.string.app_name) }
         return NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_stat_name)
             .setContentTitle(displayTitle)
@@ -249,11 +245,9 @@ object NotificationHelper {
             .setOngoing(false)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setCategory(channelType.category)
             .apply { action?.let(::addAction) }
     }
 }
 
-private const val TRANSIENT_MESSAGE_CHANNEL_ID = "transient_message_channel"
-private const val TRANSIENT_MESSAGE_NOTIFICATION_ID = 14
 private const val TRANSIENT_MESSAGE_TIMEOUT_MS = 10_000L

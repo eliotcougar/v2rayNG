@@ -427,9 +427,9 @@ object CoreServiceManager {
 
         TetheringCoreSync.onStarting()
         try {
-            doStartCoreLoop(service, vpnInterface)
+            val startedServerName = doStartCoreLoop(service, vpnInterface)
             feedbackState.started()
-            MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_SUCCESS, getRunningServerName())
+            MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_SUCCESS, startedServerName)
             return true
         } catch (e: Exception) {
             feedbackState.startFailed()
@@ -444,18 +444,19 @@ object CoreServiceManager {
     }
 
     @Throws(Exception::class)
-    private fun doStartCoreLoop(service: Service, vpnInterface: ParcelFileDescriptor?) {
+    private fun doStartCoreLoop(service: Service, vpnInterface: ParcelFileDescriptor?): String {
         registerCoreReceivers(service)
         urlDownloadScope?.cancel()
         urlDownloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        launchCore(service, vpnInterface)
+        val startedServerName = launchCore(service, vpnInterface)
         xhttpWakeRefresh.start { retireXHTTPClientsAfterDeviceIdle(service) }
         startNetworkMonitor(service)
+        return startedServerName
     }
 
     @Throws(Exception::class)
-    private fun launchCore(service: Service, vpnInterface: ParcelFileDescriptor?) {
+    private fun launchCore(service: Service, vpnInterface: ParcelFileDescriptor?): String {
         val guid = MmkvManager.getSelectServer() ?: error("No server selected")
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
         currentProfileId = guid
@@ -534,6 +535,7 @@ object CoreServiceManager {
         mutableRunningState.value = true
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
+        return config.remarks
     }
 
     /**

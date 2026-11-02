@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AngApplication
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
 import com.v2ray.ang.extension.toast
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
@@ -43,43 +44,57 @@ abstract class BaseViewModel(application: Application) : AndroidViewModel(applic
     /**
      * Show informational feedback from a string resource.
      */
-    fun toast(resId: Int) {
-        localizedContext.toast(resId)
+    fun toast(resId: Int, liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE) {
+        localizedContext.toast(resId, liveRegionMode = liveRegionMode)
     }
 
     /**
      * Show informational feedback.
      */
-    fun toast(message: String) {
-        app.toast(message)
+    fun toast(message: String, liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE) {
+        app.toast(message, liveRegionMode = liveRegionMode)
     }
 
     /**
      * Show success feedback from a string resource.
      */
-    fun toastSuccess(resId: Int) {
-        localizedContext.toastSuccess(resId)
+    fun toastSuccess(
+        resId: Int,
+        liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+        accessibilityMessage: String? = null,
+    ) {
+        localizedContext.toastSuccess(resId, liveRegionMode = liveRegionMode, accessibilityMessage = accessibilityMessage)
     }
 
     /**
      * Show success feedback.
      */
-    fun toastSuccess(message: String) {
-        app.toastSuccess(message)
+    fun toastSuccess(
+        message: String,
+        liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+        accessibilityMessage: String? = null,
+    ) {
+        app.toastSuccess(message, liveRegionMode = liveRegionMode, accessibilityMessage = accessibilityMessage)
     }
 
     /**
      * Show error feedback from a string resource.
      */
-    fun toastError(resId: Int) {
-        localizedContext.toastError(resId)
+    fun toastError(
+        resId: Int,
+        liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+    ) {
+        localizedContext.toastError(resId, liveRegionMode = liveRegionMode)
     }
 
     /**
      * Show error feedback.
      */
-    fun toastError(message: String) {
-        app.toastError(message)
+    fun toastError(
+        message: String,
+        liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+    ) {
+        app.toastError(message, liveRegionMode = liveRegionMode)
     }
 
     /**

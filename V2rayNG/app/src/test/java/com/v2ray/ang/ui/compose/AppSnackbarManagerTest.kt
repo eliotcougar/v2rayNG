@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.compose
 
 import androidx.compose.material3.SnackbarDuration
 import com.v2ray.ang.dto.UserMessage
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,7 +19,7 @@ class AppSnackbarManagerTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
     private val notifications = mutableListOf<UserMessage>()
     private var clears = 0
-    private val manager = AppSnackbarManager(scope, { notifications.add(it) }, { clears++ }, { "Close" })
+    private val manager = AppSnackbarManager(scope, { notifications.add(it) }, { clears++ }, { "Close" }, { 0L })
 
     @AfterEach
     fun close() = scope.cancel()
@@ -269,5 +270,66 @@ class AppSnackbarManagerTest {
         assertSame(first, manager.activeHost.value)
         manager.unregister(first)
         assertNull(manager.activeHost.value)
+    }
+
+    @Test
+    fun aLongErrorDoesNotBlockSubsequentServiceSpeechOrLoseItsCloseAction() {
+        manager.setForeground(true)
+        manager.register("main")
+        manager.show(UserMessage("Error\nDetails", type = UserMessage.Type.ERROR))
+        val error = manager.hostState.currentSnackbarData!!
+        manager.show(UserMessage(
+            "Started", type = UserMessage.Type.SUCCESS,
+            liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE,
+            accessibilityText = "Started. Now connected to Original server.",
+        ))
+
+        assertSame(error, manager.hostState.currentSnackbarData)
+        manager.liveRegionMessages.advance(manager.liveRegionMessages.current!!.id)
+        assertEquals("Started. Now connected to Original server.", manager.liveRegionMessages.current?.text)
+        assertEquals(AccessibilityLiveRegionMode.ASSERTIVE, manager.liveRegionMessages.current?.mode)
+        assertEquals("Close", error.visuals.actionLabel)
+        error.performAction()
+        assertEquals("Started", manager.hostState.currentSnackbarData?.visuals?.message)
+    }
+
+    @Test
+    fun navigationRetainsUnpublishedSpeechAndBackgroundingTransfersItsMetadataOnce() {
+        manager.setForeground(true)
+        manager.register("editor")
+        val started = UserMessage(
+            "Started", liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE,
+            accessibilityText = "Started. Now connected to Exact server.",
+        )
+        manager.show(started)
+        manager.show(UserMessage("Copied"))
+        manager.unregister("editor")
+        manager.register("main")
+        assertEquals(started.accessibilityText, manager.liveRegionMessages.current?.text)
+        manager.liveRegionMessages.advance(manager.liveRegionMessages.current!!.id)
+        assertEquals("Copied", manager.liveRegionMessages.current?.text)
+
+        manager.setForeground(false)
+        assertNull(manager.liveRegionMessages.current)
+        assertEquals(listOf(started, UserMessage("Copied")), notifications)
+        manager.setForeground(false)
+        assertEquals(2, notifications.size)
+    }
+
+    @Test
+    fun speechDeduplicationDoesNotDropVisualMessagesOrHideDifferentUrgency() {
+        manager.setForeground(true)
+        manager.show(UserMessage("Updated"))
+        manager.show(UserMessage("Updated"))
+        manager.show(UserMessage("Updated", liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE))
+        val first = manager.hostState.currentSnackbarData!!
+        manager.liveRegionMessages.advance(manager.liveRegionMessages.current!!.id)
+        assertEquals(AccessibilityLiveRegionMode.ASSERTIVE, manager.liveRegionMessages.current?.mode)
+        manager.liveRegionMessages.advance(manager.liveRegionMessages.current!!.id)
+        assertNull(manager.liveRegionMessages.current)
+        first.dismiss()
+        assertEquals("Updated", manager.hostState.currentSnackbarData?.visuals?.message)
+        manager.hostState.currentSnackbarData!!.dismiss()
+        assertEquals("Updated", manager.hostState.currentSnackbarData?.visuals?.message)
     }
 }

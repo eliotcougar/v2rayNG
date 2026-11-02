@@ -650,4 +650,5 @@
     <string name="summary_remote_control">اجازه به برنامه‌های دیگر برای کنترل v2rayNG</string>
     <string name="remote_control_access_required">در تنظیمات ← دسترسی برنامه‌های خودکارسازی، به این برنامه اجازه دهید و سپس این عمل را دوباره باز کنید.</string>
     <string name="tasker_current_profile">پروفایل فعلی</string>
+    <string name="acc_service_started_connected_to">سرویس با موفقیت شروع شد. اکنون به %1$s متصل هستید.</string>
 </resources>

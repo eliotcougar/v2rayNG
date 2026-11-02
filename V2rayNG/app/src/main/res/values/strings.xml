@@ -651,4 +651,5 @@
     <string name="routing_settings_enable_rule">Enable rule</string>
     <string name="connection_connected_tv">Connected</string>
     <string name="server_proxy_chain_member">Member</string>
+    <string name="acc_service_started_connected_to">Service started successfully. Now connected to %1$s.</string>
 </resources>

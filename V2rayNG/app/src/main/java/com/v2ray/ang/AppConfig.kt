@@ -213,7 +213,7 @@ object AppConfig {
     const val MSG_SET_ACTIVE_OUTBOUND_UPDATES = 77
     const val MSG_SUB_UPDATE_DATA_CHANGED = 84
 
-    /** Notification channel IDs and names. */
+    /** Notification channel IDs. */
     // Use a new ID because Android does not let an app raise an existing channel's importance.
     const val RAY_NG_CHANNEL_ID = "CORE_M_CH_ID_V2"
 

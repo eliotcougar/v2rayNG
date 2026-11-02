@@ -1,7 +1,15 @@
 package com.v2ray.ang.dto
 
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
+
 /** Feedback shared by the foreground snackbar and background notification paths. */
-data class UserMessage(val text: String, val type: Type = Type.NORMAL, val long: Boolean = false) {
+data class UserMessage(
+    val text: String,
+    val type: Type = Type.NORMAL,
+    val long: Boolean = false,
+    val liveRegionMode: AccessibilityLiveRegionMode = AccessibilityLiveRegionMode.POLITE,
+    val accessibilityText: String? = null,
+) {
     enum class Type { NORMAL, SUCCESS, ERROR, INFO }
 
     // A conservative reading-length policy, independent of the current screen or process.

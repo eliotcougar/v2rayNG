@@ -658,4 +658,5 @@
     <string name="summary_remote_control">السماح للتطبيقات الأخرى بالتحكم في v2rayNG</string>
     <string name="remote_control_access_required">اسمح لهذا التطبيق في الإعدادات ← وصول تطبيقات الأتمتة، ثم افتح هذا الإجراء مجددًا.</string>
     <string name="tasker_current_profile">الملف الشخصي الحالي</string>
+    <string name="acc_service_started_connected_to">تم تشغيل الخدمة بنجاح. أنت متصل الآن بـ %1$s.</string>
 </resources>

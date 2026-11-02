@@ -151,11 +151,19 @@ class SubscriptionsViewModel @JvmOverloads constructor(
                                 R.plurals.title_update_config_count,
                                 result.configCount,
                                 result.configCount,
-                            )
+                            ),
                         )
 
                     else ->
-                        toast(getString(R.string.title_update_subscription_result, result.configCount, result.successCount, result.failureCount, result.skipCount))
+                        toast(
+                            getString(
+                                R.string.title_update_subscription_result,
+                                result.configCount,
+                                result.successCount,
+                                result.failureCount,
+                                result.skipCount,
+                            ),
+                        )
                 }
                 if (result.configCount > 0) {
                     SettingsChangeManager.makeSetupGroupTab()

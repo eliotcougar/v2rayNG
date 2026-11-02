@@ -651,4 +651,5 @@
     <string name="remote_control_access_required">دِ تنظیمات ← دسترسی برنامه‌هانی خودکارسازی بِ ای برنامه اجازه بدین، بعد ای کار نِ دوباره وا کنین.</string>
     <string name="tasker_current_profile">پروفایل فعلی</string>
 
+    <string name="acc_service_started_connected_to">ره وستن سرویس وا مووفقیت ٱنجوم وابی. هیم سکو وا %1$s منپیز هڌ.</string>
 </resources>

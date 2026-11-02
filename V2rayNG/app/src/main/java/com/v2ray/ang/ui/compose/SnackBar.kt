@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.SystemClock
 import androidx.activity.compose.LocalActivity
 import androidx.annotation.MainThread
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,11 +35,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -55,6 +61,8 @@ import com.v2ray.ang.AngApplication
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.UserMessage
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
+import com.v2ray.ang.extension.delay
 import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.helper.NotificationHelper
@@ -74,8 +82,12 @@ class AppSnackbarManager(
     private val notifyBackground: (UserMessage) -> Unit,
     private val clearBackground: () -> Unit,
     private val closeLabel: () -> String,
+    elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
 ) {
     val hostState = SnackbarHostState()
+    internal val liveRegionMessages = LiveRegionMessageState(elapsedRealtime)
+    private var liveRegionExpiry: Job? = null
+    private var publishedLiveRegionId: Long? = null
     private val hosts = mutableListOf<String>()
     private val _activeHost = MutableStateFlow<String?>(null)
     val activeHost = _activeHost.asStateFlow()
@@ -115,11 +127,23 @@ class AppSnackbarManager(
     internal fun setForeground(foreground: Boolean) {
         isForeground = foreground
         if (!foreground) {
+            liveRegionExpiry?.cancel()
+            publishedLiveRegionId = null
+            liveRegionMessages.clear()
             // Cancel the Material queue before posting: nothing may expire in a hidden host.
             pending.toList().forEach { (job, message) ->
                 job.cancel()
                 notifyBackground(message)
             }
+        }
+    }
+
+    internal fun onLiveRegionPublished(id: Long) {
+        if (liveRegionMessages.current?.id != id || publishedLiveRegionId == id) return
+        publishedLiveRegionId = id
+        liveRegionExpiry = scope.launch {
+            delay(LiveRegionMessageLifetimeMs)
+            liveRegionMessages.advance(id)
         }
     }
 
@@ -129,6 +153,7 @@ class AppSnackbarManager(
             notifyBackground(message)
             return
         }
+        liveRegionMessages.offer(message)
         // Material still owns serialization, dismissal and the accessibility-adjusted timeout.
         // Track its jobs only so unread messages can be handed to background notifications.
         val job = scope.launch(start = CoroutineStart.LAZY) {
@@ -163,8 +188,8 @@ class AppSnackbarManager(
                     if (!isOrderedBroadcast || resultCode == Activity.RESULT_OK) return
                     if (!manager.isForeground) return
                     val what = intent.getIntExtra("key", 0)
-                    val details = if (what == AppConfig.MSG_STATE_START_FAILURE) intent.getStringExtra("content") else null
-                    val message = MessageHelper.serviceMessage(context, what, details) ?: return
+                    val content = intent.getStringExtra("content")
+                    val message = MessageHelper.serviceMessage(context, what, content) ?: return
                     manager.show(message)
                     // The process now owns delivery even if the current screen closes.
                     resultCode = Activity.RESULT_OK
@@ -211,6 +236,15 @@ fun AppSnackbarHost() {
     }
     val activeHost by manager.activeHost.collectAsStateWithLifecycle()
     if (activeHost != host) return
+    val liveRegionMessage = manager.liveRegionMessages.current
+    AccessibilityLiveRegionText(
+        eventId = liveRegionMessage?.id,
+        text = liveRegionMessage?.text.orEmpty(),
+        mode = if (liveRegionMessage?.mode == AccessibilityLiveRegionMode.ASSERTIVE) {
+            LiveRegionMode.Assertive
+        } else LiveRegionMode.Polite,
+        onPublished = manager::onLiveRegionPublished,
+    )
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
@@ -220,46 +254,101 @@ fun AppSnackbarHost() {
             .padding(bottom = if (imeVisible) 8.dp else 100.dp),
     ) {
         val maxTextHeight = maxHeight / 2
-        SnackbarHost(
-            hostState = manager.hostState,
+        val current = manager.hostState.currentSnackbarData ?: return@BoxWithConstraints
+        val feedback = (current.visuals as AppSnackbarVisuals).feedback
+        val background = when (feedback.type) {
+            UserMessage.Type.NORMAL -> if (LocalDarkTheme.current) toastNormalBgDark else toastNormalBgLight
+            UserMessage.Type.SUCCESS -> toastSuccessBg
+            UserMessage.Type.ERROR -> toastErrorBg
+            UserMessage.Type.INFO -> toastInfoBg
+        }
+        Surface(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .widthIn(max = maxWidth * 0.75f),
-        ) { data ->
-            SideEffect {
-                // A save-and-finish can still compose one last frame; leave its feedback unread.
-                if (activity?.isFinishing != true) manager.onPresented(host, data)
-            }
-            val type = (data.visuals as AppSnackbarVisuals).feedback.type
-            val background = when (type) {
-                UserMessage.Type.NORMAL -> if (LocalDarkTheme.current) toastNormalBgDark else toastNormalBgLight
-                UserMessage.Type.SUCCESS -> toastSuccessBg
-                UserMessage.Type.ERROR -> toastErrorBg
-                UserMessage.Type.INFO -> toastInfoBg
-            }
-            Surface(
-                modifier = Modifier.wrapContentWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = background,
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            shape = RoundedCornerShape(24.dp),
+            color = background,
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                // Material's animation wrapper adds its own live region and pane title. Clear that
+                // entire subtree; keep the real Close button outside it. Long errors remain readable
+                // as one text node, without a second live region or a focus request.
+                SnackbarHost(
+                    hostState = manager.hostState,
+                    modifier = Modifier.weight(1f, fill = false).clearAndSetSemantics {
+                        if (feedback.requiresDismissal) text = AnnotatedString(feedback.text)
+                    },
+                ) { data ->
+                    SideEffect {
+                        // A save-and-finish can still compose one last frame; leave its feedback unread.
+                        if (activity?.isFinishing != true) manager.onPresented(host, data)
+                    }
                     Text(
                         text = data.visuals.message,
                         color = toastTextColor,
                         fontSize = 14.sp,
-                        modifier = Modifier.weight(1f, fill = false)
-                            .heightIn(max = maxTextHeight)
+                        modifier = Modifier.heightIn(max = maxTextHeight)
                             .verticalScroll(rememberScrollState()),
                     )
-                    data.visuals.actionLabel?.let { label ->
-                        TextButton(
-                            onClick = { data.performAction() },
-                            modifier = Modifier.align(Alignment.End),
-                            colors = ButtonDefaults.textButtonColors(contentColor = toastTextColor),
-                        ) { Text(label) }
-                    }
+                }
+                current.visuals.actionLabel?.let { label ->
+                    TextButton(
+                        onClick = { current.performAction() },
+                        modifier = Modifier.align(Alignment.End),
+                        colors = ButtonDefaults.textButtonColors(contentColor = toastTextColor),
+                    ) { Text(label) }
                 }
             }
         }
     }
 }
+
+internal data class LiveRegionMessage(
+    val id: Long,
+    val text: String,
+    val mode: AccessibilityLiveRegionMode,
+)
+
+internal class LiveRegionMessageState(
+    private val elapsedRealtime: () -> Long = SystemClock::elapsedRealtime,
+) {
+    var current by mutableStateOf<LiveRegionMessage?>(null)
+        private set
+
+    private val pending = ArrayDeque<LiveRegionMessage>()
+    private var nextId = 0L
+    private var lastMessage: String? = null
+    private var lastMode: AccessibilityLiveRegionMode? = null
+    private var lastUpdateAt = 0L
+
+    fun offer(event: UserMessage) {
+        val mode = event.liveRegionMode
+        val text = event.accessibilityText ?: event.text
+        if (text.isBlank()) return
+        val now = elapsedRealtime()
+        if (text == lastMessage && mode == lastMode && now - lastUpdateAt < DuplicateLiveRegionMessageWindowMs) return
+
+        lastMessage = text
+        lastMode = mode
+        lastUpdateAt = now
+        val message = LiveRegionMessage(++nextId, text, mode)
+        if (current == null) current = message else pending.addLast(message)
+    }
+
+    // Mode controls urgency, not publication order; every event keeps its own semantics lifetime.
+    fun advance(id: Long) {
+        if (current?.id != id) return
+        current = pending.removeFirstOrNull()
+    }
+
+    fun clear() {
+        current = null
+        pending.clear()
+        lastMessage = null
+        lastMode = null
+        lastUpdateAt = 0L
+    }
+}
+
+internal const val DuplicateLiveRegionMessageWindowMs = 1000L
+private const val LiveRegionMessageLifetimeMs = 1000L

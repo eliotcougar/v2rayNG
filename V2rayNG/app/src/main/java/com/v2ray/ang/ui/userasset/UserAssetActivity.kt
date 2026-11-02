@@ -234,7 +234,7 @@ class UserAssetActivity : HelperBaseComponentActivity() {
                         R.plurals.title_update_asset_count,
                         result.successCount,
                         result.successCount,
-                    )
+                    ),
                 )
             } else {
                 toastError(R.string.toast_failure)

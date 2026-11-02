@@ -650,4 +650,5 @@
     <string name="routing_settings_enable_rule">Qaydanı aktivləşdir</string>
     <string name="connection_connected_tv">Qoşuldu</string>
     <string name="server_proxy_chain_member">Üzv</string>
+    <string name="acc_service_started_connected_to">Xidmət uğurla başladıldı. İndi %1$s serverinə qoşulub.</string>
 </resources>

@@ -15,6 +15,8 @@ import com.v2ray.ang.R
 import com.v2ray.ang.dto.SubscriptionUpdateMessage
 import com.v2ray.ang.dto.TestServiceMessage
 import com.v2ray.ang.dto.UserMessage
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
+import com.v2ray.ang.extension.serviceStartedMessage
 import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.service.CoreTestService
 import com.v2ray.ang.service.SubscriptionUpdateService
@@ -63,6 +65,10 @@ object MessageHelper {
             content?.takeIf { isError && it.isNotBlank() }
                 ?: AppLocaleManager.localizedContext(context).getString(resource),
             type = if (isError) UserMessage.Type.ERROR else UserMessage.Type.SUCCESS,
+            liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE,
+            accessibilityText = if (what == AppConfig.MSG_STATE_START_SUCCESS) {
+                context.serviceStartedMessage(content.orEmpty())
+            } else null,
         )
     }
 
