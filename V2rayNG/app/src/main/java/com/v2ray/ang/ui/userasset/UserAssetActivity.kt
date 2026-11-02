@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +35,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,7 +67,6 @@ import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
-import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
 import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
@@ -80,8 +86,6 @@ private enum class AddAssetMenuAction(@StringRes val labelRes: Int) {
     Url(R.string.menu_item_add_url),
     QRCode(R.string.menu_item_scan_qrcode)
 }
-
-private data class AssetDeleteTarget(val guid: String, val name: String)
 
 private data class UserAssetRowFocusTargets(val edit: FocusRequester = FocusRequester(), val delete: FocusRequester = FocusRequester())
 
@@ -273,9 +277,8 @@ internal fun UserAssetScreen(
 ) {
     val assets = uiState.assets
     val fileMetadata = uiState.fileMetadata
-    var deleteTarget by remember { mutableStateOf<AssetDeleteTarget?>(null) }
+    var deleteAssetId by rememberSaveable { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
-    val isTelevision = isTelevisionDevice()
     val backFocusRequester = rememberDpadFocusRequester()
     val geoSourceFocusRequester = remember { FocusRequester() }
     val assetIds = assets.map { it.guid }
@@ -360,7 +363,7 @@ internal fun UserAssetScreen(
                     firstRowPreviousFocusRequester = geoSourceFocusRequester.takeIf { index == 0 },
                     onEdit = { onEditAsset(item.guid) },
                     onDeleteClick = {
-                        deleteTarget = AssetDeleteTarget(item.guid, item.assetUrl.remarks)
+                        deleteAssetId = item.guid
                     }
                 )
                 ItemDivider()
@@ -369,15 +372,15 @@ internal fun UserAssetScreen(
     }
 
 
-    deleteTarget?.let { asset ->
+    uiState.assets.firstOrNull { it.guid == deleteAssetId }?.let { asset ->
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_asset_file),
-            itemName = asset.name,
+            itemName = asset.assetUrl.remarks,
             onConfirm = {
-                deleteTarget = null
-                onRemoveAsset(asset.guid, asset.name)
+                deleteAssetId = null
+                onRemoveAsset(asset.guid, asset.assetUrl.remarks)
             },
-            onDismiss = { deleteTarget = null }
+            onDismiss = { deleteAssetId = null }
         )
     }
 }
@@ -396,23 +399,42 @@ private fun UserAssetItem(
 ) {
     val context = LocalContext.current
     val locale = LocalConfiguration.current.locales[0]
-    val propertiesText = if (fileMetadata != null) {
+    val propertiesText: String
+    val propertiesAccessibilityText: String
+    if (fileMetadata == null) {
+        propertiesText = stringResource(R.string.msg_file_not_found)
+        propertiesAccessibilityText = propertiesText
+    } else {
         val fileSize = Formatter.formatFileSize(context, fileMetadata.length)
         val skeleton = if (DateFormat.is24HourFormat(context)) "yMMMdHm" else "yMMMdhm"
         val formattedDate = SimpleDateFormat(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
             .format(Date(fileMetadata.lastModified))
-        "$fileSize  •  $formattedDate"
-    } else {
-        stringResource(R.string.msg_file_not_found)
+        propertiesText = "$fileSize  •  $formattedDate"
+        propertiesAccessibilityText = stringResource(R.string.acc_asset_file_details, fileSize, formattedDate)
     }
     val showEditButton = item.canEdit()
     val actionFocusOrder = remember(showEditButton, focusTargets) {
         if (showEditButton) listOf(focusTargets.edit, focusTargets.delete) else listOf(focusTargets.delete)
     }
+    val accessibilityActions = buildList {
+        if (showEditButton) {
+            add(CustomAccessibilityAction(
+                label = stringResource(R.string.acc_edit_asset_named, item.assetUrl.remarks),
+                action = { onEdit(); true },
+            ))
+        }
+        add(CustomAccessibilityAction(
+            label = stringResource(R.string.acc_delete_asset_named, item.assetUrl.remarks),
+            action = { onDeleteClick(); true },
+        ))
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics(mergeDescendants = true) {
+                customActions = accessibilityActions
+            }
             .padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -430,6 +452,9 @@ private fun UserAssetItem(
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = propertiesText,
+                modifier = Modifier.clearAndSetSemantics {
+                    text = AnnotatedString(propertiesAccessibilityText)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -439,8 +464,9 @@ private fun UserAssetItem(
             AppIconButton(
                 icon = painterResource(R.drawable.ic_edit_24dp),
                 label = stringResource(R.string.menu_item_edit_asset),
+                contentDescription = null,
                 focusRequester = focusTargets.edit,
-                modifier = Modifier.dpadRowActionNavigation(
+                modifier = Modifier.clearAndSetSemantics {}.dpadRowActionNavigation(
                     current = focusTargets.edit,
                     order = actionFocusOrder,
                     previousRow = previousFocusTargets?.edit ?: previousFocusTargets?.delete
@@ -454,8 +480,9 @@ private fun UserAssetItem(
         AppIconButton(
             icon = painterResource(R.drawable.ic_delete_24dp),
             label = stringResource(R.string.menu_item_del_asset),
+            contentDescription = null,
             focusRequester = focusTargets.delete,
-            modifier = Modifier.dpadRowActionNavigation(
+            modifier = Modifier.clearAndSetSemantics {}.dpadRowActionNavigation(
                 current = focusTargets.delete,
                 order = actionFocusOrder,
                 previousRow = previousFocusTargets?.delete ?: firstRowPreviousFocusRequester,

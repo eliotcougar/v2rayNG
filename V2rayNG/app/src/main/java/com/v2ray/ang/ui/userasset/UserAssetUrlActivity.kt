@@ -162,6 +162,10 @@ fun UserAssetUrlScreen(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
                             label = stringResource(R.string.menu_item_del_asset),
+                            contentDescription = stringResource(
+                                R.string.acc_delete_asset_named,
+                                initialRemarks
+                            ),
                             onClick = { showDeleteConfirm = true }
                         )
                     )
@@ -220,7 +224,10 @@ fun UserAssetUrlScreen(
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_asset_source),
             itemName = initialRemarks,
-            onConfirm = onDelete,
+            onConfirm = {
+                showDeleteConfirm = false
+                onDelete()
+            },
             onDismiss = { showDeleteConfirm = false }
         )
     }
