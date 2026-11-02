@@ -185,6 +185,12 @@
     <string name="menu_item_import_proxy_app">ক্লিপবোর্ড থেকে আমদানি করুন</string>
     <string name="per_app_proxy_settings">অ্যাপভিত্তিক সেটিংস</string>
     <string name="per_app_proxy_settings_enable">অ্যাপভিত্তিক সেটিংস চালু করুন</string>
+    <string name="acc_app_checked">চিহ্নিত</string>
+    <string name="acc_app_not_checked">চিহ্নিত নয়</string>
+    <string name="acc_app_routing_state">%1$s। %2$s</string>
+    <string name="acc_app_routed_directly">সরাসরি রাউট করা হয়েছে</string>
+    <string name="acc_app_routed_through">অ্যাপের মাধ্যমে রাউট করা হয়েছে</string>
+    <string name="acc_per_app_routing_disabled">অ্যাপভিত্তিক রাউটিং চালু নেই</string>
     <string name="app_picker_unknown_app">অজানা অ্যাপ (UID শনাক্ত করা যায়নি)</string>
 
     <!-- Preferences -->

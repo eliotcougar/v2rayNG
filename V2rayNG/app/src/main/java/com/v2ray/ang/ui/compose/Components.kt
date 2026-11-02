@@ -71,6 +71,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -456,15 +457,23 @@ fun AppListItem(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    focusRequester: FocusRequester? = null
+    focusRequester: FocusRequester? = null,
+    routingDescription: String? = null
 ) {
     val context = LocalContext.current
+    val checkedDescription = stringResource(if (checked) R.string.acc_app_checked else R.string.acc_app_not_checked)
+    val accessibilityState = routingDescription?.let {
+        stringResource(R.string.acc_app_routing_state, checkedDescription, it)
+    } ?: checkedDescription
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester)
             .toggleable(value = checked, role = Role.Checkbox, onValueChange = onCheckedChange)
-            .semantics(mergeDescendants = true) { contentDescription = appName }
+            .semantics(mergeDescendants = true) {
+                contentDescription = appName
+                stateDescription = accessibilityState
+            }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.perappproxy
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,9 +42,14 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.extension.toastSuccess
@@ -53,7 +60,6 @@ import com.v2ray.ang.ui.compose.AppListItem
 import com.v2ray.ang.ui.compose.ConfirmDialog
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
-import com.v2ray.ang.ui.compose.dpadClickable
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
@@ -77,6 +83,11 @@ class PerAppProxyActivity : BaseComponentActivity() {
         viewModel.loadApps(this)
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshRoutingMode()
+    }
+
     @Composable
     override fun ScreenContent() {
         val apps by viewModel.displayedApps.collectAsStateWithLifecycle()
@@ -84,6 +95,8 @@ class PerAppProxyActivity : BaseComponentActivity() {
         val blacklist by viewModel.blacklist.collectAsStateWithLifecycle()
         val perAppProxyEnabled by viewModel.perAppProxyEnabled.collectAsStateWithLifecycle()
         val bypassApps by viewModel.bypassApps.collectAsStateWithLifecycle()
+        val installedApps by viewModel.appsAll.collectAsStateWithLifecycle()
+        val routingMode by viewModel.routingMode.collectAsStateWithLifecycle()
 
         PerAppProxyScreen(
             apps = apps,
@@ -91,6 +104,8 @@ class PerAppProxyActivity : BaseComponentActivity() {
             blacklist = blacklist,
             perAppProxyEnabled = perAppProxyEnabled,
             bypassApps = bypassApps,
+            installedApps = installedApps.orEmpty(),
+            routingMode = routingMode,
             onBackClick = { finish() },
             onPerAppProxyChanged = { viewModel.setPerAppProxyEnabled(it) },
             onBypassAppsChanged = { viewModel.setBypassAppsEnabled(it) },
@@ -113,12 +128,14 @@ class PerAppProxyActivity : BaseComponentActivity() {
 }
 
 @Composable
-fun PerAppProxyScreen(
+internal fun PerAppProxyScreen(
     apps: List<AppInfo>,
     isLoading: Boolean,
     blacklist: Set<String>,
     perAppProxyEnabled: Boolean,
     bypassApps: Boolean,
+    installedApps: List<AppInfo>,
+    routingMode: PerAppRoutingMode,
     onBackClick: () -> Unit,
     onPerAppProxyChanged: (Boolean) -> Unit,
     onBypassAppsChanged: (Boolean) -> Unit,
@@ -149,6 +166,9 @@ fun PerAppProxyScreen(
     }
     val focusFirstApp = {
         apps.firstOrNull()?.let { rowFocusRequesters[it.packageName]?.let(requestRowFocus) } ?: true
+    }
+    val routing = remember(routingMode, perAppProxyEnabled, bypassApps, blacklist, installedApps) {
+        PerAppRouting(routingMode, perAppProxyEnabled, bypassApps, blacklist, installedApps, BuildConfig.APPLICATION_ID)
     }
     LaunchedEffect(searchQuery) {
         onSearch(searchQuery)
@@ -255,6 +275,7 @@ fun PerAppProxyScreen(
             ) {
                 itemsIndexed(items = apps, key = { _, app -> app.packageName }) { index, app ->
                     val checked = blacklist.contains(app.packageName)
+                    val routingDescription = routing.descriptionRes(app)?.let { stringResource(it) }
                     val focusRequester = rowFocusRequesters.getValue(app.packageName)
                     AppListItem(
                         appName = app.appName,
@@ -262,6 +283,7 @@ fun PerAppProxyScreen(
                         icon = null,
                         checked = checked,
                         onCheckedChange = { onToggleApp(app.packageName) },
+                        routingDescription = routingDescription,
                         focusRequester = focusRequester,
                         modifier = Modifier.dpadVerticalFocusNavigation(
                             onMoveUp = {
@@ -307,25 +329,24 @@ private fun PerAppModeToggle(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val checkedDescription = stringResource(if (checked) R.string.acc_toggle_on else R.string.acc_toggle_off)
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.then(
-            if (isTelevision) {
-                Modifier
-                    .dpadFocusOutline(cornerRadius = 16.dp)
-                    .dpadClickable { onCheckedChange(!checked) }
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
-            } else {
-                Modifier
-            }
-        )
+        modifier = modifier
+            .dpadFocusOutline(cornerRadius = 16.dp)
+            .semantics { stateDescription = checkedDescription }
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .then(if (isTelevision) Modifier.padding(horizontal = 20.dp, vertical = 12.dp) else Modifier)
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
         Spacer(modifier = Modifier.width(8.dp))
         Switch(
             checked = checked,
-            modifier = Modifier.scale(if (isTelevision) 0.75f else 0.65f),
-            onCheckedChange = if (isTelevision) null else onCheckedChange,
+            modifier = Modifier
+                .scale(if (isTelevision) 0.75f else 0.65f)
+                .then(if (!isTelevision) Modifier.minimumInteractiveComponentSize() else Modifier)
+                .clearAndSetSemantics {},
+            onCheckedChange = null,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                 checkedTrackColor = MaterialTheme.colorScheme.secondary
