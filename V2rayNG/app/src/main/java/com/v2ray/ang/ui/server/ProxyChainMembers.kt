@@ -1,14 +1,9 @@
 package com.v2ray.ang.ui.server
 
-/** Removes one draft member and its row key together, resolving its current position at confirmation. */
-internal fun withoutProxyChainMember(
-    members: List<String>,
-    memberKeys: List<String>,
-    memberKey: String,
-): Pair<List<String>, List<String>> {
-    val index = memberKeys.indexOf(memberKey)
-    if (index < 0) return members to memberKeys
+internal data class ProxyChainMember(val id: Long, val remark: String) : java.io.Serializable
 
-    return members.toMutableList().also { it.removeAt(index) } to
-        memberKeys.toMutableList().also { it.removeAt(index) }
+/** Resolve the stable row ID at confirmation so reordering and duplicate names cannot change the target. */
+internal fun withoutProxyChainMember(members: List<ProxyChainMember>, memberId: Long): List<ProxyChainMember> {
+    if (members.none { it.id == memberId }) return members
+    return members.filterNot { it.id == memberId }
 }

@@ -2,6 +2,7 @@ package com.v2ray.ang.ui
 
 import android.os.Bundle
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,6 +37,10 @@ import com.v2ray.ang.dto.TranslatorsParser
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
+import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
 import com.v2ray.ang.util.Utils
 
 class TranslatorsActivity : BaseComponentActivity() {
@@ -55,13 +61,15 @@ fun TranslatorsScreen(onBackClick: () -> Unit) {
     val credits = remember {
         TranslatorsParser.parse(Utils.readTextFromAssets(context, "translators.json"))
     }
+    val backFocusRequester = rememberDpadFocusRequester()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
             AppTopBar(
                 title = stringResource(R.string.title_translators),
-                onBackClick = onBackClick
+                onBackClick = onBackClick,
+                navigationFocusRequester = backFocusRequester
             )
         }
     ) { innerPadding ->
@@ -73,7 +81,7 @@ fun TranslatorsScreen(onBackClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(credits, key = { it.language }) { credit ->
-                TranslationCreditCard(credit)
+                TranslationCreditCard(credit, backFocusRequester)
             }
             item {
                 NavigationBarsSpacer()
@@ -83,7 +91,7 @@ fun TranslatorsScreen(onBackClick: () -> Unit) {
 }
 
 @Composable
-private fun TranslationCreditCard(credit: TranslatorsCredit) {
+private fun TranslationCreditCard(credit: TranslatorsCredit, backFocusRequester: FocusRequester) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -106,7 +114,8 @@ private fun TranslationCreditCard(credit: TranslatorsCredit) {
                 }
                 ContributorRow(
                     displayName = contributor.displayName ?: contributor.name,
-                    linkUrl = contributor.url
+                    linkUrl = contributor.url,
+                    backFocusRequester = backFocusRequester
                 )
             }
         }
@@ -114,20 +123,23 @@ private fun TranslationCreditCard(credit: TranslatorsCredit) {
 }
 
 @Composable
-private fun ContributorRow(displayName: String, linkUrl: String?) {
+private fun ContributorRow(displayName: String, linkUrl: String?, backFocusRequester: FocusRequester) {
     val context = LocalContext.current
     val isLink = linkUrl != null
+    val isTelevision = isTelevisionDevice()
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .dpadFocusOutline()
+            .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
             .then(
                 if (isLink) {
                     Modifier.clickable(role = Role.Button) {
                         Utils.openUri(context, linkUrl)
                     }
                 } else {
-                    Modifier
+                    Modifier.focusable(enabled = isTelevision)
                 }
             )
             .padding(horizontal = 16.dp, vertical = 12.dp),

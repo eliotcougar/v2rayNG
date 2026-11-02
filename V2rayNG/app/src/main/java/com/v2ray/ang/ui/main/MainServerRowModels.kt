@@ -5,6 +5,8 @@ import com.v2ray.ang.dto.entities.ServersCache
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.handler.AngConfigManager
+import java.text.BreakIterator
+import java.util.Locale
 
 internal data class ServerRowUiModel(
     val guid: String,
@@ -13,28 +15,24 @@ internal data class ServerRowUiModel(
     val statistics: String,
     val typeDescription: String,
     val testDelayMillis: Long,
-    val subscriptionBadge: String,
+    val subscriptionBadge: String
 )
 
 internal data class ServerGroupUiState(
     val servers: List<ServersCache> = emptyList(),
-    val rows: List<ServerRowUiModel> = emptyList(),
+    val rows: List<ServerRowUiModel> = emptyList()
 )
 
-internal fun buildServerRowUiModel(
-    server: ServersCache,
-    subscriptionRemarks: String,
-): ServerRowUiModel {
+internal fun buildServerRowUiModel(server: ServersCache, subscriptionRemarks: String): ServerRowUiModel {
     val profile = server.profile
     return ServerRowUiModel(
         guid = server.guid,
         profile = profile,
         remarks = profile.remarks,
-        statistics = profile.description.nullIfBlank()
-            ?: AngConfigManager.generateDescription(profile),
+        statistics = profile.description.nullIfBlank() ?: AngConfigManager.generateDescription(profile),
         typeDescription = serverProtocolDescription(profile),
         testDelayMillis = server.testDelayMillis,
-        subscriptionBadge = subscriptionRemarks.firstOrNull()?.toString().orEmpty(),
+        subscriptionBadge = firstGrapheme(subscriptionRemarks)
     )
 }
 
@@ -42,9 +40,7 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
     if (profile.configType.isComplexType()) return profile.configType.name
     val parts = mutableListOf(profile.configType.name)
     profile.network?.let { network ->
-        if (network.isNotBlank() && !network.equals("tcp", ignoreCase = true)) {
-            parts.add(network)
-        }
+        if (network.isNotBlank() && !network.equals("tcp", ignoreCase = true)) parts.add(network)
     }
     profile.security?.let { security ->
         if (security.isNotBlank()) {
@@ -58,4 +54,12 @@ private fun serverProtocolDescription(profile: ProfileItem): String {
         }
     }
     return parts.joinToString(" / ")
+}
+
+internal fun firstGrapheme(text: String): String {
+    if (text.isEmpty()) return ""
+    val iterator = BreakIterator.getCharacterInstance(Locale.getDefault())
+    iterator.setText(text)
+    val end = iterator.following(0).takeIf { it != BreakIterator.DONE } ?: text.length
+    return text.substring(0, end)
 }

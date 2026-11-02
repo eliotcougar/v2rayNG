@@ -15,16 +15,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -34,8 +35,13 @@ import com.v2ray.ang.R
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.extension.toastError
+import com.v2ray.ang.ui.compose.AppTopBarAction
+import com.v2ray.ang.ui.compose.dpadFocusOutline
+import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
+import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -144,6 +150,8 @@ fun TaskerScreen(
 ) {
     val listState = rememberLazyListState()
     val enabled = !isLoading && items.isNotEmpty()
+    val switchFocusRequester = remember { FocusRequester() }
+    val backFocusRequester = rememberDpadFocusRequester()
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
@@ -151,11 +159,16 @@ fun TaskerScreen(
                 title = "",
                 isLoading = isLoading,
                 onBackClick = onBackClick,
-                actions = {
-                    IconButton(onClick = onSave, enabled = enabled && selectedGuid != null) {
-                        Icon(painterResource(R.drawable.ic_fab_check), contentDescription = stringResource(R.string.acc_save))
-                    }
-                }
+                navigationFocusRequester = backFocusRequester,
+                onMoveDown = { enabled && switchFocusRequester.requestFocus() },
+                actionItems = listOf(
+                    AppTopBarAction(
+                        icon = painterResource(R.drawable.ic_fab_check),
+                        label = stringResource(R.string.acc_save),
+                        onClick = onSave,
+                        enabled = enabled && selectedGuid != null
+                    )
+                )
             )
         }
     ) { innerPadding ->
@@ -163,17 +176,20 @@ fun TaskerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .tvSafeAreaPadding()
         ) {
             SettingsSwitchItem(
                 title = stringResource(R.string.tasker_start_service),
                 checked = start,
                 enabled = enabled,
-                onCheckedChange = onStartChanged
+                onCheckedChange = onStartChanged,
+                modifier = Modifier.focusRequester(switchFocusRequester)
             )
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .dpadMovePreviousNavigation { backFocusRequester.requestFocus() }
                     .verticalScrollbar(listState),
                 contentPadding = NavigationBarsBottomPadding()
             ) {
@@ -181,6 +197,7 @@ fun TaskerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .dpadFocusOutline()
                             .selectable(selected = selectedGuid == item.guid, enabled = enabled, role = Role.RadioButton) { onSelect(item.guid) }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically

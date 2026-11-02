@@ -7,54 +7,33 @@ import org.junit.jupiter.api.Test
 class ProxyChainMembersTest {
     @Test
     fun removalFollowsThePendingKeyAfterReordering() {
-        val pendingKey = "two"
-        val members = listOf("Two", "One", "Three")
-        val keys = listOf("two", "one", "three")
+        val members = listOf(ProxyChainMember(2, "Two"), ProxyChainMember(1, "One"), ProxyChainMember(3, "Three"))
+        val remaining = withoutProxyChainMember(members, 2)
 
-        val (remainingMembers, remainingKeys) = withoutProxyChainMember(members, keys, pendingKey)
-
-        assertEquals(listOf("One", "Three"), remainingMembers)
-        assertEquals(listOf("one", "three"), remainingKeys)
-        assertEquals(listOf("Two", "One", "Three"), members)
-        assertEquals(listOf("two", "one", "three"), keys)
+        assertEquals(listOf(ProxyChainMember(1, "One"), ProxyChainMember(3, "Three")), remaining)
+        assertEquals(listOf(2L, 1L, 3L), members.map { it.id })
     }
 
     @Test
     fun duplicateNamesDoNotChangeWhichMemberIsRemoved() {
-        val (members, keys) = withoutProxyChainMember(
-            listOf("Same", "Same", "Other"),
-            listOf("first", "second", "third"),
-            "second",
-        )
-
-        assertEquals(listOf("Same", "Other"), members)
-        assertEquals(listOf("first", "third"), keys)
+        val members = listOf(ProxyChainMember(1, "Same"), ProxyChainMember(2, "Same"), ProxyChainMember(3, "Other"))
+        assertEquals(listOf(members[0], members[2]), withoutProxyChainMember(members, 2))
     }
 
     @Test
-    fun missingMemberLeavesBothListsUnchanged() {
-        val members = listOf("One", "Three")
-        val keys = listOf("one", "three")
-
-        val (remainingMembers, remainingKeys) = withoutProxyChainMember(members, keys, "two")
-
-        assertSame(members, remainingMembers)
-        assertSame(keys, remainingKeys)
+    fun missingMemberLeavesTheListUnchanged() {
+        val members = listOf(ProxyChainMember(1, "One"), ProxyChainMember(3, "Three"))
+        assertSame(members, withoutProxyChainMember(members, 2))
     }
 
     @Test
     fun emptyChainRemainsEmpty() {
-        assertEquals(
-            emptyList<String>() to emptyList<String>(),
-            withoutProxyChainMember(emptyList(), emptyList(), "missing"),
-        )
+        assertEquals(emptyList<ProxyChainMember>(), withoutProxyChainMember(emptyList(), 1))
     }
 
     @Test
     fun blankMemberIsRemovedWithItsOwnKey() {
-        assertEquals(
-            listOf("One") to listOf("one"),
-            withoutProxyChainMember(listOf("One", ""), listOf("one", "blank"), "blank"),
-        )
+        val members = listOf(ProxyChainMember(1, "One"), ProxyChainMember(2, ""))
+        assertEquals(listOf(members[0]), withoutProxyChainMember(members, 2))
     }
 }
