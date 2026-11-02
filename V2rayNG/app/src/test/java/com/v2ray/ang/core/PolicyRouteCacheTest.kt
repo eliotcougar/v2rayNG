@@ -1,12 +1,12 @@
 package com.v2ray.ang.core
 
-import org.junit.After
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class PolicyRouteCacheTest {
-    @After
+    @AfterEach
     fun clear() = PolicyRouteCache.clear()
 
     @Test

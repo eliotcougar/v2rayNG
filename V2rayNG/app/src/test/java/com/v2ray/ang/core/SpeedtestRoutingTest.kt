@@ -2,9 +2,9 @@ package com.v2ray.ang.core
 
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.V2rayConfig
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Test
 
 class SpeedtestRoutingTest {
     private fun config(primary: Boolean, burst: Boolean = false): V2rayConfig {

@@ -64,7 +64,7 @@ object CoreServiceManager {
     private var currentConfig: ProfileItem? = null
     private var processFinder: XrayProcessFinder? = null
     private var browserDialer: IDialerService? = null
-    private var networkMonitor: NetworkMonitor? = null
+    @Volatile private var networkMonitor: NetworkMonitor? = null
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     @Volatile private var runningProfileGuid = ""
@@ -160,6 +160,8 @@ object CoreServiceManager {
                         AppConfig.TAG,
                         "StartCore-Manager: Core network state reset; restored $restoredObservers observer snapshots",
                     )
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     if (coreController.isRunning) {
                         LogUtil.e(
@@ -183,11 +185,11 @@ object CoreServiceManager {
                             NotificationManager.showCoreFailure(message)
                         }
                     }
-                } finally {
-                    if (networkTransitions.decrementAndGet() == 0 && isPolicyRouteTrackingActive()) {
-                        refreshFreshPolicyRoute()
-                    }
                 }
+            }
+        }.invokeOnCompletion {
+            if (networkTransitions.decrementAndGet() == 0 && isPolicyRouteTrackingActive()) {
+                refreshFreshPolicyRoute()
             }
         }
     }
@@ -503,13 +505,14 @@ object CoreServiceManager {
         PolicyRouteCache.clear()
         runningProfileGuid = ""
         connectionTestScope.coroutineContext.cancelChildren()
+        coreScope.coroutineContext.cancelChildren()
         val service = getService() ?: return false
 
         networkMonitor?.unregister()
         networkMonitor = null
 
         if (isRunning()) {
-            CoroutineScope(Dispatchers.IO).launch {
+            coreScope.launch {
                 try {
                     coreController.stopLoop()
                 } catch (e: Exception) {
@@ -552,12 +555,21 @@ object CoreServiceManager {
         if (networkMonitor != null) return
 
         val connectivity = service.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
-        networkMonitor = NetworkMonitor(
+        lateinit var monitor: NetworkMonitor
+        monitor = NetworkMonitor(
             connectivity = connectivity,
             includeLocationInfo = NetworkIdentityResolver.canReadWifiIdentity(service),
-            onUnderlyingNetworksChanged = { networks -> serviceControl?.get()?.setUnderlyingNetworks(networks) },
-            onNetworkEvent = { event -> handleNetworkEvent(service, event) },
-        ).also { it.register() }
+            onUnderlyingNetworksChanged = { networks ->
+                if (networkMonitor === monitor) serviceControl?.get()?.setUnderlyingNetworks(networks)
+            },
+            onNetworkEvent = { event ->
+                if (networkMonitor === monitor && coreRecoveryEnabled.get() && coreController.isRunning) {
+                    handleNetworkEvent(service, event)
+                }
+            },
+        )
+        networkMonitor = monitor
+        monitor.register()
     }
 
     private fun handleNetworkEvent(service: Service, event: NetworkMonitor.NetworkEvent) {
