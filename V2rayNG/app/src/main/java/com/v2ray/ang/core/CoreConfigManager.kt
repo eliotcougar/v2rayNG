@@ -97,6 +97,12 @@ object CoreConfigManager {
         val result = ConfigResult(true, configContext.guid, raw)
 
         val json = JsonUtil.parseString(raw)?.takeIf { it.isJsonObject }?.asJsonObject ?: return result
+        fun customResult(content: String) = ConfigResult(
+            status = true,
+            guid = configContext.guid,
+            content = content,
+            hasPrimaryBalancer = json.hasPrimaryBalancer(),
+        )
 
         // Inject or remove traffic statistics configuration based on user preference
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_SPEED_ENABLED) == true) {
@@ -123,7 +129,7 @@ object CoreConfigManager {
         }
 
         if (!needTun()) {
-            return JsonUtil.toJsonPretty(json)?.let { ConfigResult(true, configContext.guid, it) } ?: result
+            return JsonUtil.toJsonPretty(json)?.let(::customResult) ?: customResult(raw)
         }
 
         // Check whether package names need to be replaced with UIDs
@@ -162,7 +168,7 @@ object CoreConfigManager {
             }
         }
 
-        return JsonUtil.toJsonPretty(json)?.let { ConfigResult(true, configContext.guid, it) } ?: result
+        return JsonUtil.toJsonPretty(json)?.let(::customResult) ?: customResult(raw)
     }
 
     /**
@@ -456,12 +462,38 @@ object CoreConfigManager {
     private fun postProcessForSpeedtest(v2rayConfig: V2rayConfig) {
         v2rayConfig.log.loglevel = MmkvManager.decodeSettingsString(AppConfig.PREF_LOGLEVEL) ?: "warning"
         v2rayConfig.inbounds.clear()
-        v2rayConfig.routing.rules.clear()
+        prepareSpeedtestRouting(v2rayConfig)
         v2rayConfig.dns = null
         v2rayConfig.fakedns = null
         v2rayConfig.stats = null
         v2rayConfig.policy = null
         v2rayConfig.outbounds.forEach { key -> key.mux = null }
+    }
+
+    internal fun prepareSpeedtestRouting(v2rayConfig: V2rayConfig) {
+        val primary = v2rayConfig.routing.balancers.orEmpty()
+            .firstOrNull { it.tag == AppConfig.TAG_BALANCER }
+        v2rayConfig.routing.rules.clear()
+        v2rayConfig.routing.balancers = primary?.let { listOf(it) }
+        if (primary != null) {
+            v2rayConfig.routing.rules.add(
+                V2rayConfig.RoutingBean.RulesBean(network = "tcp,udp", balancerTag = primary.tag)
+            )
+        }
+        // Probe only the tested group. Unrelated routing groups can use a different
+        // observer type and must not supply the tested balancer's observations.
+        v2rayConfig.observatory = (v2rayConfig.observatory as? V2rayConfig.ObservatoryObject)
+            ?.let { observer ->
+                observer.subjectSelector.filter { it in primary?.selector.orEmpty() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { observer.copy(subjectSelector = it, enableConcurrency = true) }
+            }
+        v2rayConfig.burstObservatory = (v2rayConfig.burstObservatory as? V2rayConfig.BurstObservatoryObject)
+            ?.let { observer ->
+                observer.subjectSelector.filter { it in primary?.selector.orEmpty() }
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { observer.copy(subjectSelector = it) }
+            }
     }
 
     /**
@@ -471,8 +503,20 @@ object CoreConfigManager {
         return ConfigResult(
             status = true,
             guid = configContext.guid,
-            content = JsonUtil.toJsonPretty(v2rayConfig) ?: ""
+            content = JsonUtil.toJsonPretty(v2rayConfig) ?: "",
+            hasPrimaryBalancer = v2rayConfig.routing.balancers.orEmpty()
+                .any { it.tag == AppConfig.TAG_BALANCER },
         )
+    }
+
+    private fun JsonObject.hasPrimaryBalancer(): Boolean {
+        val balancers = get("routing")?.takeIf { it.isJsonObject }?.asJsonObject
+            ?.get("balancers")?.takeIf { it.isJsonArray }?.asJsonArray
+            ?: return false
+        return balancers.any { element ->
+            element.takeIf { it.isJsonObject }?.asJsonObject
+                ?.get("tag")?.takeIf { it.isJsonPrimitive }?.asString == AppConfig.TAG_BALANCER
+        }
     }
 
     /**

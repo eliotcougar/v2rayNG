@@ -407,6 +407,7 @@
     <string name="connection_test_fail">İnternet əlçatmazdır</string>
     <string name="connection_test_error_status_code">Xəta kodu: #%d</string>
     <string name="connection_connected">Qoşuldu. Bağlantını yoxlamaq üçün toxunun.</string>
+    <string name="connection_connected_via">%s vasitəsilə qoşuldu</string>
     <string name="connection_not_connected">Qoşulmayıb</string>
     <string name="connection_running_task_left">İcra olunan sınaqlar: %s</string>
 
@@ -621,4 +622,9 @@
     <string name="shizuku_hotspot_disabled">Wi-Fi qaynar nöqtəsi söndürüldü</string>
     <string name="shizuku_hotspot_operation_failed">Qaynar nöqtə əməliyyatı uğursuz oldu (xəta %1$d)</string>
     <string name="shizuku_tethering_wrong_upstream">Android bağlantıları dəyişdirərkən internet paylaşımı ləğv edildi. Bir az gözləyin, sonra yenidən cəhd edin.</string>
+    <string name="notification_core_recovery_failed">Bağlantını bərpa etmək alınmadı. Sızmanın qarşısını almaq üçün trafik bloklanmış qalır. v2rayNG-ni yenidən başladın.</string>
+    <string name="title_pref_remember_routes_per_wifi_network">Hər Wi-Fi şəbəkəsi üçün marşrutları yadda saxla</string>
+    <string name="summary_pref_remember_routes_per_wifi_network">Marşrut tarixçəsini yadda saxlamaq üçün qoşulmuş Wi-Fi şəbəkəsinin adı istifadə olunur. Android Wi-Fi şəbəkəsinin adını məkan məlumatı hesab etdiyindən dəqiq məkan icazəsi tələb olunur.</string>
+    <string name="toast_precise_location_required_for_wifi_route_memory">Wi-Fi şəbəkəsinin adını oxumaq üçün dəqiq məkan icazəsi tələb olunur</string>
+
 </resources>

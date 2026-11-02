@@ -60,6 +60,9 @@ class MainRepository(
                 AppConfig.MSG_MEASURE_DELAY_RESULT -> safeIntent
                     .serializable<ConnectionTestResult>("content")
                     ?.let { MainServiceEvent.MeasureDelayResult(it, requestId) }
+                AppConfig.MSG_ACTIVE_OUTBOUND_CHANGED -> MainServiceEvent.ActiveOutboundChanged(
+                    safeIntent.getStringExtra("content").orEmpty()
+                )
                 AppConfig.MSG_MEASURE_DELAY_CANCEL -> MainServiceEvent.MeasureDelayCancelled(requestId)
 
                 AppConfig.MSG_MEASURE_CONFIG_SUCCESS -> safeIntent
