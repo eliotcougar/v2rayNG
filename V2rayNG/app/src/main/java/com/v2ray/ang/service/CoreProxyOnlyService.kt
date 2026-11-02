@@ -51,6 +51,7 @@ class CoreProxyOnlyService : Service(), ServiceControl {
      * Destroys the service.
      */
     override fun onDestroy() {
+        CoreServiceManager.cancelXHTTPWakeRefresh(this)
         super.onDestroy()
         CoreServiceManager.stopCoreLoop()
     }

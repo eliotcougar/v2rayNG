@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.os.Build
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.os.ResultReceiver
 import android.system.OsConstants
 import androidx.core.content.ContextCompat
@@ -81,6 +82,7 @@ object CoreServiceManager {
     private var teardownExecutor: ExecutorService? = null
     private var receiversRegistered = false
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val xhttpWakeRefresh = XhttpWakeRefresh()
 
     @Volatile private var runningProfileGuid = ""
     private val networkResetMutex = Mutex()
@@ -94,6 +96,7 @@ object CoreServiceManager {
 
     var serviceControl: SoftReference<ServiceControl>? = null
         set(value) {
+            if (field?.get() !== value?.get()) xhttpWakeRefresh.stop()
             field = value
             val service = value?.get()?.getService()
             CoreNativeManager.initCoreEnv(service)
@@ -435,6 +438,7 @@ object CoreServiceManager {
         urlDownloadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         launchCore(service, vpnInterface)
+        xhttpWakeRefresh.start { retireXHTTPClientsAfterDeviceIdle(service) }
         startNetworkMonitor(service)
     }
 
@@ -553,6 +557,7 @@ object CoreServiceManager {
     }
 
     private fun cancelCoreWork() {
+        xhttpWakeRefresh.stop()
         stopActiveOutboundPolling()
         coreRecoveryEnabled.set(false)
         primaryPolicyBalancerAvailable.set(false)
@@ -588,6 +593,7 @@ object CoreServiceManager {
             val screenFilter = IntentFilter(Intent.ACTION_SCREEN_ON).apply {
                 addAction(Intent.ACTION_SCREEN_OFF)
                 addAction(Intent.ACTION_USER_PRESENT)
+                addAction(PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
             }
             ContextCompat.registerReceiver(
                 service,
@@ -711,6 +717,27 @@ object CoreServiceManager {
         )
         networkMonitor = monitor
         monitor.register()
+    }
+
+    internal fun cancelXHTTPWakeRefresh(service: Service) {
+        if (getService() === service) xhttpWakeRefresh.stop()
+    }
+
+    private fun retireXHTTPClientsAfterDeviceIdle(service: Service) {
+        if (getService() !== service || !coreRecoveryEnabled.get()) return
+        val powerManager = service.getSystemService(PowerManager::class.java) ?: return
+        if (powerManager.isDeviceIdleMode) return
+
+        try {
+            // The controller checks its running instance while holding the native lifecycle lock.
+            val retired = coreController.retireXHTTPClients()
+            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Retired $retired cached XHTTP clients after device idle")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "StartCore-Manager: mode=${service.javaClass.simpleName}, phase=wake, " +
+                    "profile=$runningProfileGuid, operation=retireXHTTPClients", e)
+        }
     }
 
     private fun handleNetworkEvent(service: Service, event: NetworkMonitor.NetworkEvent) {
@@ -1051,6 +1078,11 @@ object CoreServiceManager {
                 Intent.ACTION_SCREEN_ON -> {
                     LogUtil.i(AppConfig.TAG, "StartCore-Manager: Screen on")
                     NotificationManager.startSpeedNotification()
+                }
+
+                PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED -> {
+                    val powerManager = ctx?.getSystemService(PowerManager::class.java) ?: return
+                    xhttpWakeRefresh.onDeviceIdleModeChanged(powerManager.isDeviceIdleMode)
                 }
             }
         }

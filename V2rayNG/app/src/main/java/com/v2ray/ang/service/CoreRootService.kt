@@ -66,6 +66,7 @@ class CoreRootService : Service(), ServiceControl {
     }
 
     override fun onDestroy() {
+        CoreServiceManager.cancelXHTTPWakeRefresh(this)
         super.onDestroy()
         // Wait for any in-flight async setup to finish before tearing down. The rules are
         // installed off the main thread and can take seconds (the setup script waits for the
