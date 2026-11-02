@@ -407,6 +407,7 @@
     <string name="connection_test_fail">İnternet əlçatmazdır</string>
     <string name="connection_test_error_status_code">Xəta kodu: #%d</string>
     <string name="connection_connected">Qoşuldu. Bağlantını yoxlamaq üçün toxunun.</string>
+    <string name="connection_connected_via">%s vasitəsilə qoşuldu</string>
     <string name="connection_not_connected">Qoşulmayıb</string>
     <string name="connection_running_task_left">İcra olunan sınaqlar: %s</string>
 
