@@ -57,6 +57,8 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         else -> mainViewModel.formatStatus(uiState.status)
     }
     val selectedGuid = uiState.selectedGuid
+    val accessibilityText = if (isRunning && uiState.connectionTargetText.isNotBlank()) displayText
+    else mainViewModel.formatConnectionStatusForAccessibility(isRunning)
     val testDisplayText = uiState.testStatus
         ?.let(mainViewModel::formatStatus)
         ?.replace('\n', ' ')
@@ -215,7 +217,17 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                     )
                 },
                 bottomBar = {
-                    MainBottomBar(displayText, testDisplayText, isRunning, isDarkTheme, onAction)
+                    MainBottomBar(
+                        displayText = displayText,
+                        testDisplayText = testDisplayText,
+                        accessibilityText = accessibilityText,
+                        testStatus = uiState.testStatus,
+                        testAnnouncements = mainViewModel.testAnnouncements,
+                        formatTestAnnouncement = mainViewModel::formatTestAnnouncement,
+                        isRunning = isRunning,
+                        isDarkTheme = isDarkTheme,
+                        onAction = onAction,
+                    )
                 }
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {
