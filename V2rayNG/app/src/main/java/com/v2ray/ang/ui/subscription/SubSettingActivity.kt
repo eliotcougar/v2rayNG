@@ -1,9 +1,11 @@
 package com.v2ray.ang.ui.subscription
 
 import android.content.Intent
+import android.text.format.DateUtils
 import androidx.activity.viewModels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,25 +22,36 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.extension.toast
@@ -58,6 +71,8 @@ import com.v2ray.ang.ui.compose.QRCodeDialog
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
+import com.v2ray.ang.ui.compose.rememberAccessibilityActionFeedback
+import com.v2ray.ang.ui.compose.reorderAccessibilityActions
 import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
@@ -148,6 +163,20 @@ fun SubSettingScreen(
 
     var shareTarget by remember { mutableStateOf<Pair<String, String>?>(null) }
     val qrCodeBitmap by viewModel.qrCode.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val resources = LocalResources.current
+    val actionFeedback = rememberAccessibilityActionFeedback()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(viewModel, lifecycleOwner, resources, actionFeedback) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            viewModel.autoUpdateChanges.collect { enabled ->
+                actionFeedback(resources.getString(
+                    if (enabled) R.string.acc_subscription_auto_update_enabled
+                    else R.string.acc_subscription_auto_update_disabled,
+                ))
+            }
+        }
+    }
 
     val lazyListState = rememberLazyListState()
     val requestRowFocus = rememberLazyDpadFocus(subscriptions.map {
@@ -210,6 +239,37 @@ fun SubSettingScreen(
             }
         ) {
             itemsIndexed(items = subscriptions, key = { _, item -> item.guid }) { index, subCache ->
+                val subscriptionName = subscriptionAccessibilityName(
+                    subCache.subscription.remarks, subCache.subscription.url,
+                    stringResource(R.string.acc_unnamed_subscription),
+                )
+                val requestDelete = {
+                    if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subscriptionName)
+                    else onRemoveSub(subCache.guid)
+                }
+                val itemActions = buildList {
+                    add(CustomAccessibilityAction(stringResource(R.string.acc_edit_named, subscriptionName)) {
+                        onEditSub(subCache.guid); true
+                    })
+                    add(CustomAccessibilityAction(stringResource(R.string.acc_delete_named, subscriptionName)) {
+                        requestDelete(); true
+                    })
+                    if (subCache.subscription.url.isNotEmpty()) {
+                        add(CustomAccessibilityAction(stringResource(R.string.share_subscription_qrcode)) {
+                            onShareQRCode(subCache.subscription.url); true
+                        })
+                        add(CustomAccessibilityAction(stringResource(R.string.share_subscription_clipboard)) {
+                            onShareClipboard(subCache.subscription.url); true
+                        })
+                        add(CustomAccessibilityAction(stringResource(
+                            if (subCache.subscription.autoUpdate) R.string.acc_disable_subscription_auto_update
+                            else R.string.acc_enable_subscription_auto_update,
+                        )) { viewModel.setAutoUpdate(subCache.guid, !subCache.subscription.autoUpdate) })
+                    }
+                    addAll(reorderAccessibilityActions(index, subscriptions.size, actionFeedback) { command, onMoved ->
+                        viewModel.move(subCache.guid, command, onMoved)
+                    })
+                }
                 val focusTargets = rowFocusTargets.getValue(subCache.guid)
                 val previousSub = subscriptions.getOrNull(index - 1)
                 val previousTargets = previousSub?.let { rowFocusTargets[it.guid] }
@@ -237,155 +297,128 @@ fun SubSettingScreen(
                 }
                 ReorderableItem(reorderableState, key = subCache.guid, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                     ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(
-                                    if (isTelevision) {
-                                        Modifier
-                                            .padding(vertical = 8.dp)
-                                            .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
-                                            .dpadFocusOutline(
-                                                focusRequester = focusTargets.row,
-                                                cornerRadius = 16.dp,
-                                                showFocus = !isMoving
-                                            )
-                                            .dpadOrderedFocusNavigation(
-                                                current = focusTargets.row,
-                                                order = actionFocusOrder,
-                                                onBeforeFirst = { backFocusRequester.requestFocus() }
-                                            )
-                                            .dpadVerticalFocusNavigation(
-                                                onMoveUp = {
-                                                    previousTargets?.row?.let(requestRowFocus) ?: false
-                                                },
-                                                onMoveDown = {
-                                                    nextTargets?.row?.let(requestRowFocus) ?: true
-                                                }
-                                            )
-                                            .dpadLongPressToMove(
-                                                enabled = true,
-                                                item = dpadReorderItem,
-                                                onClick = { onEditSub(subCache.guid) }
-                                            )
-                                            .padding(horizontal = 24.dp, vertical = 16.dp)
-                                    } else {
-                                        Modifier.padding(horizontal = 14.dp)
+                        if (!isTelevision) {
+                            SubscriptionRow(
+                                subscription = subCache.subscription,
+                                subscriptionName = subscriptionName,
+                                actions = itemActions,
+                                onUpdate = { viewModel.setEnabled(subCache.guid, it) },
+                                onShare = { shareTarget = Pair(subCache.guid, subCache.subscription.url) },
+                                onEdit = { onEditSub(subCache.guid) },
+                                onDelete = requestDelete,
+                            )
+                        } else {
+                            val lastUpdated = if (subCache.subscription.lastUpdated > 0) {
+                                stringResource(R.string.acc_last_updated, DateUtils.formatDateTime(
+                                    context, subCache.subscription.lastUpdated,
+                                    DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_SHOW_YEAR,
+                                ))
+                            } else ""
+                            val updateState = stringResource(
+                                if (subCache.subscription.enabled) R.string.acc_subscription_update_on
+                                else R.string.acc_subscription_update_off,
+                            )
+                            val updateAction = stringResource(
+                                if (subCache.subscription.enabled) R.string.acc_disable_subscription_update
+                                else R.string.acc_enable_subscription_update,
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .semantics(mergeDescendants = true) {
+                                        contentDescription = listOf(subscriptionName, lastUpdated).filter { it.isNotEmpty() }.joinToString(". ")
+                                        stateDescription = updateState
+                                        customActions = itemActions
+                                        onClick(label = updateAction, action = null)
                                     }
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = subCache.subscription.remarks,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (subCache.subscription.url.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    .toggleable(subCache.subscription.enabled, role = Role.Switch) {
+                                        viewModel.setEnabled(subCache.guid, it)
+                                    }
+                                    .then(
+                                        if (isTelevision) {
+                                            Modifier
+                                                .padding(vertical = 8.dp)
+                                                .background(MaterialTheme.colorScheme.surfaceContainerLow, RoundedCornerShape(16.dp))
+                                                .dpadFocusOutline(
+                                                    focusRequester = focusTargets.row,
+                                                    cornerRadius = 16.dp,
+                                                    showFocus = !isMoving
+                                                )
+                                                .dpadOrderedFocusNavigation(
+                                                    current = focusTargets.row,
+                                                    order = actionFocusOrder,
+                                                    onBeforeFirst = { backFocusRequester.requestFocus() }
+                                                )
+                                                .dpadVerticalFocusNavigation(
+                                                    onMoveUp = {
+                                                        previousTargets?.row?.let(requestRowFocus) ?: false
+                                                    },
+                                                    onMoveDown = {
+                                                        nextTargets?.row?.let(requestRowFocus) ?: true
+                                                    }
+                                                )
+                                                .dpadLongPressToMove(
+                                                    enabled = true,
+                                                    item = dpadReorderItem,
+                                                    onClick = { viewModel.setEnabled(subCache.guid, !subCache.subscription.enabled) }
+                                                )
+                                                .padding(horizontal = 24.dp, vertical = 16.dp)
+                                        } else {
+                                            Modifier.padding(horizontal = 14.dp)
+                                        }
+                                    ),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).clearAndSetSemantics {}) {
                                     Text(
-                                        text = subCache.subscription.url,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        text = subCache.subscription.remarks,
+                                        style = MaterialTheme.typography.bodyLarge,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = Utils.formatTimestamp(subCache.subscription.lastUpdated),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            if (isTelevision) {
-                                Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     if (subCache.subscription.url.isNotEmpty()) {
-                                        AppIconButton(
-                                            icon = painterResource(R.drawable.ic_share_24dp),
-                                            label = stringResource(R.string.action_share),
-                                            focusRequester = focusTargets.share,
-                                            modifier = Modifier.dpadOrderedFocusNavigation(
-                                                current = focusTargets.share,
-                                                order = actionFocusOrder
-                                            ).dpadVerticalFocusNavigation(
-                                                onMoveUp = {
-                                                    if (previousSub?.subscription?.url?.isNotEmpty() == true) {
-                                                        previousTargets?.share?.let(requestRowFocus) ?: false
-                                                    } else {
-                                                        previousTargets?.edit?.let(requestRowFocus) ?: false
-                                                    }
-                                                },
-                                                onMoveDown = {
-                                                    if (nextSub?.subscription?.url?.isNotEmpty() == true) {
-                                                        nextTargets?.share?.let(requestRowFocus) ?: true
-                                                    } else {
-                                                        nextTargets?.edit?.let(requestRowFocus) ?: true
-                                                    }
-                                                }
-                                            ),
-                                            onClick = {
-                                                shareTarget = Pair(subCache.guid, subCache.subscription.url)
-                                            }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = subCache.subscription.url,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
-                                    AppIconButton(
-                                        icon = painterResource(R.drawable.ic_edit_24dp),
-                                        label = stringResource(R.string.action_edit),
-                                        focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.edit,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.edit,
-                                            nextRow = nextTargets?.edit,
-                                            requestFocus = requestRowFocus
-                                        ),
-                                        onClick = { onEditSub(subCache.guid) }
-                                    )
-                                    AppIconButton(
-                                        icon = painterResource(R.drawable.ic_delete_24dp),
-                                        label = stringResource(R.string.action_delete),
-                                        focusRequester = focusTargets.delete,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.delete,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.delete,
-                                            nextRow = nextTargets?.delete,
-                                            requestFocus = requestRowFocus
-                                        ),
-                                        onClick = {
-                                            if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subCache.subscription.remarks)
-                                            else onRemoveSub(subCache.guid)
-                                        }
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    AppRowSwitch(
-                                        checked = subCache.subscription.enabled,
-                                        onCheckedChange = { checked ->
-                                            val updated = subCache.subscription.copy()
-                                            updated.enabled = checked
-                                            viewModel.update(subCache.guid, updated)
-                                        },
-                                        label = stringResource(R.string.sub_setting_enable),
-                                        focusRequester = focusTargets.toggle,
-                                        modifier = Modifier.dpadRowActionNavigation(
-                                            current = focusTargets.toggle,
-                                            order = actionFocusOrder,
-                                            previousRow = previousTargets?.toggle,
-                                            nextRow = nextTargets?.toggle,
-                                            requestFocus = requestRowFocus
-                                        )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = Utils.formatTimestamp(subCache.subscription.lastUpdated),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
-                            } else {
-                                Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
-                                    Row {
+
+                                    Row(Modifier.padding(start = 8.dp).clearAndSetSemantics {}, verticalAlignment = Alignment.CenterVertically) {
                                         if (subCache.subscription.url.isNotEmpty()) {
                                             AppIconButton(
                                                 icon = painterResource(R.drawable.ic_share_24dp),
                                                 label = stringResource(R.string.action_share),
+                                                focusRequester = focusTargets.share,
+                                                modifier = Modifier.dpadOrderedFocusNavigation(
+                                                    current = focusTargets.share,
+                                                    order = actionFocusOrder
+                                                ).dpadVerticalFocusNavigation(
+                                                    onMoveUp = {
+                                                        if (previousSub?.subscription?.url?.isNotEmpty() == true) {
+                                                            previousTargets?.share?.let(requestRowFocus) ?: false
+                                                        } else {
+                                                            previousTargets?.edit?.let(requestRowFocus) ?: false
+                                                        }
+                                                    },
+                                                    onMoveDown = {
+                                                        if (nextSub?.subscription?.url?.isNotEmpty() == true) {
+                                                            nextTargets?.share?.let(requestRowFocus) ?: true
+                                                        } else {
+                                                            nextTargets?.edit?.let(requestRowFocus) ?: true
+                                                        }
+                                                    }
+                                                ),
                                                 onClick = {
                                                     shareTarget = Pair(subCache.guid, subCache.subscription.url)
                                                 }
@@ -394,32 +427,46 @@ fun SubSettingScreen(
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_edit_24dp),
                                             label = stringResource(R.string.action_edit),
+                                            focusRequester = focusTargets.edit,
+                                            modifier = Modifier.dpadRowActionNavigation(
+                                                current = focusTargets.edit,
+                                                order = actionFocusOrder,
+                                                previousRow = previousTargets?.edit,
+                                                nextRow = nextTargets?.edit,
+                                                requestFocus = requestRowFocus
+                                            ),
                                             onClick = { onEditSub(subCache.guid) }
                                         )
                                         AppIconButton(
                                             icon = painterResource(R.drawable.ic_delete_24dp),
                                             label = stringResource(R.string.action_delete),
-                                            onClick = {
-                                                if (confirmRemove) removeTarget = SubscriptionDeleteTarget(subCache.guid, subCache.subscription.remarks)
-                                                else onRemoveSub(subCache.guid)
-                                            }
+                                            focusRequester = focusTargets.delete,
+                                            modifier = Modifier.dpadRowActionNavigation(
+                                                current = focusTargets.delete,
+                                                order = actionFocusOrder,
+                                                previousRow = previousTargets?.delete,
+                                                nextRow = nextTargets?.delete,
+                                                requestFocus = requestRowFocus
+                                            ),
+                                            onClick = requestDelete
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        AppRowSwitch(
+                                            checked = subCache.subscription.enabled,
+                                            onCheckedChange = { checked ->
+                                                viewModel.setEnabled(subCache.guid, checked)
+                                            },
+                                            label = stringResource(R.string.sub_setting_enable),
+                                            focusRequester = focusTargets.toggle,
+                                            modifier = Modifier.dpadRowActionNavigation(
+                                                current = focusTargets.toggle,
+                                                order = actionFocusOrder,
+                                                previousRow = previousTargets?.toggle,
+                                                nextRow = nextTargets?.toggle,
+                                                requestFocus = requestRowFocus
+                                            )
                                         )
                                     }
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Switch(
-                                        checked = subCache.subscription.enabled,
-                                        onCheckedChange = { checked ->
-                                            val updated = subCache.subscription.copy()
-                                            updated.enabled = checked
-                                            viewModel.update(subCache.guid, updated)
-                                        },
-                                        modifier = Modifier.scale(0.7f),
-                                        colors = SwitchDefaults.colors(
-                                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                                            checkedTrackColor = MaterialTheme.colorScheme.secondary
-                                        )
-                                    )
-                                }
                             }
                         }
                     }

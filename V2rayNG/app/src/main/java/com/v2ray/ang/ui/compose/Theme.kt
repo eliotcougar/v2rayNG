@@ -204,6 +204,7 @@ fun AppTheme(
     }
     val platformBringIntoViewSpec = LocalBringIntoViewSpec.current
     val isTelevision = isTelevisionDevice()
+    val actionFeedback = remember { AccessibilityActionFeedbackState() }
     val view = LocalView.current
     val bringIntoViewSpec = if (isTelevision) {
         remember(platformBringIntoViewSpec) {
@@ -225,6 +226,7 @@ fun AppTheme(
     }
 
     CompositionLocalProvider(
+        LocalAccessibilityActionFeedback provides actionFeedback,
         LocalDarkTheme provides darkTheme,
         LocalBringIntoViewSpec provides bringIntoViewSpec
     ) {
@@ -235,6 +237,7 @@ fun AppTheme(
                 content()
                 if (!view.isInEditMode) AppSnackbarHost()
             }
+            AccessibilityActionFeedbackHost(actionFeedback)
         }
     }
 }

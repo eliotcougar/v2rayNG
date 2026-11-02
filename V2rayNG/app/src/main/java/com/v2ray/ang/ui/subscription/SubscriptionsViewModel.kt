@@ -15,6 +15,7 @@ import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import kotlinx.coroutines.CancellationException
@@ -22,16 +23,27 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+internal fun subscriptionAutoUpdateChange(current: SubscriptionItem?, enabled: Boolean): SubscriptionItem? =
+    current?.takeIf { it.url.isNotEmpty() && it.autoUpdate != enabled }?.copy(autoUpdate = enabled)
+
+internal fun subscriptionEnabledChange(current: SubscriptionItem?, enabled: Boolean): SubscriptionItem? =
+    current?.takeIf { it.enabled != enabled }?.copy(enabled = enabled)
 
 class SubscriptionsViewModel @JvmOverloads constructor(
     application: Application,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : BaseViewModel(application) {
+    private val pendingAutoUpdates = mutableSetOf<String>()
+    private val _autoUpdateChanges = MutableSharedFlow<Boolean>()
+    internal val autoUpdateChanges = _autoUpdateChanges.asSharedFlow()
     private var qrCodeJob: Job? = null
     private val _qrCode = MutableStateFlow<Bitmap?>(null)
     internal val qrCode = _qrCode.asStateFlow()
@@ -87,6 +99,66 @@ class SubscriptionsViewModel @JvmOverloads constructor(
         }
     }
 
+    internal fun setEnabled(subId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                val updated = withContext(ioDispatcher) {
+                    val current = MmkvManager.decodeSubscription(subId) ?: return@withContext null
+                    val replacement = subscriptionEnabledChange(current, enabled) ?: return@withContext current
+                    check(MmkvManager.updateSubscription(subId, current, replacement)) {
+                        "Failed to persist subscription update setting"
+                    }
+                    MmkvManager.decodeSubscription(subId)
+                } ?: return@launch
+                publishSubscription(subId, updated)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Subscription update toggle failed: $subId", error)
+                toastError(R.string.toast_failure)
+                reload()
+            }
+        }
+    }
+
+    internal fun setAutoUpdate(subId: String, enabled: Boolean): Boolean {
+        if (!pendingAutoUpdates.add(subId)) return false
+        viewModelScope.launch {
+            try {
+                val current = withContext(ioDispatcher) { MmkvManager.decodeSubscription(subId) } ?: return@launch
+                val updated = subscriptionAutoUpdateChange(current, enabled) ?: return@launch
+                if (enabled && updated.updateInterval < AppConfig.SUBSCRIPTION_MIN_INTERVAL_MINUTES) {
+                    toastError(R.string.toast_invalid_update_interval)
+                    return@launch
+                }
+                val persisted = withContext(ioDispatcher) {
+                    check(MmkvManager.updateSubscription(subId, current, updated)) {
+                        "Failed to persist subscription periodic update setting"
+                    }
+                    SubscriptionUpdater.syncOne(subId = subId)
+                    MmkvManager.decodeSubscription(subId)
+                } ?: return@launch
+                publishSubscription(subId, persisted)
+                _autoUpdateChanges.emit(persisted.autoUpdate)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "Subscription periodic update change failed: $subId", error)
+                toastError(R.string.toast_failure)
+                reload()
+            } finally {
+                pendingAutoUpdates.remove(subId)
+            }
+        }
+        return true
+    }
+
+    private fun publishSubscription(subId: String, updated: SubscriptionItem) {
+        _subsFlow.value = _subsFlow.value.map { item ->
+            if (item.guid == subId) SubscriptionCache(subId, updated) else item
+        }
+    }
+
     internal fun shareQRCode(url: String) {
         dismissQRCode()
         qrCodeJob = viewModelScope.launch {
@@ -103,8 +175,12 @@ class SubscriptionsViewModel @JvmOverloads constructor(
     }
 
     fun move(fromPosition: Int, toPosition: Int) {
+        move(fromPosition, toPosition, null)
+    }
+
+    private fun move(fromPosition: Int, toPosition: Int, onMoved: (() -> Unit)?): Boolean {
         val subscriptions = _subsFlow.value.toMutableList()
-        if (!subscriptions.moveItem(fromPosition, toPosition)) return
+        if (!subscriptions.moveItem(fromPosition, toPosition)) return false
 
         _subsFlow.value = subscriptions
         val previous = orderPersistenceJob
@@ -113,13 +189,23 @@ class SubscriptionsViewModel @JvmOverloads constructor(
             val saved = withContext(ioDispatcher) {
                 MmkvManager.reorderSubscriptions(subscriptions.map { it.guid })
             }
-            if (saved) SettingsChangeManager.makeSetupGroupTab() else toastError(R.string.toast_failure)
+            if (saved) {
+                SettingsChangeManager.makeSetupGroupTab()
+                onMoved?.invoke()
+            } else toastError(R.string.toast_failure)
             val thisJob = currentCoroutineContext()[Job]
             if (orderPersistenceJob === thisJob) {
                 orderPersistenceJob = null
                 reload()
             }
         }
+        return true
+    }
+
+    internal fun move(subId: String, command: ReorderCommand, onMoved: () -> Unit): Boolean {
+        val from = _subsFlow.value.indexOfFirst { it.guid == subId }
+        val to = command.targetIndex(from, _subsFlow.value.size) ?: return false
+        return move(from, to, onMoved)
     }
 
     fun updateSubscriptions() {

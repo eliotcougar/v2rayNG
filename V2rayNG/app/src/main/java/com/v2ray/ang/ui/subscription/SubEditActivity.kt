@@ -162,6 +162,9 @@ fun SubEditScreen(
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val isTelevision = isTelevisionDevice()
+    val subscriptionName = subscriptionAccessibilityName(
+        initial.remarks, initial.url, stringResource(R.string.acc_unnamed_subscription),
+    )
     val confirmRemove = isTelevision ||
         MmkvManager.decodeSettingsBool(AppConfig.PREF_CONFIRM_REMOVE, false)
 
@@ -205,7 +208,7 @@ fun SubEditScreen(
                     if (editSubId.isNotEmpty()) add(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
-                            label = stringResource(R.string.acc_delete),
+                            label = stringResource(R.string.acc_delete_named, subscriptionName),
                             onClick = {
                                 if (confirmRemove) showDeleteConfirm = true else onDelete()
                             }
