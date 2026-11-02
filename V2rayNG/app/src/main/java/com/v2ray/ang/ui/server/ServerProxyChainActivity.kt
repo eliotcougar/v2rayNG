@@ -36,6 +36,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.text.BidiFormatter
@@ -58,6 +63,8 @@ import com.v2ray.ang.ui.compose.FormDropdownConfig
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.ReorderableListItem
+import com.v2ray.ang.ui.compose.reorderAccessibilityActions
+import com.v2ray.ang.ui.compose.rememberAccessibilityActionFeedback
 import com.v2ray.ang.ui.compose.TvTextFieldNavigation
 import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadMovePreviousNavigation
@@ -244,6 +251,7 @@ fun ProxyChainScreen(
     val addFocusRequester = remember { FocusRequester() }
     val memberFocusTargets = rememberDpadFocusTargets(memberIds) { ProxyChainMemberFocusTargets() }
     val lazyListState = rememberLazyListState()
+    val actionFeedback = rememberAccessibilityActionFeedback()
     val itemKeys = listOf("remarks_field", "members_header") + memberIds
     val requestRowFocus = rememberLazyDpadFocus(
         listOf(listOf(remarksFocusRequester), emptyList()) + memberIds.map {
@@ -388,6 +396,23 @@ fun ProxyChainScreen(
 
             itemsIndexed(items = members, key = { _, member -> member.id }) { index, member ->
                 val memberId = member.id
+                val accessibilityActions = listOf(
+                    CustomAccessibilityAction(stringResource(R.string.acc_remove)) {
+                        val currentMember = savedMembers.firstOrNull { it.id == memberId }
+                        if (currentMember == null) false else {
+                            if (currentMember.remark.isBlank()) removeMember(memberId)
+                            else memberToDeleteId = memberId
+                            true
+                        }
+                    }
+                ) + reorderAccessibilityActions(index, members.size, actionFeedback) { command ->
+                    val currentIndex = savedMembers.indexOfFirst { it.id == memberId }
+                    val target = command.targetIndex(currentIndex, savedMembers.size)
+                    val reordered = target?.let {
+                        moveProxyChainMember(savedMembers, memberId, savedMembers[it].id)
+                    }
+                    if (reordered == null) false else { savedMembers = reordered; true }
+                }
                 val focusTargets = memberFocusTargets.getValue(memberId)
                 val previousTargets = memberIds.getOrNull(index - 1)
                     ?.let(memberFocusTargets::get)
@@ -418,7 +443,7 @@ fun ProxyChainScreen(
                                 .padding(horizontal = 4.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("${index + 1}", modifier = Modifier.width(44.dp), textAlign = TextAlign.Center)
+                            Text("${index + 1}", modifier = Modifier.width(44.dp).semantics { hideFromAccessibility() }, textAlign = TextAlign.Center)
                             FormDropdownField(
                                 label = stringResource(R.string.server_proxy_chain_member),
                                 value = member.remark,
@@ -442,6 +467,7 @@ fun ProxyChainScreen(
                                     }
                                 ),
                                 state = dropdownState,
+                                fieldModifier = Modifier.semantics { customActions = accessibilityActions },
                                 modifier = Modifier
                                     .weight(1f)
                                     .dpadOrderedFocusNavigation(
@@ -461,6 +487,7 @@ fun ProxyChainScreen(
                                 label = stringResource(R.string.action_remove),
                                 focusRequester = focusTargets.remove,
                                 modifier = Modifier
+                                    .clearAndSetSemantics {}
                                     .dpadOrderedFocusNavigation(focusTargets.remove, actionFocusOrder)
                                     .dpadVerticalFocusNavigation(
                                         onMoveUp = {

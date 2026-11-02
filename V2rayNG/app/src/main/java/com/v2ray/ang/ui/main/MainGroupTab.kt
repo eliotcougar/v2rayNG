@@ -23,6 +23,7 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -51,6 +52,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,6 +117,7 @@ fun GroupTabBar(
             Row(
                 Modifier
                     .horizontalScroll(rememberScrollState())
+                    .selectableGroup()
                     .padding(TAB_BAR_PADDING)
             ) {
                 EqualOrNaturalTabsLayout(availablePx = availablePx) {
@@ -182,6 +188,12 @@ private fun GroupTabItem(
 ) {
     // Counts share the ViewModel snapshot used by the TV tabs and filtered server rows.
     val count = if (group.id.isEmpty()) 0 else group.serverCount
+    val accessibilityLabel = pluralStringResource(
+        R.plurals.acc_group_tab,
+        group.serverCount,
+        group.remarks,
+        group.serverCount,
+    )
     val colors = MaterialTheme.colorScheme
     val bringIntoView = remember { BringIntoViewRequester() }
     var size by remember { mutableStateOf(IntSize.Zero) }
@@ -204,6 +216,7 @@ private fun GroupTabItem(
             .onSizeChanged { size = it }
             .clip(CircleShape)
             .background(if (selected) colors.primary.copy(alpha = 0.12f) else Color.Transparent)
+            .semantics { contentDescription = accessibilityLabel }
             .selectable(selected = selected, role = Role.Tab, onClick = onClick)
             .padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.Center,
@@ -211,6 +224,7 @@ private fun GroupTabItem(
     ) {
         Text(
             text = group.remarks,
+            modifier = Modifier.semantics { hideFromAccessibility() },
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
             color = if (selected) colors.primary else colors.onSurfaceVariant,
@@ -230,6 +244,7 @@ private fun GroupTabItem(
             ) {
                 Text(
                     text = count.toString(),
+                    modifier = Modifier.semantics { hideFromAccessibility() },
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 12.sp),
                     color = if (selected) colors.onPrimary else colors.surface,
                     maxLines = 1
@@ -255,7 +270,9 @@ private fun TvGroupTabBar(
 
     LazyRow(
         state = listState,
-        modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
+        modifier = modifier.fillMaxWidth()
+            .selectableGroup()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)),
         contentPadding = PaddingValues(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -288,8 +305,14 @@ private fun TvGroupTabItem(
     group: GroupMapItem, selected: Boolean,
     modifier: Modifier = Modifier, onClick: () -> Unit
 ) {
-    val text = if (group.id.isEmpty()) stringResource(R.string.filter_config_all)
-    else "${group.remarks} (${group.serverCount})"
+    val name = if (group.id.isEmpty()) stringResource(R.string.filter_config_all) else group.remarks
+    val text = if (group.id.isEmpty()) name else "$name (${group.serverCount})"
+    val accessibilityLabel = pluralStringResource(
+        R.plurals.acc_group_tab,
+        group.serverCount,
+        name,
+        group.serverCount,
+    )
 
     val indicatorColor = if (selected) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
     Box(Modifier.widthIn(min = 56.dp).drawWithContent {
@@ -300,8 +323,17 @@ private fun TvGroupTabItem(
         Tab(
             selected = selected,
             onClick = onClick,
-            modifier = modifier.heightIn(min = 48.dp),
-            text = { Text(text, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis) }
+            modifier = modifier.heightIn(min = 48.dp)
+                .semantics { contentDescription = accessibilityLabel },
+            text = {
+                Text(
+                    text,
+                    modifier = Modifier.semantics { hideFromAccessibility() },
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         )
     }
 }

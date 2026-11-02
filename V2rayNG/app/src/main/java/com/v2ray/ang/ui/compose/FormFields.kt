@@ -130,7 +130,8 @@ fun FormDropdownField(
     enabled: Boolean = true,
     config: FormDropdownConfig = FormDropdownConfig(),
     tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
-    state: FormDropdownState? = null
+    state: FormDropdownState? = null,
+    fieldModifier: Modifier = Modifier,
 ) {
     val dropdownState = state ?: remember { FormDropdownState() }
     val menuScrollState = rememberScrollState()
@@ -213,7 +214,7 @@ fun FormDropdownField(
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownState.expanded)
             },
-            modifier = Modifier
+            modifier = fieldModifier
                 .then(tvFieldState?.let {
                     Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
                 } ?: Modifier)

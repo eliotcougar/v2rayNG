@@ -51,8 +51,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +69,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
+import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.DpadReorderDirection
@@ -72,6 +77,9 @@ import com.v2ray.ang.ui.compose.DpadReorderItem
 import com.v2ray.ang.ui.compose.DpadReorderState
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
+import com.v2ray.ang.ui.compose.ReorderCommand
+import com.v2ray.ang.ui.compose.reorderAccessibilityActions
+import com.v2ray.ang.ui.compose.rememberAccessibilityActionFeedback
 import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorPing
@@ -124,7 +132,8 @@ private data class ServerRowActions(
     val back: () -> Unit,
     val movePrevious: ((FocusRequester) -> Unit)?,
     val moveUp: (() -> Unit)?,
-    val reorderItem: DpadReorderItem?
+    val reorderItem: DpadReorderItem?,
+    val accessibilityActions: List<CustomAccessibilityAction>,
 )
 
 private data class ServerCollectionActions(
@@ -135,7 +144,10 @@ private data class ServerCollectionActions(
     val move: (Int, Int) -> Unit,
     val back: () -> Unit,
     val movePrevious: (() -> Boolean) -> Unit,
-    val moveUpFromFirstRow: (() -> Unit)?
+    val moveUpFromFirstRow: (() -> Unit)?,
+    val onAction: (MainAction) -> Unit,
+    val accessibleMove: (String, ReorderCommand, () -> Unit) -> Boolean,
+    val feedback: (String) -> Unit,
 )
 
 @Composable
@@ -165,6 +177,22 @@ private fun ServerCollectionItem(
     val reorderItem = reorderState?.let {
         DpadReorderItem(it, row.guid, index, rows.size, reorderTarget, collectionActions.move)
     }
+    val itemActions = serverAccessibilityActions(row.profile.configType.isComplexType()).map { action ->
+        val label = when (action) {
+            ServerMenuAction.Edit -> stringResource(R.string.acc_edit_config_named, row.remarks)
+            ServerMenuAction.Delete -> stringResource(R.string.acc_delete_config_named, row.remarks)
+            else -> stringResource(action.labelRes)
+        }
+        CustomAccessibilityAction(label) {
+            action.perform(row.guid, row.profile, collectionActions.onAction, collectionActions.remove)
+            true
+        }
+    }
+    val accessibilityActions = itemActions + if (reorderState != null) {
+        reorderAccessibilityActions(index, rows.size, collectionActions.feedback) { command, onMoved ->
+            collectionActions.accessibleMove(row.guid, command, onMoved)
+        }
+    } else emptyList()
     Column {
         ServerListItem(
             model = row,
@@ -181,7 +209,8 @@ private fun ServerCollectionItem(
                     else collectionActions.movePrevious { restoreFocus(row.guid) { if (target === current.more) it.more else it.row } }
                 },
                 moveUp = if (index < stride) collectionActions.moveUpFromFirstRow else null,
-                reorderItem = reorderItem
+                reorderItem = reorderItem,
+                accessibilityActions = accessibilityActions,
             ),
             focusTargets = ServerRowFocusTargets(current, previous, next, adjacentColumn, layout, requestFocus)
         )
@@ -218,6 +247,7 @@ fun GroupPagerPage(
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
     onSelectServer: (String) -> Unit,
+    onAction: (MainAction) -> Unit,
     onEditServer: (String, ProfileItem) -> Unit,
     onShareServer: (String, ProfileItem, Boolean, () -> Boolean) -> Unit,
     onRemoveServer: (String, String) -> Unit,
@@ -234,6 +264,7 @@ fun GroupPagerPage(
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
     val isTelevision = isTelevisionDevice()
     val refreshFocusRequester = remember(groupId) { FocusRequester() }
+    val actionFeedback = rememberAccessibilityActionFeedback()
     // Keep the upstream floating card and reserve its height above the scrollable server rows.
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -271,7 +302,12 @@ fun GroupPagerPage(
                 move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
                 back = onBackFromList,
                 movePrevious = onOpenDrawer,
-                moveUpFromFirstRow = moveUpFromFirstRow
+                moveUpFromFirstRow = moveUpFromFirstRow,
+                onAction = onAction,
+                accessibleMove = { guid, command, onMoved ->
+                    mainViewModel.moveServer(groupId, guid, command, onMoved)
+                },
+                feedback = actionFeedback,
             ),
             onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
             contentPadding = listPadding
@@ -496,12 +532,24 @@ private fun ServerListItem(
         if (isTwoColumn) listOf(currentFocus.row, currentFocus.more)
         else listOf(currentFocus.row, currentFocus.share, currentFocus.edit, currentFocus.delete)
     }
-    val selectedStateDescription = if (isSelected) stringResource(R.string.acc_selected_server) else null
+    val testResultAccessibility = when {
+        model.testDelayMillis < 0L -> stringResource(R.string.acc_server_test_failed)
+        model.testDelayMillis == 0L -> ""
+        else -> pluralStringResource(
+            R.plurals.server_test_delay_accessibility_value,
+            model.testDelayMillis.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+            model.testDelayMillis,
+        )
+    }
+    val description = model.accessibilityDescription(
+        testResult = testResultAccessibility,
+        prefix = if (isSelected) stringResource(R.string.acc_selected_server) else null,
+    )
+    val selectLabel = stringResource(R.string.acc_select_server)
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .semantics { if (selectedStateDescription != null) stateDescription = selectedStateDescription }
             .dpadFocusOutline(
                 focusRequester = currentFocus.row,
                 showFocus = !isMoving
@@ -555,6 +603,11 @@ private fun ServerListItem(
                     Modifier.dpadClickable(onClick = actions.select)
                 }
             )
+            .clearAndSetSemantics {
+                contentDescription = description
+                customActions = actions.accessibilityActions
+                onClick(label = selectLabel) { actions.select(); true }
+            }
     ) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f).padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {

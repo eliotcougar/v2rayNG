@@ -22,6 +22,7 @@ import com.v2ray.ang.extension.matchesPattern
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.SubscriptionInfoParser
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -915,7 +916,7 @@ class MainViewModel(
         }
     }
 
-    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
+    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int, onMoved: (() -> Unit)? = null) {
         if (groupId.isEmpty()) return
         val groupFlow = mutableServerGroupState(groupId)
         val groupState = groupFlow.value
@@ -929,7 +930,8 @@ class MainViewModel(
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
         serverOrderPersistenceJobs[groupId] = viewModelScope.launch {
             previousPersistenceJob?.join()
-            if (!withContext(ioDispatcher) { dataSource.reorderServerList(guids, groupId) }) {
+            val saved = withContext(ioDispatcher) { dataSource.reorderServerList(guids, groupId) }
+            if (!saved) {
                 toastError(R.string.toast_failure)
             }
             // Only the final queued write reconciles the UI, on both success and failure.
@@ -944,7 +946,17 @@ class MainViewModel(
                     serverOrderPersistenceJobs.remove(groupId)
                 }
             }
+            if (saved) onMoved?.invoke()
         }
+    }
+
+    internal fun moveServer(groupId: String, guid: String, command: ReorderCommand, onMoved: () -> Unit): Boolean {
+        if (groupId.isEmpty() || keywordFilter.isNotEmpty()) return false
+        val servers = mutableServerGroupState(groupId).value.servers
+        val fromPosition = servers.indexOfFirst { it.guid == guid }
+        val toPosition = command.targetIndex(fromPosition, servers.size) ?: return false
+        moveServer(groupId, fromPosition, toPosition, onMoved)
+        return true
     }
 
     // ---------- Testing ----------

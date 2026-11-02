@@ -61,6 +61,24 @@ internal fun serverMenuActions(
     (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
 }
 
+internal fun serverAccessibilityActions(isComplexProfile: Boolean): List<ServerMenuAction> =
+    serverMenuActions(isComplexProfile, includeManagementActions = true).sortedBy { it.isShareAction }
+
+internal fun ServerMenuAction.perform(
+    guid: String,
+    profile: ProfileItem,
+    onAction: (MainAction) -> Unit,
+    onRemove: (String, String) -> Unit,
+) {
+    when (this) {
+        ServerMenuAction.ShareQRCode -> onAction(MainAction.ShareQRCode(guid))
+        ServerMenuAction.ShareClipboard -> onAction(MainAction.ShareClipboard(guid))
+        ServerMenuAction.ShareFullContent -> onAction(MainAction.ShareFullContent(guid))
+        ServerMenuAction.Edit -> onAction(MainAction.EditServer(guid, profile))
+        ServerMenuAction.Delete -> onRemove(guid, profile.remarks)
+    }
+}
+
 @Composable
 fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
     items = ImportMenuAction.entries,
@@ -117,13 +135,7 @@ fun ShareMethodDialog(
         optionText = { stringResource(it.labelRes) },
         onSelected = { action ->
             onActionSelected()
-            when (action) {
-                ServerMenuAction.ShareQRCode -> onAction(MainAction.ShareQRCode(guid))
-                ServerMenuAction.ShareClipboard -> onAction(MainAction.ShareClipboard(guid))
-                ServerMenuAction.ShareFullContent -> onAction(MainAction.ShareFullContent(guid))
-                ServerMenuAction.Edit -> onAction(MainAction.EditServer(guid, profile))
-                ServerMenuAction.Delete -> onRemove(guid, profile.remarks)
-            }
+            action.perform(guid, profile, onAction, onRemove)
         },
         onDismiss = onDismiss,
         onMovePrevious = onDismiss

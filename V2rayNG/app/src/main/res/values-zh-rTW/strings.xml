@@ -63,6 +63,17 @@
     <string name="menu_item_import_config_manually_trojan">新增 [Trojan]</string>
     <string name="menu_item_import_config_manually_wireguard">新增 [WireGuard]</string>
     <string name="menu_item_import_config_manually_hysteria2">新增 [Hysteria2]</string>
+    <plurals name="acc_group_tab">
+        <item quantity="other">%1$s。包含%2$d個伺服器</item>
+    </plurals>
+    <string name="acc_server_test_failed">連線測試失敗</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="other">%1$d 毫秒</item>
+    </plurals>
+    <string name="acc_share_config_named">分享設定 %1$s</string>
+    <string name="acc_edit_config_named">編輯設定 %1$s</string>
+    <string name="acc_delete_config_named">刪除設定 %1$s</string>
+    <string name="acc_select_server">選取</string>
     <string name="confirm_delete_visible_profiles">確定要刪除目前顯示的所有設定檔嗎？</string>
     <string name="confirm_delete_duplicate_profiles">確定要刪除目前顯示的所有重複設定檔嗎？</string>
     <string name="confirm_delete_invalid_profiles">請先測試設定檔。確定要刪除目前顯示的所有無效設定檔嗎？</string>

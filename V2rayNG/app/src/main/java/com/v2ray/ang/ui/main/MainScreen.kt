@@ -252,6 +252,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                 lazyListStates = pagerCoordinator.lazyListStates,
                                 lazyGridStates = pagerCoordinator.lazyGridStates,
                                 onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
+                                onAction = onAction,
                                 onEditServer = { guid, profile ->
                                     onAction(MainAction.EditServer(guid, profile))
                                 },
