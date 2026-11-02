@@ -10,6 +10,7 @@ import com.v2ray.ang.dto.UrlContentRequest
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.dto.entities.SubscriptionItem
+import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.fmt.CustomFmt
@@ -26,6 +27,7 @@ import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.QRCodeDecoder
 import com.v2ray.ang.util.Utils
+import okhttp3.Headers
 import java.net.URI
 
 object AngConfigManager {
@@ -48,7 +50,6 @@ object AngConfigManager {
             EConfigType.WIREGUARD.protocolScheme to WireguardFmt::parse,
             EConfigType.HYSTERIA2.protocolScheme to Hysteria2Fmt::parse,
             AppConfig.HY2 to Hysteria2Fmt::parse,
-            AppConfig.V2RAYNFMTS to V2rayNFmt::parse
         )
     }
 
@@ -249,25 +250,34 @@ object AngConfigManager {
 
             // Parse all configs first (no I/O during parsing)
             val configs = mutableListOf<ProfileItem>()
+            val v2raynLines = mutableListOf<String>()
+
             servers.lines()
                 .distinct()
                 .reversed()
                 .forEach {
-                    val config = parseConfig(it, subid, subItem)
-                    if (config != null) {
-                        configs.add(config)
+                    if (it.startsWith(AppConfig.V2RAYNFMTS, ignoreCase = true)) {
+                        v2raynLines.add(it)
+                    } else {
+                        val config = parseConfig(it, subid, subItem)
+                        if (config != null) {
+                            configs.add(config)
+                        }
                     }
                 }
 
-            if (configs.isNotEmpty()) {
+            val v2raynConfigs = V2rayNFmt.parse(v2raynLines, subid)
+            val allConfigs = v2raynConfigs + configs
+
+            if (allConfigs.isNotEmpty()) {
                 commitProfiles(
-                    configs = configs.map(::ParsedProfile),
+                    configs = allConfigs.map(::ParsedProfile),
                     subid = subid,
                     append = append,
                 )
             }
 
-            return configs.size
+            return allConfigs.size
         } catch (e: ProfileStorageException) {
             throw e
         } catch (e: Exception) {
@@ -420,12 +430,6 @@ object AngConfigManager {
             config.subscriptionId = subid
             config.description = generateDescription(config)
 
-            if (str.startsWith(AppConfig.V2RAYNFMTS, ignoreCase = true)
-                && config.policyGroupSubscriptionId == "self"
-            ) {
-                config.policyGroupSubscriptionId = subid
-            }
-
             return config
         } catch (e: Exception) {
             LogUtil.e(AppConfig.TAG, "Failed to parse config", e)
@@ -486,6 +490,17 @@ object AngConfigManager {
             val proxyUsername = SettingsManager.getSocksUsername()
             val proxyPassword = SettingsManager.getSocksPassword()
 
+            // Account info (traffic, expiry, support link) the panel sends in the response headers.
+            var usageInfo: SubscriptionUsageInfo? = null
+            val captureUsageInfo: (Headers) -> Unit = { headers ->
+                usageInfo = SubscriptionInfoParser.parse(
+                    userInfo = headers["Subscription-Userinfo"],
+                    profileTitle = headers["Profile-Title"],
+                    supportUrl = headers["Support-Url"],
+                    webPageUrl = headers["Profile-Web-Page-Url"],
+                )
+            }
+
             var configText = try {
                 val httpPort = SettingsManager.getHttpPort()
                 HttpUtil.getUrlContentWithUserAgent(
@@ -497,7 +512,8 @@ object AngConfigManager {
                         httpPort = httpPort,
                         proxyUsername = proxyUsername,
                         proxyPassword = proxyPassword
-                    )
+                    ),
+                    captureUsageInfo
                 )
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.ANG_PACKAGE, "Update subscription: proxy not ready or other error", e)
@@ -510,7 +526,8 @@ object AngConfigManager {
                             url = url,
                             userAgent = userAgent,
                             requestHeaders = requestHeaders
-                        )
+                        ),
+                        captureUsageInfo
                     )
                 } catch (e: Exception) {
                     LogUtil.e(AppConfig.TAG, "Update subscription: Failed to get URL content with user agent", e)
@@ -524,6 +541,8 @@ object AngConfigManager {
             val count = parseConfigViaSub(configText, it.guid, false)
             if (count > 0) {
                 it.subscription.lastUpdated = System.currentTimeMillis()
+                // Replaced on every successful update so the box disappears if the panel stops sending the headers.
+                it.subscription.usageInfo = usageInfo
                 MmkvManager.encodeSubscription(it.guid, it.subscription)
                 LogUtil.i(AppConfig.TAG, "Subscription updated: ${it.subscription.remarks}, $count configs")
                 return SubscriptionUpdateResult(

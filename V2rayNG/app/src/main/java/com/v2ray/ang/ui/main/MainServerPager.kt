@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,15 +32,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,12 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.dto.entities.ServersCache
-import com.v2ray.ang.extension.isComplexType
-import com.v2ray.ang.extension.nullIfBlank
-import com.v2ray.ang.handler.AngConfigManager
-import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
@@ -69,8 +74,8 @@ fun GroupPagerPage(
     groupId: String,
     mainViewModel: MainViewModel,
     selectedGuid: String?,
+    locateTarget: LocateTarget?,
     doubleColumnDisplay: Boolean,
-    confirmRemove: Boolean,
     searchQuery: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
@@ -78,50 +83,98 @@ fun GroupPagerPage(
     onEditServer: (String, ProfileItem) -> Unit,
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
-    onRemoveServer: (String) -> Unit,
+    onRemoveServer: (String, String) -> Unit,
+    usageInfo: SubscriptionUsageInfo?,
+    groupTitle: String,
+    onOpenLink: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val serverFlow = remember(groupId) {
-        mainViewModel.serversForGroup(groupId)
+    val groupStateFlow = remember(groupId) {
+        mainViewModel.serverGroupState(groupId)
     }
-    val servers by serverFlow.collectAsStateWithLifecycle()
+    val groupState by groupStateFlow.collectAsStateWithLifecycle()
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
-    ServerListPage(
-        servers = servers,
-        selectedGuid = selectedGuid,
-        canReorder = canReorder,
-        doubleColumnDisplay = doubleColumnDisplay,
-        subscriptionId = groupId,
-        confirmRemove = confirmRemove,
-        groupId = groupId,
-        lazyListStates = lazyListStates,
-        lazyGridStates = lazyGridStates,
-        onSelectServer = onSelectServer,
-        onEditServer = onEditServer,
-        onShareServer = onShareServer,
-        onMoreServer = onMoreServer,
-        onRemoveServer = onRemoveServer,
-        onMoveServer = { fromIndex, toIndex -> mainViewModel.moveServer(groupId, fromIndex, toIndex) },
-        contentPadding = contentPadding
-    )
+    val actions = remember(
+        onSelectServer,
+        onEditServer,
+        onShareServer,
+        onMoreServer,
+        onRemoveServer,
+    ) {
+        ServerRowActions(
+            select = onSelectServer,
+            edit = onEditServer,
+            share = onShareServer,
+            more = onMoreServer,
+            remove = onRemoveServer,
+        )
+    }
+    // The box floats over the list (the list scrolls underneath it), so the list is padded by the box height.
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    var infoHeightPx by remember { mutableIntStateOf(0) }
+    val listPadding = if (usageInfo == null) {
+        contentPadding
+    } else {
+        PaddingValues(
+            start = contentPadding.calculateStartPadding(layoutDirection),
+            top = contentPadding.calculateTopPadding() + with(density) { infoHeightPx.toDp() },
+            end = contentPadding.calculateEndPadding(layoutDirection),
+            bottom = contentPadding.calculateBottomPadding()
+        )
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        ServerListPage(
+            rows = groupState.rows,
+            selectedGuid = selectedGuid,
+            locateTarget = locateTarget?.takeIf { it.groupId == groupId },
+            canReorder = canReorder,
+            doubleColumnDisplay = doubleColumnDisplay,
+            groupId = groupId,
+            lazyListStates = lazyListStates,
+            lazyGridStates = lazyGridStates,
+            actions = actions,
+            onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled) },
+            onMoveServer = { fromIndex, toIndex ->
+                mainViewModel.moveServer(groupId, fromIndex, toIndex)
+            },
+            contentPadding = listPadding
+        )
+        if (usageInfo != null) {
+            SubscriptionInfoCard(
+                info = usageInfo,
+                fallbackTitle = groupTitle,
+                onOpenLink = onOpenLink,
+                onRefresh = { mainViewModel.onAction(MainAction.UpdateGroupSubscription(groupId)) },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .onSizeChanged { infoHeightPx = it.height }
+            )
+        }
+    }
 }
+
+private class ServerRowActions(
+    val select: (String) -> Unit,
+    val edit: (String, ProfileItem) -> Unit,
+    val share: (String, ProfileItem) -> Unit,
+    val more: (String, ProfileItem) -> Unit,
+    val remove: (String, String) -> Unit,
+)
 
 @Composable
 private fun ServerListPage(
-    servers: List<ServersCache>,
+    rows: List<ServerRowUiModel>,
     selectedGuid: String?,
+    locateTarget: LocateTarget?,
     canReorder: Boolean,
     doubleColumnDisplay: Boolean,
-    subscriptionId: String,
-    confirmRemove: Boolean,
     groupId: String,
     lazyListStates: MutableMap<String, LazyListState>,
     lazyGridStates: MutableMap<String, LazyGridState>,
-    onSelectServer: (String) -> Unit,
-    onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem) -> Unit,
-    onMoreServer: (String, ProfileItem) -> Unit,
-    onRemoveServer: (String) -> Unit,
+    actions: ServerRowActions,
+    onLocateHandled: () -> Unit,
     onMoveServer: (Int, Int) -> Unit,
     contentPadding: PaddingValues
 ) {
@@ -135,6 +188,8 @@ private fun ServerListPage(
             }
         } else null
 
+        LocateTargetEffect(locateTarget, rows, gridState, onLocateHandled)
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             state = gridState,
@@ -143,24 +198,19 @@ private fun ServerListPage(
                 .verticalScrollbar(gridState),
             contentPadding = contentPadding
         ) {
-            itemsIndexed(items = servers, key = { _, item -> item.guid }) { _, serverCache ->
+            itemsIndexed(items = rows, key = { _, item -> item.guid }) { _, row ->
                 val content: @Composable () -> Unit = {
                     ServerItemColumn(
-                        serverCache = serverCache,
-                        selectedGuid = selectedGuid,
-                        subscriptionId = subscriptionId,
+                        row = row,
+                        isSelected = row.guid == selectedGuid,
                         doubleColumnDisplay = true,
-                        onSelectServer = onSelectServer,
-                        onEditServer = onEditServer,
-                        onShareServer = onShareServer,
-                        onMoreServer = onMoreServer,
-                        onRemoveServer = onRemoveServer
+                        actions = actions
                     )
                 }
                 if (canReorder && reorderableGridState != null) {
                     ReorderableItem(
                         reorderableGridState,
-                        key = serverCache.guid
+                        key = row.guid
                     ) { isDragging ->
                         ReorderableGridItem(
                             scope = this,
@@ -182,6 +232,8 @@ private fun ServerListPage(
             }
         } else null
 
+        LocateTargetEffect(locateTarget, rows, listState, onLocateHandled)
+
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -189,39 +241,29 @@ private fun ServerListPage(
                 .verticalScrollbar(listState),
             contentPadding = contentPadding
         ) {
-            itemsIndexed(items = servers, key = { _, item -> item.guid }) { _, serverCache ->
+            itemsIndexed(items = rows, key = { _, item -> item.guid }) { _, row ->
                 if (canReorder && reorderableState != null) {
                     ReorderableItem(
                         reorderableState,
-                        key = serverCache.guid
+                        key = row.guid
                     ) { isDragging ->
                         ReorderableListItem(
                             scope = this,
                             isDragging = isDragging
                         ) {
                             ServerItemRow(
-                                serverCache = serverCache,
-                                selectedGuid = selectedGuid,
-                                subscriptionId = subscriptionId,
-                                onSelectServer = onSelectServer,
-                                onEditServer = onEditServer,
-                                onShareServer = onShareServer,
-                                onMoreServer = onMoreServer,
-                                onRemoveServer = onRemoveServer
+                                row = row,
+                                isSelected = row.guid == selectedGuid,
+                                actions = actions
                             )
                         }
                         ItemDivider()
                     }
                 } else {
                     ServerItemRow(
-                        serverCache = serverCache,
-                        selectedGuid = selectedGuid,
-                        subscriptionId = subscriptionId,
-                        onSelectServer = onSelectServer,
-                        onEditServer = onEditServer,
-                        onShareServer = onShareServer,
-                        onMoreServer = onMoreServer,
-                        onRemoveServer = onRemoveServer
+                        row = row,
+                        isSelected = row.guid == selectedGuid,
+                        actions = actions
                     )
                     ItemDivider()
                 }
@@ -231,95 +273,80 @@ private fun ServerListPage(
 }
 
 @Composable
-private fun ServerItemRow(
-    serverCache: ServersCache,
-    selectedGuid: String?,
-    subscriptionId: String,
-    onSelectServer: (String) -> Unit,
-    onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem) -> Unit,
-    onMoreServer: (String, ProfileItem) -> Unit,
-    onRemoveServer: (String) -> Unit
+private fun LocateTargetEffect(
+    target: LocateTarget?,
+    rows: List<ServerRowUiModel>,
+    state: LazyListState,
+    onHandled: () -> Unit,
 ) {
-    val profile = serverCache.profile
-    val subRemarks = if (subscriptionId.isEmpty()) {
-        MmkvManager.decodeSubscription(profile.subscriptionId)?.remarks?.firstOrNull()
-            ?.toString() ?: ""
-    } else ""
+    if (target == null) return
+    LaunchedEffect(target, rows) {
+        val index = rows.indexOfFirst { it.guid == target.serverGuid }
+        if (index < 0) return@LaunchedEffect
+        state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
+        onHandled()
+    }
+}
 
+@Composable
+private fun LocateTargetEffect(
+    target: LocateTarget?,
+    rows: List<ServerRowUiModel>,
+    state: LazyGridState,
+    onHandled: () -> Unit,
+) {
+    if (target == null) return
+    LaunchedEffect(target, rows) {
+        val index = rows.indexOfFirst { it.guid == target.serverGuid }
+        if (index < 0) return@LaunchedEffect
+        state.scrollToItem(index, -state.layoutInfo.viewportSize.height / 3)
+        onHandled()
+    }
+}
+
+@Composable
+private fun ServerItemRow(
+    row: ServerRowUiModel,
+    isSelected: Boolean,
+    actions: ServerRowActions
+) {
     ServerListItem(
-        remarks = profile.remarks,
-        statistics = profile.description.nullIfBlank()
-            ?: AngConfigManager.generateDescription(profile),
-        typeDescription = getProtocolDescription(profile),
-        testDelayMillis = serverCache.testDelayMillis,
-        isSelected = serverCache.guid == selectedGuid,
-        subscriptionRemarks = subRemarks,
+        row = row,
+        isSelected = isSelected,
         doubleColumnDisplay = false,
-        onClick = { onSelectServer(serverCache.guid) },
-        onShare = { onShareServer(serverCache.guid, profile) },
-        onEdit = { onEditServer(serverCache.guid, profile) },
-        onRemove = { onRemoveServer(serverCache.guid) },
-        onMore = { onMoreServer(serverCache.guid, profile) }
+        actions = actions
     )
 }
 
 @Composable
 private fun ServerItemColumn(
-    serverCache: ServersCache,
-    selectedGuid: String?,
-    subscriptionId: String,
+    row: ServerRowUiModel,
+    isSelected: Boolean,
     doubleColumnDisplay: Boolean,
-    onSelectServer: (String) -> Unit,
-    onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem) -> Unit,
-    onMoreServer: (String, ProfileItem) -> Unit,
-    onRemoveServer: (String) -> Unit
+    actions: ServerRowActions
 ) {
-    val profile = serverCache.profile
-    val subRemarks = if (subscriptionId.isEmpty()) {
-        MmkvManager.decodeSubscription(profile.subscriptionId)?.remarks?.firstOrNull()?.toString() ?: ""
-    } else ""
     Column {
         ServerListItem(
-            remarks = profile.remarks,
-            statistics = profile.description.nullIfBlank() ?: AngConfigManager.generateDescription(profile),
-            typeDescription = getProtocolDescription(profile),
-            testDelayMillis = serverCache.testDelayMillis,
-            isSelected = serverCache.guid == selectedGuid,
-            subscriptionRemarks = subRemarks,
+            row = row,
+            isSelected = isSelected,
             doubleColumnDisplay = doubleColumnDisplay,
-            onClick = { onSelectServer(serverCache.guid) },
-            onEdit = { onEditServer(serverCache.guid, profile) },
-            onShare = { onShareServer(serverCache.guid, profile) },
-            onRemove = { onRemoveServer(serverCache.guid) },
-            onMore = { onMoreServer(serverCache.guid, profile) }
+            actions = actions
         )
         ItemDivider()
     }
 }
 
 @Composable
-fun ServerListItem(
-    remarks: String,
-    statistics: String,
-    typeDescription: String,
-    testDelayMillis: Long,
+private fun ServerListItem(
+    row: ServerRowUiModel,
     isSelected: Boolean,
-    subscriptionRemarks: String,
     doubleColumnDisplay: Boolean,
-    onClick: () -> Unit,
-    onEdit: () -> Unit,
-    onShare: () -> Unit,
-    onRemove: () -> Unit,
-    onMore: () -> Unit,
-    modifier: Modifier = Modifier,
-    dragModifier: Modifier = Modifier
+    actions: ServerRowActions
 ) {
-    val testResult = if (testDelayMillis == 0L) {
+    val testResult = if (row.testDelayMillis == 0L) {
         ""
     } else {
-        stringResource(R.string.server_test_delay_value, testDelayMillis)
+        stringResource(R.string.server_test_delay_value, row.testDelayMillis)
     }
     val selectedStateDescription = if (isSelected) {
         stringResource(R.string.acc_selected_server)
@@ -327,7 +354,7 @@ fun ServerListItem(
         null
     }
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
             .semantics {
@@ -335,8 +362,7 @@ fun ServerListItem(
                     stateDescription = selectedStateDescription
                 }
             }
-            .clickable(onClick = onClick)
-            .then(dragModifier)
+            .clickable { actions.select(row.guid) }
     ) {
         Box(
             Modifier
@@ -363,9 +389,9 @@ fun ServerListItem(
                 .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(row.remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (doubleColumnDisplay) {
-                    IconButton(onClick = onMore, Modifier.size(36.dp)) {
+                    IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(36.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_more_vert_24dp),
                             stringResource(R.string.acc_more),
@@ -373,21 +399,21 @@ fun ServerListItem(
                         )
                     }
                 } else {
-                    IconButton(onClick = onShare, Modifier.size(36.dp)) {
+                    IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(36.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_share_24dp),
                             stringResource(R.string.title_configuration_share),
                             Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = onEdit, Modifier.size(36.dp)) {
+                    IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(36.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_edit_24dp),
                             stringResource(R.string.acc_edit),
                             Modifier.size(24.dp)
                         )
                     }
-                    IconButton(onClick = onRemove, Modifier.size(36.dp)) {
+                    IconButton(onClick = { actions.remove(row.guid, row.remarks) }, Modifier.size(36.dp)) {
                         Icon(
                             painterResource(R.drawable.ic_delete_24dp),
                             stringResource(R.string.acc_delete),
@@ -398,43 +424,46 @@ fun ServerListItem(
             }
             Spacer(modifier = Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (subscriptionRemarks.isNotBlank()) {
+                if (row.subscriptionBadge.isNotBlank()) {
                     Box(
                         Modifier
                             .size(24.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)), Alignment.Center
                     ) {
-                        Text(subscriptionRemarks.take(1).uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(row.subscriptionBadge.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
-                Text(statistics, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    row.statistics,
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             Spacer(modifier = Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(typeDescription, style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(testResult, style = MaterialTheme.typography.bodySmall, color = if (testDelayMillis < 0L) colorPingRed else colorPing, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    row.typeDescription,
+                    modifier = Modifier.weight(1f, fill = false),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colorConfigType,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    testResult,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (row.testDelayMillis < 0L) colorPingRed else colorPing,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
-}
-
-private fun getProtocolDescription(profile: ProfileItem): String {
-    if (profile.configType.isComplexType()) return profile.configType.name
-    val parts = mutableListOf(profile.configType.name)
-    profile.network?.let { net ->
-        if (net.isNotBlank() && !net.equals("tcp", ignoreCase = true)) parts.add(net)
-    }
-    profile.security?.let { sec ->
-        if (sec.isNotBlank()) {
-            if (profile.insecure == true && sec.equals("tls", ignoreCase = true)) {
-                parts.add("$sec insecure")
-            } else {
-                parts.add(sec)
-            }
-        }
-    }
-    return parts.joinToString(" / ")
 }
 
 internal suspend fun PagerState.navigateToPageOptimized(

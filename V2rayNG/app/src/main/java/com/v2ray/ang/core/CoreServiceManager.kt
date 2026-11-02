@@ -19,6 +19,7 @@ import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.BrowserDialerMode
+import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
@@ -31,9 +32,13 @@ import com.v2ray.ang.service.NetworkMonitor
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
-import com.v2ray.ang.extension.delay
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import libv2ray.CoreCallbackHandler
 import libv2ray.CoreController
 import libv2ray.ProcessFinder
@@ -48,6 +53,8 @@ object CoreServiceManager {
     private var processFinder: XrayProcessFinder? = null
     private var browserDialer: IDialerService? = null
     private var networkMonitor: NetworkMonitor? = null
+    private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val xhttpWakeRefresh = XhttpWakeRefresh()
 
     @Volatile
     private var isReloading = false
@@ -57,6 +64,7 @@ object CoreServiceManager {
 
     var serviceControl: SoftReference<ServiceControl>? = null
         set(value) {
+            if (field?.get() !== value?.get()) xhttpWakeRefresh.stop()
             field = value
             val service = value?.get()?.getService()
             CoreNativeManager.initCoreEnv(service)
@@ -99,6 +107,7 @@ object CoreServiceManager {
             doStartCoreLoop(service, vpnInterface)
             return true
         } catch (e: Exception) {
+            xhttpWakeRefresh.stop()
             val message = e.message?.takeUnless { it.isBlank() } ?: e.javaClass.simpleName
             LogUtil.e(AppConfig.TAG, "StartCore-Manager: $message", e)
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
@@ -118,6 +127,7 @@ object CoreServiceManager {
 
         currentVpnInterface = vpnInterface
         launchCore(service, vpnInterface)
+        xhttpWakeRefresh.start { retireXHTTPClientsAfterDeviceIdle(service) }
         startNetworkMonitor(service)
     }
 
@@ -186,6 +196,8 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        xhttpWakeRefresh.stop()
+        connectionTestScope.coroutineContext.cancelChildren()
         val service = getService() ?: return false
 
         networkMonitor?.unregister()
@@ -238,12 +250,25 @@ object CoreServiceManager {
         ).also { it.register() }
     }
 
-    private fun retireXHTTPClientsAfterDeviceIdle(ctx: Context) {
-        val powerManager = ctx.getSystemService(PowerManager::class.java)
-        if (powerManager.isDeviceIdleMode || !isRunning()) return
+    internal fun cancelXHTTPWakeRefresh(service: Service) {
+        if (getService() === service) xhttpWakeRefresh.stop()
+    }
 
-        val retired = coreController.retireXHTTPClients()
-        LogUtil.i(AppConfig.TAG, "StartCore-Manager: Retired $retired cached XHTTP clients after device idle")
+    private fun retireXHTTPClientsAfterDeviceIdle(service: Service) {
+        if (getService() !== service) return
+        val powerManager = service.getSystemService(PowerManager::class.java) ?: return
+        if (powerManager.isDeviceIdleMode) return
+
+        try {
+            // The controller checks its running instance while holding the native lifecycle lock.
+            val retired = coreController.retireXHTTPClients()
+            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Retired $retired cached XHTTP clients after device idle")
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LogUtil.e(AppConfig.TAG, "StartCore-Manager: mode=${service.javaClass.simpleName}, phase=wake, " +
+                    "profile=${MmkvManager.getSelectServer()}, operation=retireXHTTPClients", e)
+        }
     }
 
     /**
@@ -264,6 +289,7 @@ object CoreServiceManager {
             val tunFd = currentVpnInterface
 
             isReloading = true
+            connectionTestScope.coroutineContext.cancelChildren()
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload start...")
 
             coreController.stopLoop()
@@ -318,13 +344,15 @@ object CoreServiceManager {
      * Tests with primary URL first, then falls back to alternative URL if needed.
      * Also fetches remote IP information if the delay test was successful.
      */
-    private fun measureV2rayDelay() {
-        if (!isRunning()) {
+    private fun measureV2rayDelay(requestId: String) {
+        val service = getService() ?: return
+        if (!isRunning() || isReloading) {
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
             return
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val service = getService() ?: return@launch
+        connectionTestScope.coroutineContext.cancelChildren()
+        connectionTestScope.launch {
             var time = -1L
             var errorStr = ""
 
@@ -335,6 +363,7 @@ object CoreServiceManager {
                 errorStr = e.message?.substringAfter("\":").orEmpty()
             }
             if (time == -1L) {
+                ensureActive()
                 try {
                     time = coreController.measureDelay(SettingsManager.getDelayTestUrl(true))
                 } catch (e: Exception) {
@@ -343,24 +372,24 @@ object CoreServiceManager {
                 }
             }
 
+            ensureActive()
+            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
             val result = ConnectionTestResult(
                 delayMillis = time,
                 errorMessage = errorStr,
+                country = endpoint?.country,
+                ipAddress = endpoint?.ipAddress,
             )
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result)
-
-            // Only fetch IP info if the delay test was successful
-            if (time >= 0) {
-                SpeedtestManager.getRemoteIPInfo()?.let { ip ->
-                    MessageHelper.sendMsg2UI(
-                        service,
-                        AppConfig.MSG_MEASURE_DELAY_RESULT,
-                        result.copy(
-                            country = ip.country,
-                            ipAddress = ip.ipAddress,
-                        ),
-                    )
+            withContext(Dispatchers.Main.immediate) {
+                if (isRunning()) {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
+                } else {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
                 }
+            }
+        }.invokeOnCompletion { cause ->
+            if (cause is CancellationException) {
+                MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
             }
         }
     }
@@ -499,7 +528,8 @@ object CoreServiceManager {
                 }
 
                 AppConfig.MSG_MEASURE_DELAY -> {
-                    measureV2rayDelay()
+                    if (isOrderedBroadcast) resultCode = Activity.RESULT_OK
+                    measureV2rayDelay(intent.getStringExtra("content").orEmpty())
                 }
             }
 
@@ -515,7 +545,8 @@ object CoreServiceManager {
                 }
 
                 PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED -> {
-                    ctx?.let(::retireXHTTPClientsAfterDeviceIdle)
+                    val powerManager = ctx?.getSystemService(PowerManager::class.java) ?: return
+                    xhttpWakeRefresh.onDeviceIdleModeChanged(powerManager.isDeviceIdleMode)
                 }
             }
         }
