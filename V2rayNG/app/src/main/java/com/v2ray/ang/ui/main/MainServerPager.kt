@@ -248,6 +248,9 @@ fun GroupPagerPage(
             bottom = contentPadding.calculateBottomPadding()
         )
     }
+    val moveUpFromFirstRow: (() -> Unit)? = if (isTelevision && usageInfo != null) {
+        { refreshFocusRequester.requestFocus() }
+    } else onMoveUpFromFirstRow
 
     Box(Modifier.fillMaxSize()) {
         ServerListPage(
@@ -268,9 +271,7 @@ fun GroupPagerPage(
                 move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
                 back = onBackFromList,
                 movePrevious = onOpenDrawer,
-                moveUpFromFirstRow = if (isTelevision && usageInfo != null) {
-                    { refreshFocusRequester.requestFocus() }
-                } else onMoveUpFromFirstRow
+                moveUpFromFirstRow = moveUpFromFirstRow
             ),
             onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
             contentPadding = listPadding
