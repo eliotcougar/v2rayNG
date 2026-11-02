@@ -48,6 +48,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -83,6 +85,8 @@ object CoreServiceManager {
     private var receiversRegistered = false
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val xhttpWakeRefresh = XhttpWakeRefresh()
+    private val mutableRunningState = MutableStateFlow(false)
+    internal val runningState = mutableRunningState.asStateFlow()
 
     @Volatile private var runningProfileGuid = ""
     private val networkResetMutex = Mutex()
@@ -191,6 +195,7 @@ object CoreServiceManager {
                             e,
                         )
                     } else {
+                        mutableRunningState.value = false
                         coreRecoveryEnabled.set(false)
                         primaryPolicyBalancerAvailable.set(false)
                         stopPolicyRoutePolling()
@@ -520,6 +525,7 @@ object CoreServiceManager {
             result.content,
             usesHevTun,
         )
+        mutableRunningState.value = true
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
@@ -557,6 +563,7 @@ object CoreServiceManager {
     }
 
     private fun cancelCoreWork() {
+        mutableRunningState.value = false
         xhttpWakeRefresh.stop()
         stopActiveOutboundPolling()
         coreRecoveryEnabled.set(false)
