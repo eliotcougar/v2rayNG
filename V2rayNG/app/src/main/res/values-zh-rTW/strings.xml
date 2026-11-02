@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="external_import_title">匯入設定？</string>
+    <string name="external_import_message">其他應用程式要求匯入設定。請僅在信任其來源時繼續。現有設定將保留。如需自動更新，請在設定 → %1$s 中允許該自動化應用程式。</string>
+    <string name="external_import_confirm">匯入</string>
     <string name="app_name" translatable="false">v2rayNG</string>
     <string name="app_widget_name">開關</string>
     <string name="app_tile_name">開關</string>
@@ -624,4 +627,8 @@
     <string name="title_pref_remember_routes_per_wifi_network">依 Wi-Fi 網路記住可用路由</string>
     <string name="summary_pref_remember_routes_per_wifi_network">使用目前連線的 Wi-Fi 名稱分別儲存路由記錄。由於 Android 將 Wi-Fi 名稱視為位置資訊加以保護，因此需要精確位置權限。</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">讀取 Wi-Fi 網路名稱需要精確位置權限</string>
+    <string name="title_remote_control">自動化應用程式存取權限</string>
+    <string name="summary_remote_control">允許其他應用程式控制 v2rayNG</string>
+    <string name="remote_control_access_required">請在「設定 → 自動化應用程式存取權限」中允許此應用程式，然後重新開啟此操作。</string>
+    <string name="tasker_current_profile">目前設定檔</string>
 </resources>

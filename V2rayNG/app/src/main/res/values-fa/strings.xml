@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="external_import_title">پیکربندی وارد شود؟</string>
+    <string name="external_import_message">برنامهٔ دیگری می‌خواهد پیکربندی وارد کند. فقط اگر به منبع آن اعتماد دارید ادامه دهید. پروفایل‌های موجود حفظ می‌شوند. برای به‌روزرسانی خودکار، به برنامهٔ خودکارسازی در تنظیمات ← %1$s اجازه دهید.</string>
+    <string name="external_import_confirm">وارد کردن</string>
     <string name="app_name" translatable="false">v2rayNG</string>
     <string name="app_widget_name">تعویض</string>
     <string name="app_tile_name">تعویض</string>
@@ -626,4 +629,8 @@
     <string name="title_pref_remember_routes_per_wifi_network">به‌خاطر سپردن مسیرهای قابل استفاده برای هر شبکه Wi-Fi</string>
     <string name="summary_pref_remember_routes_per_wifi_network">برای نگه‌داری سابقه مسیر جداگانه، از نام شبکه Wi-Fi متصل استفاده می‌کند. به مجوز مکان دقیق نیاز دارد، زیرا Android نام شبکه‌های Wi-Fi را به‌عنوان اطلاعات مکانی محافظت می‌کند.</string>
     <string name="toast_precise_location_required_for_wifi_route_memory">برای خواندن نام شبکه Wi-Fi، مجوز مکان دقیق لازم است</string>
+    <string name="title_remote_control">دسترسی برنامه‌های خودکارسازی</string>
+    <string name="summary_remote_control">اجازه به برنامه‌های دیگر برای کنترل v2rayNG</string>
+    <string name="remote_control_access_required">در تنظیمات ← دسترسی برنامه‌های خودکارسازی، به این برنامه اجازه دهید و سپس این عمل را دوباره باز کنید.</string>
+    <string name="tasker_current_profile">پروفایل فعلی</string>
 </resources>
