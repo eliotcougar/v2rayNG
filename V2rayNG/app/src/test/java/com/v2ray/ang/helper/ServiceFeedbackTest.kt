@@ -4,6 +4,7 @@ import android.content.Context
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.UserMessage
+import com.v2ray.ang.extension.AccessibilityLiveRegionMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -15,7 +16,7 @@ class ServiceFeedbackTest {
         val context = mock(Context::class.java)
         val details = "Configuration failed\nDetailed reason"
         assertEquals(
-            UserMessage(details, UserMessage.Type.ERROR),
+            UserMessage(details, UserMessage.Type.ERROR, liveRegionMode = AccessibilityLiveRegionMode.ASSERTIVE),
             MessageHelper.serviceMessage(context, AppConfig.MSG_STATE_START_FAILURE, details),
         )
     }
