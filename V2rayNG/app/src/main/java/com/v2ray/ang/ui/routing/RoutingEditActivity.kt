@@ -36,6 +36,7 @@ import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvAwareImePadding
@@ -46,7 +47,9 @@ import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.extension.nullIfBlank
 import com.v2ray.ang.extension.toastSuccess
+import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.handler.SettingsManager
+import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.ui.apppicker.AppPickerActivity
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -57,6 +60,7 @@ import com.v2ray.ang.ui.compose.NavigationBarsSpacer
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -113,9 +117,16 @@ class RoutingEditActivity : BaseComponentActivity() {
 
     private fun deleteServer(): Boolean {
         if (ruleId.isNotEmpty()) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                SettingsManager.removeRoutingRulesetById(ruleId)
-                withContext(Dispatchers.Main) { finish() }
+            lifecycleScope.launch {
+                try {
+                    val removed = withContext(Dispatchers.IO) { SettingsManager.removeRoutingRulesetById(ruleId) }
+                    if (removed) finish() else toastError(R.string.toast_failure)
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    LogUtil.e(AppConfig.TAG, "RoutingEditActivity: failed to delete rule $ruleId", error)
+                    toastError(R.string.toast_failure)
+                }
             }
         }
         return true
@@ -203,7 +214,7 @@ fun RoutingEditScreen(
                     if (initial != null) add(
                         AppTopBarAction(
                             icon = painterResource(R.drawable.ic_delete_24dp),
-                            label = stringResource(R.string.acc_delete),
+                            label = stringResource(R.string.acc_delete_routing_rule_named, initial.remarks.orEmpty()),
                             onClick = { showDeleteConfirm = true }
                         )
                     )

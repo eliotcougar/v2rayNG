@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -30,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +40,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -45,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
+import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.enums.RoutingType
 import com.v2ray.ang.extension.toastError
 import com.v2ray.ang.extension.toastSuccess
@@ -61,6 +72,9 @@ import com.v2ray.ang.ui.compose.DpadReorderItem
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 import com.v2ray.ang.ui.compose.ReorderableListItem
+import com.v2ray.ang.ui.compose.ReorderCommand
+import com.v2ray.ang.ui.compose.reorderAccessibilityActions
+import com.v2ray.ang.ui.compose.rememberAccessibilityActionFeedback
 import com.v2ray.ang.ui.compose.SelectListDialog
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.colorConfigType
@@ -84,6 +98,7 @@ import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -125,6 +140,14 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
             onEditRule = { ruleId ->
                 startActivity(Intent(this, RoutingEditActivity::class.java).putExtra(RoutingEditActivity.EXTRA_RULE_ID, ruleId))
             },
+            onUpdateRule = { ruleId, item ->
+                changeRules("update", ruleId) { check(viewModel.update(ruleId, item)) }
+            },
+            onDeleteRule = { ruleId -> changeRules("delete", ruleId) { viewModel.remove(ruleId) } },
+            onMoveRule = { ruleId, targetId -> changeRules("move", ruleId) { viewModel.move(ruleId, targetId) } },
+            onMoveRuleCommand = { ruleId, command, onMoved ->
+                changeRules("move", ruleId) { if (viewModel.move(ruleId, command)) onMoved() }
+            },
             onDomainStrategySelected = { value ->
                 MmkvManager.encodeSettings(AppConfig.PREF_ROUTING_DOMAIN_STRATEGY, value)
                 domainStrategyState.value = value
@@ -138,7 +161,21 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.reload()
+        changeRules("reload") { viewModel.reload() }
+    }
+
+    private fun changeRules(operation: String, ruleId: String? = null, change: suspend () -> Unit): Boolean {
+        lifecycleScope.launch {
+            try {
+                change()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                LogUtil.e(AppConfig.TAG, "RoutingSettingActivity: failed to $operation rule $ruleId", error)
+                toastError(R.string.toast_failure)
+            }
+        }
+        return true
     }
 
     private fun getDomainStrategy(): String {
@@ -149,11 +186,17 @@ class RoutingSettingActivity : HelperBaseComponentActivity() {
     private fun importPredefined(type: RoutingType) {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                SettingsManager.resetRoutingRulesetsFromPresets(this@RoutingSettingActivity, type)
-                launch(Dispatchers.Main) {
-                    viewModel.reload()
-                    toastSuccess(R.string.toast_success)
+                val result = SettingsManager.resetRoutingRulesetsFromPresets(this@RoutingSettingActivity, type)
+                withContext(Dispatchers.Main) {
+                    if (result) {
+                        viewModel.reload()
+                        toastSuccess(R.string.toast_success)
+                    } else {
+                        toastError(R.string.toast_failure)
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 LogUtil.e(AppConfig.TAG, "Failed to import predefined ruleset", e)
             }
@@ -216,12 +259,16 @@ private class RoutingRowFocusTargets {
 }
 
 @Composable
-fun RoutingSettingScreen(
+internal fun RoutingSettingScreen(
     viewModel: RoutingSettingsViewModel,
     domainStrategyState: MutableStateFlow<String>,
     onBackClick: () -> Unit,
     onAddRule: () -> Unit,
     onEditRule: (String) -> Unit,
+    onUpdateRule: (String, RulesetItem) -> Unit,
+    onDeleteRule: (String) -> Unit,
+    onMoveRule: (String, String) -> Unit,
+    onMoveRuleCommand: (String, ReorderCommand, onMoved: () -> Unit) -> Boolean,
     onDomainStrategySelected: (String) -> Unit,
     onImportPredefined: (RoutingType) -> Unit,
     onImportClipboard: () -> Unit,
@@ -235,7 +282,8 @@ fun RoutingSettingScreen(
     val rowFocusTargets = rememberDpadFocusTargets(rulesetIds) { RoutingRowFocusTargets() }
     val domainStrategy by domainStrategyState.collectAsState()
     var showPresetDialog by remember { mutableStateOf(false) }
-    var deleteRuleId by remember { mutableStateOf<String?>(null) }
+    var deleteRuleId by rememberSaveable { mutableStateOf<String?>(null) }
+    val actionFeedback = rememberAccessibilityActionFeedback()
     val navigationFocusRequester = rememberDpadFocusRequester()
     val domainStrategyFocusRequester = remember { FocusRequester() }
     val domainStrategies = stringArrayResource(R.array.routing_domain_strategy).toList()
@@ -257,7 +305,7 @@ fun RoutingSettingScreen(
     }
     val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
         reorderIndicesForKeys(rulesetIds, from.key, to.key)?.let { (fromIndex, toIndex) ->
-            viewModel.move(fromIndex, toIndex)
+            onMoveRule(rulesetIds[fromIndex], rulesetIds[toIndex])
         }
     }
 
@@ -326,17 +374,52 @@ fun RoutingSettingScreen(
                     index = index,
                     itemCount = rulesets.size,
                     targetIndex = ::verticalDpadReorderTarget,
-                    onMove = viewModel::move
+                    onMove = { fromIndex, toIndex ->
+                        val fromId = rulesetIds.getOrNull(fromIndex)
+                        val toId = rulesetIds.getOrNull(toIndex)
+                        if (fromId != null && toId != null) onMoveRule(fromId, toId)
+                    }
                 )
                 val isMoving = dpadReorderState.isMoving(ruleset.id)
                 val actionFocusOrder = remember(focusTargets) {
                     listOf(focusTargets.row, focusTargets.edit, focusTargets.delete, focusTargets.toggle)
+                }
+                val ruleName = ruleset.remarks.orEmpty()
+                val toggleLabel = stringResource(
+                    if (ruleset.enabled) R.string.acc_disable_routing_rule else R.string.acc_enable_routing_rule
+                )
+                val editLabel = stringResource(R.string.acc_edit_routing_rule_named, ruleName)
+                val deleteLabel = stringResource(R.string.acc_delete_routing_rule_named, ruleName)
+                val outbound = ruleset.outboundTag.ifBlank { AppConfig.TAG_PROXY }
+                val routeDescription = when (outbound) {
+                    AppConfig.TAG_BLOCKED -> stringResource(R.string.acc_routing_rule_blocked)
+                    AppConfig.TAG_DIRECT -> stringResource(R.string.acc_routing_rule_routed_directly)
+                    else -> stringResource(R.string.acc_routing_rule_routed_through, outbound)
+                }
+                val summary = stringResource(R.string.acc_routing_rule_summary, ruleName, routeDescription)
+                val accessibilitySummary = if (ruleset.locked == true) {
+                    stringResource(R.string.acc_routing_rule_locked_summary, summary)
+                } else summary
+                val ruleState = stringResource(
+                    if (ruleset.enabled) R.string.acc_routing_rule_enabled else R.string.acc_routing_rule_disabled
+                )
+                val actions = listOf(
+                    CustomAccessibilityAction(editLabel) { onEditRule(ruleset.id); true },
+                    CustomAccessibilityAction(deleteLabel) { deleteRuleId = ruleset.id; true },
+                ) + reorderAccessibilityActions(index, rulesets.size, actionFeedback) { command, onMoved ->
+                    onMoveRuleCommand(ruleset.id, command, onMoved)
                 }
                 ReorderableItem(reorderableState, key = ruleset.id, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                     ReorderableListItem(scope = this, isDragging = isDragging, isMoving = isMoving) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .semantics(mergeDescendants = true) {
+                                    contentDescription = accessibilitySummary
+                                    stateDescription = ruleState
+                                    customActions = actions
+                                    onClick(label = toggleLabel, action = null)
+                                }
                                 .then(
                                     if (isTelevision) {
                                         Modifier
@@ -364,16 +447,22 @@ fun RoutingSettingScreen(
                                             .dpadLongPressToMove(
                                                 enabled = isTelevision,
                                                 item = dpadReorderItem,
-                                                onClick = { onEditRule(ruleset.id) }
+                                                onClick = { onUpdateRule(ruleset.id, ruleset.copy(enabled = !ruleset.enabled)) },
+                                                addFocusTarget = false,
                                             )
                                             .padding(horizontal = 24.dp, vertical = 16.dp)
                                     } else {
                                         Modifier.padding(horizontal = 16.dp)
                                     }
+                                )
+                                .toggleable(
+                                    value = ruleset.enabled,
+                                    role = Role.Switch,
+                                    onValueChange = { onUpdateRule(ruleset.id, ruleset.copy(enabled = it)) },
                                 ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).clearAndSetSemantics {}) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = ruleset.remarks ?: "",
@@ -385,7 +474,7 @@ fun RoutingSettingScreen(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Icon(
                                             painter = painterResource(R.drawable.ic_lock_24dp),
-                                            contentDescription = stringResource(R.string.action_locked),
+                                            contentDescription = null,
                                             modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -413,9 +502,9 @@ fun RoutingSettingScreen(
                                 Row(Modifier.padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_edit_24dp),
-                                        label = stringResource(R.string.action_edit),
+                                        label = editLabel,
                                         focusRequester = focusTargets.edit,
-                                        modifier = Modifier.dpadRowActionNavigation(
+                                        modifier = Modifier.clearAndSetSemantics {}.dpadRowActionNavigation(
                                             current = focusTargets.edit,
                                             order = actionFocusOrder,
                                             previousRow = previousTargets?.edit,
@@ -426,9 +515,9 @@ fun RoutingSettingScreen(
                                     )
                                     AppIconButton(
                                         icon = painterResource(R.drawable.ic_delete_24dp),
-                                        label = stringResource(R.string.action_delete),
+                                        label = deleteLabel,
                                         focusRequester = focusTargets.delete,
-                                        modifier = Modifier.dpadRowActionNavigation(
+                                        modifier = Modifier.clearAndSetSemantics {}.dpadRowActionNavigation(
                                             current = focusTargets.delete,
                                             order = actionFocusOrder,
                                             previousRow = previousTargets?.delete,
@@ -442,11 +531,11 @@ fun RoutingSettingScreen(
                                         checked = ruleset.enabled,
                                         onCheckedChange = { checked ->
                                             val updated = ruleset.copy(enabled = checked)
-                                            viewModel.update(ruleset.id, updated)
+                                            onUpdateRule(ruleset.id, updated)
                                         },
                                         label = stringResource(R.string.routing_settings_enable_rule),
                                         focusRequester = focusTargets.toggle,
-                                        modifier = Modifier.dpadRowActionNavigation(
+                                        modifier = Modifier.clearAndSetSemantics {}.dpadRowActionNavigation(
                                             current = focusTargets.toggle,
                                             order = actionFocusOrder,
                                             previousRow = previousTargets?.toggle,
@@ -457,18 +546,24 @@ fun RoutingSettingScreen(
                                 }
                             } else {
                                 Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = 8.dp)) {
-                                AppIconButton(
-                                    icon = painterResource(R.drawable.ic_edit_24dp),
-                                    label = stringResource(R.string.action_edit),
-                                    onClick = { onEditRule(ruleset.id) }
-                                )
+                                Row {
+                                    AppIconButton(
+                                        icon = painterResource(R.drawable.ic_edit_24dp),
+                                        label = editLabel,
+                                        modifier = Modifier.clearAndSetSemantics {},
+                                        onClick = { onEditRule(ruleset.id) }
+                                    )
+                                    AppIconButton(
+                                        icon = painterResource(R.drawable.ic_delete_24dp),
+                                        label = deleteLabel,
+                                        modifier = Modifier.clearAndSetSemantics {},
+                                        onClick = { deleteRuleId = ruleset.id }
+                                    )
+                                }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Switch(
                                     checked = ruleset.enabled,
-                                    onCheckedChange = { checked ->
-                                        val updated = ruleset.copy(enabled = checked)
-                                        viewModel.update(ruleset.id, updated)
-                                    },
+                                    onCheckedChange = null,
                                     modifier = Modifier.scale(0.7f),
                                     colors = SwitchDefaults.colors(
                                         checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
@@ -488,12 +583,13 @@ fun RoutingSettingScreen(
     }
 
 
-    deleteRuleId?.let { ruleId ->
+    rulesets.firstOrNull { it.id == deleteRuleId }?.let { rule ->
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_routing_rule),
+            itemName = rule.remarks,
             onConfirm = {
-                viewModel.remove(ruleId)
                 deleteRuleId = null
+                onDeleteRule(rule.id)
             },
             onDismiss = { deleteRuleId = null }
         )
