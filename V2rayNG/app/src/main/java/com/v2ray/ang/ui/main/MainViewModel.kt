@@ -449,7 +449,18 @@ class MainViewModel(
     }
 
     private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
-        mutableServerGroupState(groupId).value = buildGroupUiState(groupId, servers)
+        val groupState = buildGroupUiState(groupId, servers)
+        mutableServerGroupState(groupId).value = groupState
+        _uiState.update { state ->
+            val index = state.groups.indexOfFirst { it.id == groupId }
+            if (index < 0 || state.groups[index].serverCount == groupState.servers.size) {
+                state
+            } else {
+                val groups = state.groups.toMutableList()
+                groups[index] = groups[index].copy(serverCount = groupState.servers.size)
+                state.copy(groups = groups)
+            }
+        }
     }
 
     private fun buildGroupUiState(groupId: String, servers: List<ServersCache>): ServerGroupUiState {
@@ -458,16 +469,6 @@ class MainViewModel(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers)
         )
-        _uiState.update { state ->
-            val index = state.groups.indexOfFirst { it.id == groupId }
-            if (index < 0 || state.groups[index].serverCount == filteredServers.size) {
-                state
-            } else {
-                val groups = state.groups.toMutableList()
-                groups[index] = groups[index].copy(serverCount = filteredServers.size)
-                state.copy(groups = groups)
-            }
-        }
     }
 
     private fun buildServerRows(groupId: String, servers: List<ServersCache>): List<ServerRowUiModel> {
@@ -799,6 +800,14 @@ class MainViewModel(
             } catch (error: Exception) {
                 LogUtil.e(AppConfig.TAG, "Failed to load selected group: $id", error)
             }
+        }
+    }
+
+    fun reloadServerList() {
+        val groupId = uiState.value.selectedGroupId
+        selectedGroupLoadJob?.cancel()
+        selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
+            updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
         }
     }
 

@@ -64,6 +64,8 @@ class MainSubscriptionRefreshTest {
             }
             val group = fixture.viewModel.uiState.value.groups.first { it.id == GROUP_A }
             assertEquals(2, fixture.viewModel.serverGroupState(GROUP_A).value.servers.size)
+            assertEquals(2, group.serverCount)
+            assertEquals(3, fixture.viewModel.uiState.value.groups.first { it.id == ALL }.serverCount)
             assertEquals("https://example.com/group-a", group.usageInfo?.webPageUrl)
             assertEquals(100L, group.usageInfo?.total)
             assertEquals("Group A", group.remarks)
