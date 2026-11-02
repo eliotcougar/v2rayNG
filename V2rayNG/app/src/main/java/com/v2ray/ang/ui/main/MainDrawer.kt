@@ -223,11 +223,13 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
     onClose: () -> Unit,
     onNavigate: (MainDestination) -> Unit
 ) {
-    val focusRequesters = remember { List(drawerItems.size) { FocusRequester() } }
+    val tetheringEnabled = booleanResource(R.bool.shizuku_tethering_enabled)
+    val visibleItems = drawerItems.filter { tetheringEnabled || it != MainDestination.Tethering }
+    val focusRequesters = remember(visibleItems) { List(visibleItems.size) { FocusRequester() } }
     val drawerScrollState = rememberScrollState()
-    var focusedIndex by remember { mutableIntStateOf(0) }
+    var focusedIndex by remember(visibleItems) { mutableIntStateOf(0) }
 
-    LaunchedEffect(drawerValue, focusGeneration) {
+    LaunchedEffect(drawerValue, focusGeneration, focusRequesters) {
         if (drawerValue == TvDrawerValue.Open) {
             requestFocusWhenReady(focusRequesters[focusedIndex], focusRequesters.first())
         }
@@ -294,7 +296,7 @@ private fun NavigationDrawerScope.TvMainDrawerContent(
                 }
             }
 
-            drawerItems.forEachIndexed { index, item ->
+            visibleItems.forEachIndexed { index, item ->
                 if (index == primaryDrawerItems.size) {
                     AppDivider(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp))
                 }

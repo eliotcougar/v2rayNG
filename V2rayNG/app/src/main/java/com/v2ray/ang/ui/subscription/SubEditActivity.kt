@@ -310,7 +310,7 @@ fun SubEditScreen(
     if (showDeleteConfirm) {
         DeleteConfirmDialog(
             message = stringResource(R.string.confirm_delete_subscription_group),
-            itemName = initial.remarks,
+            itemName = subscriptionName,
             onConfirm = onDelete,
             onDismiss = { showDeleteConfirm = false }
         )
