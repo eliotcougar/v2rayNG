@@ -1,14 +1,19 @@
 package com.v2ray.ang.ui.routing
 
 import android.app.Application
+import android.content.Context
+import android.content.res.AssetManager
+import android.util.Log
 import com.tencent.mmkv.MMKV
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.entities.RulesetItem
+import com.v2ray.ang.enums.RoutingType
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.util.JsonUtil
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,6 +24,8 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.reset
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.io.ByteArrayInputStream
+import java.io.IOException
 
 class RoutingSettingsViewModelTest {
     private lateinit var storage: MMKV
@@ -125,7 +132,7 @@ class RoutingSettingsViewModelTest {
     }
 
     @Test
-    fun reimportWithLockedDuplicatesKeepsEveryRowAddressable() = runBlocking<Unit> {
+    fun reimportWithLockedDuplicatesRetainsEachLockedRuleExactlyOnce() = runBlocking<Unit> {
         val exported = """[{"id":"same","remarks":"Locked","locked":true},{"id":"same","remarks":"Locked","locked":true},{"remarks":"Other"}]"""
         saved = exported
         viewModel.reload()
@@ -135,7 +142,97 @@ class RoutingSettingsViewModelTest {
             viewModel.reload()
             val loaded = viewModel.getAll()
             assertEquals(retainedIds, loaded.take(retainedIds.size).map { it.id })
+            assertEquals(3, loaded.size)
+            assertEquals(2, loaded.count { it.locked == true })
             assertEquals(loaded.size, loaded.map { it.id }.toSet().size)
         }
+    }
+
+    @Test
+    fun importingAnEditedLockedIdentityPreservesTheSavedRuleAndOtherSameNamedRules() = runBlocking<Unit> {
+        val locked = RulesetItem(id = "locked", remarks = "Same", domain = listOf("saved.example"), locked = true)
+        val replacement = RulesetItem(id = "other", remarks = "Same")
+        saved = JsonUtil.toJson(listOf(locked, RulesetItem(id = "old")))
+        viewModel.reload()
+
+        assertTrue(SettingsManager.resetRoutingRulesets(JsonUtil.toJson(listOf(locked.copy(locked = false), replacement))))
+        viewModel.reload()
+
+        assertEquals(listOf(locked, replacement), viewModel.getAll())
+        assertEquals(listOf(locked, replacement), MmkvManager.decodeRoutingRulesets())
+    }
+
+    @Test
+    fun refusedResetDoesNotPersistPartialIdentityRepairsOrReplaceVisibleRules() = runBlocking<Unit> {
+        val original = """[{"id":"same","locked":true},{"id":"same","locked":true}]"""
+        saved = original
+        whenever(storage.encode(any<String>(), any<String>())).thenReturn(false)
+
+        mockStatic(Log::class.java).use {
+            assertFalse(SettingsManager.resetRoutingRulesets(JsonUtil.toJson(listOf(RulesetItem(id = "new")))))
+        }
+
+        assertEquals(original, saved)
+        assertEquals(emptyList<RulesetItem>(), viewModel.getAll())
+    }
+
+    @Test
+    fun presetResetPreservesLockedContentsAndDistinctSameNamedRules() {
+        val locked = RulesetItem(id = "locked", remarks = "Same", locked = true)
+        val other = RulesetItem(id = "other", remarks = "Same")
+        saved = JsonUtil.toJson(listOf(locked, RulesetItem(id = "old")))
+        val context = presetContext(JsonUtil.toJson(listOf(locked.copy(locked = false), other)))
+
+        assertTrue(SettingsManager.resetRoutingRulesetsFromPresets(context, RoutingType.WHITE))
+
+        assertEquals(listOf(locked, other), MmkvManager.decodeRoutingRulesets())
+    }
+
+    @Test
+    fun refusedPresetResetReturnsFalseWithoutPartialIdentityRepairs() {
+        val original = """[{"id":"same","locked":true},{"id":"same","locked":true}]"""
+        saved = original
+        whenever(storage.encode(any<String>(), any<String>())).thenReturn(false)
+        val context = presetContext(JsonUtil.toJson(listOf(RulesetItem(id = "new"))))
+
+        mockStatic(Log::class.java).use {
+            assertFalse(SettingsManager.resetRoutingRulesetsFromPresets(context, RoutingType.WHITE))
+        }
+
+        assertEquals(original, saved)
+    }
+
+    @Test
+    fun emptyOrInvalidPresetsReturnFalseWithoutReplacingSavedRules() {
+        val original = JsonUtil.toJson(listOf(RulesetItem(id = "keep")))
+        saved = original
+
+        mockStatic(Log::class.java).use {
+            for (content in listOf("", "[]", "null", "invalid JSON")) {
+                assertFalse(SettingsManager.resetRoutingRulesetsFromPresets(presetContext(content), RoutingType.WHITE))
+                assertEquals(original, saved)
+            }
+        }
+        verify(storage, never()).encode(any<String>(), any<String>())
+    }
+
+    @Test
+    fun unreadablePresetReturnsFalseWithoutWriting() {
+        val context = presetContext("")
+        whenever(context.assets.open(RoutingType.WHITE.fileName)).thenThrow(IOException("Asset unavailable"))
+
+        mockStatic(Log::class.java).use {
+            assertFalse(SettingsManager.resetRoutingRulesetsFromPresets(context, RoutingType.WHITE))
+        }
+
+        verify(storage, never()).encode(any<String>(), any<String>())
+    }
+
+    private fun presetContext(content: String): Context {
+        val context = mock<Context>()
+        val assets = mock<AssetManager>()
+        whenever(context.assets).thenReturn(assets)
+        whenever(assets.open(RoutingType.WHITE.fileName)).thenAnswer { ByteArrayInputStream(content.toByteArray()) }
+        return context
     }
 }
