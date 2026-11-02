@@ -232,7 +232,7 @@ fun ProxyChainScreen(
     val members = savedMembers
     val memberIds = members.map { it.id }
     var nextMemberId by rememberSaveable { mutableLongStateOf(initialMembers.size.toLong()) }
-    var showProfileDeleteConfirm by remember { mutableStateOf(false) }
+    var showProfileDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     var memberToDeleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }
     var pendingAddFocus by remember { mutableStateOf(false) }

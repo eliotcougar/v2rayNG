@@ -214,7 +214,7 @@ fun ServerCustomConfigScreen(
     val textFieldState = rememberTextFieldState(initialText = initialContent)
     val isTelevision = isTelevisionDevice()
     val editorTvState = if (isTelevision) rememberTvTextFieldState() else null
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
     val verticalScroll = rememberScrollState()
