@@ -506,10 +506,9 @@ object CoreServiceManager {
         runningProfileGuid = ""
         connectionTestScope.coroutineContext.cancelChildren()
         coreScope.coroutineContext.cancelChildren()
-        val service = getService() ?: return false
-
         networkMonitor?.unregister()
         networkMonitor = null
+        val service = getService() ?: return false
 
         if (isRunning()) {
             coreScope.launch {

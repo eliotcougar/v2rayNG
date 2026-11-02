@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -179,6 +180,7 @@ class NetworkMonitor(
             try {
                 delay(HANDOVER_DEBOUNCE_MS)
                 synchronized(this@NetworkMonitor) {
+                    coroutineContext.ensureActive()
                     if (registered && upstream == network) {
                         notifyNetworkEvent(network, currentCapabilities, isHandover = true)
                     }

@@ -5,11 +5,14 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
+import com.tencent.mmkv.MMKV
+import com.v2ray.ang.util.LogUtil
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mockConstruction
 import org.mockito.Mockito.mockStatic
@@ -25,6 +28,19 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 class NetworkMonitorTest {
+    companion object {
+        @BeforeAll
+        @JvmStatic
+        fun initializeLogging() {
+            mockStatic(MMKV::class.java).use { mmkv ->
+                val settings = mock<MMKV>()
+                mmkv.`when`<MMKV> { MMKV.mmkvWithID("SETTING", MMKV.MULTI_PROCESS_MODE) }
+                    .thenReturn(settings)
+                LogUtil.refreshLogLevel()
+            }
+        }
+    }
+
     @Test
     fun callbacksAfterUnregisterCannotChangeTheUnderlay() = Fixture().use { f ->
         val network = mock<Network>()
