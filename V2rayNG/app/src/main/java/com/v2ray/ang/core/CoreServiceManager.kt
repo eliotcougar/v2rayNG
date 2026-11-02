@@ -84,6 +84,7 @@ object CoreServiceManager {
     private var teardownExecutor: ExecutorService? = null
     private var receiversRegistered = false
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val feedbackState = ServiceFeedbackState()
     private val xhttpWakeRefresh = XhttpWakeRefresh()
     private val mutableRunningState = MutableStateFlow(false)
     internal val runningState = mutableRunningState.asStateFlow()
@@ -196,6 +197,7 @@ object CoreServiceManager {
                         )
                     } else {
                         mutableRunningState.value = false
+                        feedbackState.startFailed()
                         coreRecoveryEnabled.set(false)
                         primaryPolicyBalancerAvailable.set(false)
                         stopPolicyRoutePolling()
@@ -208,7 +210,7 @@ object CoreServiceManager {
                         )
                         getService()?.let { service ->
                             val message = service.getString(R.string.notification_core_recovery_failed)
-                            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
+                            MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_FAILURE, message)
                             NotificationManager.showCoreFailure(message)
                         }
                     }
@@ -424,13 +426,16 @@ object CoreServiceManager {
         TetheringCoreSync.onStarting()
         try {
             doStartCoreLoop(service, vpnInterface)
+            feedbackState.started()
+            MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_SUCCESS, getRunningServerName())
             return true
         } catch (e: Exception) {
+            feedbackState.startFailed()
             val message = e.message?.takeUnless { it.isBlank() } ?: e.javaClass.simpleName
             LogUtil.e(AppConfig.TAG, "StartCore-Manager: $message", e)
             TetheringCoreSync.onStartFailed(service, message)
             cleanupFailedStart(service)
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_FAILURE, message)
+            MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_FAILURE, message)
             NotificationManager.cancelNotification()
             return false
         }
@@ -526,7 +531,6 @@ object CoreServiceManager {
             usesHevTun,
         )
         mutableRunningState.value = true
-        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
@@ -537,6 +541,7 @@ object CoreServiceManager {
      * @return True if the core was stopped successfully, false otherwise.
      */
     fun stopCoreLoop(): Boolean {
+        feedbackState.requestStop()
         cancelCoreWork()
         val service = getService()
         if (service == null) {
@@ -554,7 +559,6 @@ object CoreServiceManager {
             browserDialer = null
         }
 
-        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
         NotificationManager.cancelNotification()
 
         unregisterCoreReceivers(service)
@@ -934,6 +938,10 @@ object CoreServiceManager {
          */
         override fun shutdown(): Long {
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: CoreCallback shutdown")
+            // Internal warm resets close the instance without this completed-stop callback.
+            if (feedbackState.stopped()) {
+                getService()?.let { MessageHelper.sendServiceEvent(it, AppConfig.MSG_STATE_STOP_SUCCESS) }
+            }
             return 0
         }
 
@@ -1030,6 +1038,7 @@ object CoreServiceManager {
 
                 AppConfig.MSG_STATE_RESTART -> {
                     LogUtil.i(AppConfig.TAG, "StartCore-Manager: Restart service")
+                    feedbackState.restarting()
                     // The UI and daemon run in separate processes, so acknowledge the active
                     // daemon before stopping it instead of relying on possibly stale UI state.
                     if (isOrderedBroadcast) resultCode = Activity.RESULT_OK

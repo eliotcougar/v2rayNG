@@ -177,6 +177,7 @@ dependencies {
     implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.glance.appwidget.multiprocess)
     implementation(libs.lifecycle.runtime.compose)
+    implementation(libs.lifecycle.process)
     implementation(libs.coil.compose)
 
     debugImplementation(libs.androidx.compose.ui.tooling)

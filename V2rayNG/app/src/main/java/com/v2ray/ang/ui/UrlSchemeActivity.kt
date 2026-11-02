@@ -73,7 +73,7 @@ class UrlSchemeActivity : BaseComponentActivity() {
                     finish()
                 }
                 UrlSchemeState.Failed -> {
-                    toast(R.string.import_subscription_failure)
+                    toastError(R.string.import_subscription_failure)
                     finish()
                 }
                 UrlSchemeState.Cancelled -> finish()

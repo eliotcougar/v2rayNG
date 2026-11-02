@@ -7,11 +7,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.ResultReceiver
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.CoreUrlDownloadRequest
+import com.v2ray.ang.R
 import com.v2ray.ang.dto.SubscriptionUpdateMessage
 import com.v2ray.ang.dto.TestServiceMessage
+import com.v2ray.ang.dto.UserMessage
+import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.service.CoreTestService
 import com.v2ray.ang.service.SubscriptionUpdateService
 import com.v2ray.ang.util.LogUtil
@@ -40,8 +44,34 @@ object MessageHelper {
         what: Int,
         content: Serializable,
         onResult: (handled: Boolean) -> Unit,
-    ) {
-        sendOrderedMsg2Service(ctx, messageIntent(AppConfig.BROADCAST_ACTION_SERVICE, what, content), onResult)
+    ) = sendMsgForResult(ctx, messageIntent(AppConfig.BROADCAST_ACTION_SERVICE, what, content), onResult)
+
+    /** State receivers still receive the event; a foreground process acknowledges ownership of feedback. */
+    internal fun sendServiceEvent(ctx: Context, what: Int, content: String = "") {
+        val message = requireNotNull(serviceMessage(ctx, what, content))
+        sendMsgForResult(ctx, messageIntent(AppConfig.BROADCAST_ACTION_ACTIVITY, what, content)) { handled ->
+            if (!handled) {
+                NotificationHelper.notifyTransientMessage(ctx, message)
+            }
+        }
+    }
+
+    internal fun serviceMessage(context: Context, what: Int, content: String? = null): UserMessage? {
+        val resource = serviceMessageResource(what) ?: return null
+        val isError = what == AppConfig.MSG_STATE_START_FAILURE
+        return UserMessage(
+            content?.takeIf { isError && it.isNotBlank() }
+                ?: AppLocaleManager.localizedContext(context).getString(resource),
+            type = if (isError) UserMessage.Type.ERROR else UserMessage.Type.SUCCESS,
+        )
+    }
+
+    @StringRes
+    internal fun serviceMessageResource(what: Int): Int? = when (what) {
+        AppConfig.MSG_STATE_START_SUCCESS -> R.string.toast_services_success
+        AppConfig.MSG_STATE_START_FAILURE -> R.string.toast_services_failure
+        AppConfig.MSG_STATE_STOP_SUCCESS -> R.string.toast_services_stop
+        else -> null
     }
 
     internal fun sendCoreUrlDownloadRequest(
@@ -52,10 +82,10 @@ object MessageHelper {
     ) {
         val intent = messageIntent(AppConfig.BROADCAST_ACTION_SERVICE, AppConfig.MSG_DOWNLOAD_URL, request)
             .putExtra(CoreUrlDownloadRequest.EXTRA_RESULT_RECEIVER, resultReceiver)
-        sendOrderedMsg2Service(ctx, intent, onResult)
+        sendMsgForResult(ctx, intent, onResult)
     }
 
-    private fun sendOrderedMsg2Service(
+    private fun sendMsgForResult(
         ctx: Context,
         intent: Intent,
         onResult: (handled: Boolean) -> Unit,
@@ -76,7 +106,7 @@ object MessageHelper {
                 null,
             )
         } catch (e: Exception) {
-            LogUtil.e(AppConfig.TAG, "Failed to send ordered message to service", e)
+            LogUtil.e(AppConfig.TAG, "Failed to send ordered message with action: ${intent.action}", e)
             onResult(false)
         }
     }
