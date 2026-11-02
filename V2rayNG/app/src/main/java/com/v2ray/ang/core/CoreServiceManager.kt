@@ -1024,6 +1024,10 @@ object CoreServiceManager {
                     }
                 }
 
+                AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES -> {
+                    setActiveOutboundUpdatesEnabled(intent.getStringExtra("content").toBoolean())
+                }
+
                 AppConfig.MSG_UNREGISTER_CLIENT -> {
                     // nothing to do
                 }

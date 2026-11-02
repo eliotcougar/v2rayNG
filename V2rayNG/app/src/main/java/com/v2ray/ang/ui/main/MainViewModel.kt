@@ -6,7 +6,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.R
-import com.v2ray.ang.core.CoreServiceManager
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
@@ -313,7 +312,10 @@ class MainViewModel(
     }
 
     private fun updateActiveOutboundUpdates(guid: String? = _uiState.value.selectedGuid) {
-        CoreServiceManager.setActiveOutboundUpdatesEnabled(mainUiVisible && shouldPollActiveOutbound(guid))
+        dataSource.sendMsg2Service(
+            AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES,
+            (mainUiVisible && shouldPollActiveOutbound(guid)).toString(),
+        )
     }
 
     private fun outboundTargetDisplayName(target: String): String {
@@ -1086,7 +1088,7 @@ class MainViewModel(
         selectedGroupLoadJob?.cancel()
         reloadJob?.cancel()
         filterJob?.cancel()
-        CoreServiceManager.setActiveOutboundUpdatesEnabled(false)
+        dataSource.sendMsg2Service(AppConfig.MSG_SET_ACTIVE_OUTBOUND_UPDATES, "false")
         cancelAllPing()
         dataSource.close()
         super.onCleared()
