@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,7 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.first
@@ -42,6 +46,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -58,6 +64,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.DpadReorderDirection
@@ -214,6 +221,9 @@ fun GroupPagerPage(
     onEditServer: (String, ProfileItem) -> Unit,
     onShareServer: (String, ProfileItem, Boolean, () -> Boolean) -> Unit,
     onRemoveServer: (String, String) -> Unit,
+    usageInfo: SubscriptionUsageInfo?,
+    groupTitle: String,
+    onOpenLink: (String) -> Unit,
     onOpenDrawer: (() -> Boolean) -> Unit,
     onBackFromList: () -> Unit,
     onMoveUpFromFirstRow: (() -> Unit)?,
@@ -222,29 +232,72 @@ fun GroupPagerPage(
     val groupStateFlow = remember(mainViewModel, groupId) { mainViewModel.serverGroupState(groupId) }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
     val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
-    ServerListPage(
-        rows = groupState.rows,
-        selectedGuid = selectedGuid,
-        locateTarget = locateTarget?.takeIf { it.groupId == groupId },
-        canReorder = canReorder,
-        doubleColumnDisplay = doubleColumnDisplay,
-        revealSelectedGeneration = revealSelectedGeneration,
-        groupId = groupId,
-        lazyListStates = lazyListStates,
-        lazyGridStates = lazyGridStates,
-        collectionActions = ServerCollectionActions(
-            select = onSelectServer,
-            edit = onEditServer,
-            share = onShareServer,
-            remove = onRemoveServer,
-            move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
-            back = onBackFromList,
-            movePrevious = onOpenDrawer,
-            moveUpFromFirstRow = onMoveUpFromFirstRow
-        ),
-        onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
-        contentPadding = contentPadding
-    )
+    val isTelevision = isTelevisionDevice()
+    val refreshFocusRequester = remember(groupId) { FocusRequester() }
+    // Keep the upstream floating card and reserve its height above the scrollable server rows.
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    var infoHeightPx by remember(groupId) { mutableIntStateOf(0) }
+    val listPadding = if (usageInfo == null) {
+        contentPadding
+    } else {
+        PaddingValues(
+            start = contentPadding.calculateStartPadding(layoutDirection),
+            top = contentPadding.calculateTopPadding() + with(density) { infoHeightPx.toDp() },
+            end = contentPadding.calculateEndPadding(layoutDirection),
+            bottom = contentPadding.calculateBottomPadding()
+        )
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        ServerListPage(
+            rows = groupState.rows,
+            selectedGuid = selectedGuid,
+            locateTarget = locateTarget?.takeIf { it.groupId == groupId },
+            canReorder = canReorder,
+            doubleColumnDisplay = doubleColumnDisplay,
+            revealSelectedGeneration = revealSelectedGeneration,
+            groupId = groupId,
+            lazyListStates = lazyListStates,
+            lazyGridStates = lazyGridStates,
+            collectionActions = ServerCollectionActions(
+                select = onSelectServer,
+                edit = onEditServer,
+                share = onShareServer,
+                remove = onRemoveServer,
+                move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
+                back = onBackFromList,
+                movePrevious = onOpenDrawer,
+                moveUpFromFirstRow = if (isTelevision && usageInfo != null) {
+                    { refreshFocusRequester.requestFocus() }
+                } else onMoveUpFromFirstRow
+            ),
+            onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
+            contentPadding = listPadding
+        )
+        if (usageInfo != null) {
+            SubscriptionInfoCard(
+                info = usageInfo,
+                fallbackTitle = groupTitle,
+                onOpenLink = onOpenLink,
+                onRefresh = { mainViewModel.onAction(MainAction.UpdateGroupSubscription(groupId)) },
+                refreshFocusRequester = refreshFocusRequester,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(
+                        start = contentPadding.calculateStartPadding(layoutDirection),
+                        top = contentPadding.calculateTopPadding(),
+                        end = contentPadding.calculateEndPadding(layoutDirection)
+                    )
+                    .onSizeChanged { infoHeightPx = it.height }
+                    .dpadVerticalFocusNavigation(
+                        onMoveUp = { onMoveUpFromFirstRow?.let { it(); true } ?: false },
+                        onMoveDown = { false }
+                    )
+                    .dpadBackNavigation(onBack = onBackFromList)
+            )
+        }
+    }
 }
 
 @Composable

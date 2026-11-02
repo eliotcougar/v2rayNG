@@ -240,6 +240,9 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                     dialog = MainDialog.Share(MainShareTarget(guid, profile, more, restore))
                                 },
                                 onRemoveServer = requestRemoveServer,
+                                usageInfo = group.usageInfo,
+                                groupTitle = group.remarks,
+                                onOpenLink = { url -> onAction(MainAction.OpenSubscriptionLink(url)) },
                                 onOpenDrawer = { restore -> tvDrawerCoordinator?.openFrom(restore) },
                                 onBackFromList = { topBarFocus.start.requestFocus() },
                                 onMoveUpFromFirstRow = if (groups.size > 1) {

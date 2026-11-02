@@ -69,7 +69,8 @@ data class V2rayConfig(
         var settings: OutSettingsBean? = null,
         var streamSettings: StreamSettingsBean? = null,
         val sendThrough: String? = null,
-        var mux: MuxBean? = MuxBean(false)
+        var mux: MuxBean? = MuxBean(false),
+        var targetStrategy: String? = null
     ) {
         data class OutSettingsBean(
             /*Common */
@@ -99,7 +100,6 @@ data class V2rayConfig(
             var reserved: List<Int>? = null,
             var mtu: Int? = null,
             var remoteDNS: List<String>? = null,
-            var domainStrategy: String? = null,
         ) {
             data class WireGuardBean(
                 var publicKey: String = "",
@@ -353,6 +353,7 @@ data class V2rayConfig(
             var expectIPs: List<String>? = null,
             val clientIp: String? = null,
             val skipFallback: Boolean? = null,
+            val finalQuery: Boolean? = null,
             val tag: String? = null,
         )
     }

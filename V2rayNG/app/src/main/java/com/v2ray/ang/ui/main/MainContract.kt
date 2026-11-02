@@ -50,6 +50,7 @@ sealed interface MainAction {
     data object RemoveInvalidServers : ViewModelIntent
     data object SortByTestResults : ViewModelIntent
     data object UpdateSubscriptions : ViewModelIntent
+    data class UpdateGroupSubscription(val groupId: String) : ViewModelIntent
     data object ExportAll : ViewModelIntent
     data object LocateSelectedServer : ViewModelIntent
     data class SelectGroup(val groupId: String) : ViewModelIntent
@@ -72,4 +73,5 @@ sealed interface MainAction {
     data class EditServer(val guid: String, val profile: ProfileItem) : ActivityRequest
     data class ShareClipboard(val guid: String) : ActivityRequest
     data class ShareFullContent(val guid: String) : ActivityRequest
+    data class OpenSubscriptionLink(val url: String) : ActivityRequest
 }
