@@ -18,6 +18,7 @@ import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.helper.NotificationHelper
 import com.v2ray.ang.util.LogUtil
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,24 +97,26 @@ class SubscriptionUpdateService : Service() {
         runningTasks.incrementAndGet()
         serviceScope.launch {
             val changedSubscriptionIds = linkedSetOf<String>()
-            updateSemaphore.withPermit {
-                try {
+            try {
+                updateSemaphore.withPermit {
                     message.subIds.forEach { subId ->
                         updateSingle(subId, message.forcedUpdate) {
                             changedSubscriptionIds += subId
                         }
                     }
-                } catch (e: Exception) {
-                    LogUtil.e(AppConfig.TAG, "SubscriptionUpdateService update failed", e)
-                } finally {
-                    MessageHelper.sendSubscriptionDataChanged(
-                        this@SubscriptionUpdateService,
-                        changedSubscriptionIds
-                    )
-                    if (runningTasks.decrementAndGet() == 0 && activeWorkers.isEmpty()) {
-                        NotificationHelper.stopForeground(this@SubscriptionUpdateService)
-                        stopSelf()
-                    }
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "SubscriptionUpdateService batch update failed for IDs ${message.subIds}", e)
+            } finally {
+                MessageHelper.sendSubscriptionDataChanged(
+                    this@SubscriptionUpdateService,
+                    changedSubscriptionIds
+                )
+                if (runningTasks.decrementAndGet() == 0 && activeWorkers.isEmpty()) {
+                    NotificationHelper.stopForeground(this@SubscriptionUpdateService)
+                    stopSelf()
                 }
             }
         }

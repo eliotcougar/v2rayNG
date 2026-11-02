@@ -413,13 +413,7 @@ object CoreConfigManager {
             "${AppConfig.TAG_BALANCER_PRE}-${resolvedOutbound.tag}"
         }
         val strategyType = BalancerStrategyType.from(resolvedOutbound.profile.policyGroupType)
-        val fallbackTag = if (strategyType.supportsObservatory && resolvedOutbound.profile.policyGroupTestOutbounds != false) {
-            resolvedOutbound.profile.policyGroupFallbackTag
-                ?.takeIf { it.isNotEmpty() && it != AppConfig.TAG_PROXY }
-            // Xray excludes dead random/roundRobin candidates only when fallbackTag is set;
-            // without this default, an enabled empty field creates no observatory.
-                ?: membersToAdd.first().tag
-        } else null
+        val fallbackTag = resolvePolicyGroupFallbackTag(strategyType, resolvedOutbound.profile, membersToAdd.first().tag)
         val strategy = buildBalancerStrategy(
             strategyType = strategyType,
             selector = listOf(memberTagPrefix),
@@ -434,6 +428,27 @@ object CoreConfigManager {
         balancerStrategies.add(strategy)
         policyGroupBalancerTags[resolvedOutbound.tag] = balancerTag
     }
+
+    internal fun resolvePolicyGroupFallbackTag(
+        strategyType: BalancerStrategyType,
+        profile: ProfileItem,
+        firstMemberTag: String,
+    ): String? {
+        if (strategyType.requiresObservatory || strategyType.requiresBurstObservatory) {
+            // Missing or failed probes must not let a matched rule use Xray's default outbound.
+            return firstMemberTag
+        }
+        return if (strategyType.supportsObservatory && profile.policyGroupTestOutbounds != false) {
+            profile.policyGroupFallbackTag
+                ?.takeIf { it.isNotEmpty() && it != AppConfig.TAG_PROXY }
+            // Xray excludes dead random/roundRobin candidates only when fallbackTag is set;
+            // without this default, an enabled empty field creates no observatory.
+                ?: firstMemberTag
+        } else null
+    }
+
+    internal fun shouldUseStandardObservatory(strategyType: BalancerStrategyType, fallbackTag: String?): Boolean =
+        strategyType.requiresObservatory || (strategyType.supportsObservatory && fallbackTag != null)
 
     /**
      * Trim runtime sections that are not needed for latency testing.
@@ -517,7 +532,7 @@ object CoreConfigManager {
             inbound1.listen = AppConfig.LOOPBACK
         }
         inbound1.port = socksPort
-        inbound1.settings?.udp = MmkvManager.decodeSettingsBool(AppConfig.PREF_SOCKS_ENABLE_UDP, true)
+        inbound1.settings?.udp = MmkvManager.decodeSettingsBool(AppConfig.PREF_SOCKS_ENABLE_UDP, AppConfig.DEFAULT_SOCKS_ENABLE_UDP)
         if (socksUsername != null && socksPassword != null) {
             inbound1.settings?.auth = "password"
             inbound1.settings?.accounts = listOf(
@@ -873,8 +888,6 @@ object CoreConfigManager {
         val remoteDns = SettingsManager.getRemoteDnsServers()
         val domesticDns = SettingsManager.getDomesticDnsServers()
 
-        remoteDns.forEach { servers.add(it) }
-
         val hosts = buildDnsHostsFromRoutingRules(configContext)
         val cnDomesticDnsTags = buildDnsCnModeFromRoutingRules(configContext, servers, domesticDns)
         val domesticDnsTags = buildDnsFromRoutingRules(
@@ -884,6 +897,8 @@ object CoreConfigManager {
             domesticDns = domesticDns
         )
         domesticDnsTags.addAll(cnDomesticDnsTags)
+
+        remoteDns.forEach { servers.add(it) }
 
         v2rayConfig.dns = V2rayConfig.DnsBean(
             servers = servers,
@@ -1027,6 +1042,7 @@ object CoreConfigManager {
                                 address = address,
                                 domains = rule.domain,
                                 skipFallback = true,
+                                finalQuery = if (dnsIndex == domesticDns.lastIndex) true else null,
                                 tag = tag
                             )
                         )
@@ -1036,12 +1052,15 @@ object CoreConfigManager {
 
                 AppConfig.TAG_BLOCKED -> Unit
                 else -> {
-                    servers.add(
-                        V2rayConfig.DnsBean.ServersBean(
-                            address = remoteDns.first(),
-                            domains = rule.domain,
+                    remoteDns.forEachIndexed { index, address ->
+                        servers.add(
+                            V2rayConfig.DnsBean.ServersBean(
+                                address = address,
+                                domains = rule.domain,
+                                finalQuery = if (index == remoteDns.lastIndex) true else null
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -1058,7 +1077,7 @@ object CoreConfigManager {
      * Resolve outbound domains to IPs and write resolved hosts to DNS map.
      */
     private fun resolveOutboundDomainsToHosts(v2rayConfig: V2rayConfig) {
-        if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, "1") != "1") {
+        if (MmkvManager.decodeSettingsString(AppConfig.PREF_OUTBOUND_DOMAIN_RESOLVE_METHOD, AppConfig.DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD) != "1") {
             return
         }
 
@@ -1249,7 +1268,7 @@ object CoreConfigManager {
             fallbackTag = fallbackTag,
             strategy = V2rayConfig.RoutingBean.StrategyObject(type = strategyType.policyGroupType)
         )
-        val observatory = if (strategyType.requiresObservatory || fallbackTag != null) {
+        val observatory = if (shouldUseStandardObservatory(strategyType, fallbackTag)) {
             V2rayConfig.ObservatoryObject(
                 subjectSelector = selector,
                 probeUrl = probeUrl,
