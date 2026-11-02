@@ -611,7 +611,7 @@ object CoreServiceManager {
                 service,
                 screenStateReceiver,
                 screenFilter,
-                Utils.receiverFlags(),
+                ContextCompat.RECEIVER_EXPORTED,
             )
             receiversRegistered = true
         } catch (error: Throwable) {

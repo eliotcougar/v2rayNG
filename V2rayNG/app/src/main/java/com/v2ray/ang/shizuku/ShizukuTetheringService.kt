@@ -1177,6 +1177,8 @@ class ShizukuTetheringService(context: Context) : IShizukuTetheringService.Stub(
         val controller = Libv2ray.newCoreController(object : CoreCallbackHandler {
             override fun startup(): Long = 0
             override fun shutdown(): Long = 0
+            // This secondary core does not publish the main core's per-network route history.
+            override fun onBalancerTargetChanged(balancerTag: String?, target: String?): Long = 0
             override fun onEmitStatus(code: Long, status: String?): Long {
                 Log.i(TAG, "Hotspot Xray status $code: ${status.orEmpty()}")
                 return 0
