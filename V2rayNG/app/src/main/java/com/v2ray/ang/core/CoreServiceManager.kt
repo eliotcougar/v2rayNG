@@ -28,6 +28,7 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.extension.serializable
 import com.v2ray.ang.handler.CoreDownloadManager
+import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.NotificationManager
 import com.v2ray.ang.handler.SettingsManager
@@ -209,7 +210,8 @@ object CoreServiceManager {
                             e,
                         )
                         getService()?.let { service ->
-                            val message = service.getString(R.string.notification_core_recovery_failed)
+                            val message = AppLocaleManager.localizedContext(service)
+                                .getString(R.string.notification_core_recovery_failed)
                             MessageHelper.sendServiceEvent(service, AppConfig.MSG_STATE_START_FAILURE, message)
                             NotificationManager.showCoreFailure(message)
                         }
@@ -460,7 +462,6 @@ object CoreServiceManager {
 
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
         val result = CoreConfigManager.getV2rayConfig(service, guid)
-        LogUtil.d(AppConfig.TAG, result.content)
         if (!result.status) {
             error(result.errorMessage.ifBlank { "Failed to get V2Ray config" })
         }
