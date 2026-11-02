@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -30,10 +31,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.toggleableState
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -48,12 +49,20 @@ fun CollapsiblePreferenceGroupHeader(
     modifier: Modifier = Modifier
 ) {
     val isTelevision = isTelevisionDevice()
+    val groupDescription = stringResource(
+        if (expanded) R.string.acc_settings_group_expanded else R.string.acc_settings_group_collapsed,
+        title,
+    )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline()
-            .dpadClickable { onExpandedChange(!expanded) }
+            .semantics {
+                heading()
+                contentDescription = groupDescription
+            }
+            .dpadClickable(role = Role.Button) { onExpandedChange(!expanded) }
             .padding(
                 horizontal = if (isTelevision) 24.dp else 16.dp,
                 vertical = 12.dp
@@ -64,7 +73,7 @@ fun CollapsiblePreferenceGroupHeader(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).clearAndSetSemantics {}
         )
         Icon(
             painter = painterResource(R.drawable.ic_expand_more_24dp),
@@ -83,12 +92,10 @@ private fun SettingsItemRow(
     title: String,
     description: String?,
     enabled: Boolean,
-    onClick: (() -> Unit)?,
+    interactionModifier: Modifier,
     modifier: Modifier = Modifier,
     showFocus: Boolean = true,
     focusRequester: FocusRequester? = null,
-    role: Role? = null,
-    toggleState: Boolean? = null,
     trailing: @Composable (() -> Unit)? = null
 ) {
     val isTelevision = isTelevisionDevice()
@@ -106,13 +113,7 @@ private fun SettingsItemRow(
         modifier = modifier
             .fillMaxWidth()
             .dpadFocusOutline(focusRequester = focusRequester, showFocus = showFocus)
-            .semantics(mergeDescendants = true) {
-                role?.let { this.role = it }
-                toggleState?.let { toggleableState = ToggleableState(it) }
-            }
-            .then(
-                onClick?.let { Modifier.dpadClickable(enabled, role = role, onClick = it) } ?: Modifier
-            )
+            .then(interactionModifier)
             .padding(
                 horizontal = if (isTelevision) 24.dp else 16.dp,
                 vertical = 16.dp
@@ -206,9 +207,7 @@ fun SettingsEditItem(
         title = title,
         description = description,
         enabled = enabled,
-        onClick = if (enabled) {
-            dialogState::open
-        } else null,
+        interactionModifier = Modifier.dpadClickable(enabled = enabled, onClick = dialogState::open),
         modifier = modifier,
         showFocus = !dialogState.visible,
         focusRequester = dialogState.originFocusRequester
@@ -264,9 +263,7 @@ fun SettingsListItem(
         title = title,
         description = summary.ifEmpty { null },
         enabled = enabled,
-        onClick = if (enabled) {
-            dialogState::open
-        } else null,
+        interactionModifier = Modifier.dpadClickable(enabled = enabled, onClick = dialogState::open),
         modifier = modifier,
         showFocus = !dialogState.visible,
         focusRequester = dialogState.originFocusRequester
@@ -301,7 +298,7 @@ fun SettingsMenuItem(
         title = title,
         description = subtitle,
         enabled = true,
-        onClick = onClick,
+        interactionModifier = Modifier.dpadClickable(onClick = onClick),
         modifier = modifier
     )
 }
@@ -317,17 +314,21 @@ fun SettingsSwitchItem(
     enabled: Boolean = true
 ) {
     val isTelevision = isTelevisionDevice()
+    val checkedDescription = stringResource(if (checked) R.string.acc_toggle_on else R.string.acc_toggle_off)
     SettingsItemRow(
         icon = icon,
         title = title,
         description = summary,
         enabled = enabled,
-        onClick = if (enabled) {
-            { onCheckedChange(!checked) }
-        } else null,
+        interactionModifier = Modifier
+            .semantics { stateDescription = checkedDescription }
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            ),
         modifier = modifier,
-        role = Role.Switch,
-        toggleState = checked,
         trailing = {
             Switch(
                 checked = checked,
