@@ -11,6 +11,7 @@ import com.v2ray.ang.dto.entities.SubscriptionItem
 import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.MmkvManager
+import com.v2ray.ang.handler.SubscriptionUpdater
 import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.helper.MessageHelper
