@@ -19,8 +19,8 @@ android {
         applicationId = "com.v2ray.ang"
         minSdk = 24
         targetSdk = 37
-        versionCode = 755
-        versionName = "2.3.15"
+        versionCode = 760
+        versionName = "2.4.0"
 
         val abiFilterList = providers.gradleProperty("ABI_FILTERS").orNull?.split(';')
         splits {
@@ -175,8 +175,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.tv.material)
     implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.glance.appwidget)
-    implementation(libs.androidx.glance.appwidget.multiprocess)
     implementation(libs.lifecycle.runtime.compose)
     implementation(libs.lifecycle.process)
     implementation(libs.coil.compose)

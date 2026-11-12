@@ -16,5 +16,4 @@ sealed class MainServiceEvent {
     data class MeasureConfigNotify(val progress: String, val requestId: String) : MainServiceEvent()
     data class MeasureConfigFinish(val requestId: String) : MainServiceEvent()
     data class MeasureConfigCancelled(val requestId: String) : MainServiceEvent()
-    data class SubscriptionDataChanged(val subscriptionIds: List<String>) : MainServiceEvent()
 }

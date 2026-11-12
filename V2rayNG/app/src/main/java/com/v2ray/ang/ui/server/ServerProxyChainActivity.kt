@@ -59,8 +59,9 @@ import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.DpadReorderItem
-import com.v2ray.ang.ui.compose.FormDropdownConfig
-import com.v2ray.ang.ui.compose.FormDropdownField
+import com.v2ray.ang.ui.compose.ServerSelectButton
+import com.v2ray.ang.ui.compose.ServerSelectListDialog
+import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.reorderAccessibilityActions
@@ -75,7 +76,6 @@ import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
 import com.v2ray.ang.ui.compose.rememberDpadFocusTargets
 import com.v2ray.ang.ui.compose.rememberDpadFocusRequester
-import com.v2ray.ang.ui.compose.rememberFormDropdownState
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
 import com.v2ray.ang.ui.compose.reorderIndicesForKeys
 import com.v2ray.ang.ui.compose.requestFocusWhenReady
@@ -153,7 +153,7 @@ class ServerProxyChainActivity : BaseComponentActivity() {
         }
 
         val invalidMembers = chainMembers.filter { member ->
-            val profile = SettingsManager.getServerViaRemarks(member)
+            val profile = SettingsManager.getProfileEntryViaRemarks(member)?.profile
             profile == null || profile.configType.isComplexType()
         }
 
@@ -243,6 +243,7 @@ fun ProxyChainScreen(
     var memberToDeleteId by rememberSaveable { mutableStateOf<Long?>(null) }
     var pendingMemberFocusId by remember { mutableStateOf<Long?>(null) }
     var pendingAddFocus by remember { mutableStateOf(false) }
+    var editingMemberId by rememberSaveable { mutableStateOf<Long?>(null) }
     val showDelete = editGuid.isNotEmpty() && !isRunning
 
     val backFocusRequester = rememberDpadFocusRequester()
@@ -427,7 +428,7 @@ fun ProxyChainScreen(
                     onMove = ::moveMember
                 )
                 val isMoving = dpadReorderState.isMoving(memberId)
-                val dropdownState = rememberFormDropdownState()
+                val openMemberPicker: () -> Unit = { editingMemberId = memberId }
                 val actionFocusOrder = remember(focusTargets) {
                     listOf(focusTargets.field, focusTargets.remove)
                 }
@@ -444,41 +445,35 @@ fun ProxyChainScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("${index + 1}", modifier = Modifier.width(44.dp).semantics { hideFromAccessibility() }, textAlign = TextAlign.Center)
-                            FormDropdownField(
+                            ServerSelectButton(
                                 label = stringResource(R.string.server_proxy_chain_member),
                                 value = member.remark,
-                                options = allRemarks,
-                                onValueChange = { newVal ->
-                                    savedMembers = savedMembers.map { if (it.id == memberId) it.copy(remark = newVal) else it }
-                                },
-                                config = FormDropdownConfig(
-                                    editable = !isTelevision,
-                                    placeholder = stringResource(R.string.server_proxy_chain_member_unselected)
-                                ),
-                                tvNavigation = TvTextFieldNavigation(
-                                    focusRequester = focusTargets.field,
-                                    onMoveUp = {
-                                        previousTargets?.field?.let(requestRowFocus)
-                                            ?: requestRowFocus(remarksFocusRequester)
-                                    },
-                                    onMoveDown = {
-                                        nextTargets?.field?.let(requestRowFocus)
-                                            ?: addFocusRequester.requestFocus()
-                                    }
-                                ),
-                                state = dropdownState,
-                                fieldModifier = Modifier.semantics { customActions = accessibilityActions },
+                                placeholder = stringResource(R.string.server_proxy_chain_member_unselected),
+                                focusRequester = focusTargets.field,
+                                showFocus = !isMoving,
+                                onClick = openMemberPicker,
                                 modifier = Modifier
                                     .weight(1f)
+                                    .semantics { customActions = accessibilityActions }
                                     .dpadOrderedFocusNavigation(
                                         current = focusTargets.field,
                                         order = actionFocusOrder,
                                         onBeforeFirst = { backFocusRequester.requestFocus() }
                                     )
+                                    .dpadVerticalFocusNavigation(
+                                        onMoveUp = {
+                                            previousTargets?.field?.let(requestRowFocus)
+                                                ?: requestRowFocus(remarksFocusRequester)
+                                        },
+                                        onMoveDown = {
+                                            nextTargets?.field?.let(requestRowFocus)
+                                                ?: addFocusRequester.requestFocus()
+                                        }
+                                    )
                                     .dpadLongPressToMove(
                                         enabled = isTelevision,
                                         item = dpadReorderItem,
-                                        onClick = dropdownState::toggle,
+                                        onClick = openMemberPicker,
                                         addFocusTarget = false
                                     )
                             )
@@ -528,6 +523,25 @@ fun ProxyChainScreen(
                 memberToDeleteId = null
             },
             onDismiss = { memberToDeleteId = null }
+        )
+    }
+    editingMemberId?.let { memberId ->
+        val member = savedMembers.firstOrNull { it.id == memberId } ?: return@let
+        fun closePicker() {
+            editingMemberId = null
+            if (isTelevision) pendingMemberFocusId = memberId
+        }
+        ServerSelectListDialog(
+            title = stringResource(R.string.server_proxy_chain_pick_members),
+            options = allRemarks,
+            selectedOption = member.remark,
+            onSelected = { selectedRemark ->
+                savedMembers = savedMembers.map {
+                    if (it.id == memberId) it.copy(remark = selectedRemark) else it
+                }
+                closePicker()
+            },
+            onDismiss = ::closePicker,
         )
     }
 }

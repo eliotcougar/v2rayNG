@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
@@ -24,7 +26,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -68,6 +74,22 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
     val shareQRCodeBitmap = uiState.shareQRCodeBitmap
 
     val isDarkTheme = LocalDarkTheme.current
+    var bottomBarHeightPx by remember { mutableIntStateOf(0) }
+    val bottomBarHeight = with(LocalDensity.current) { bottomBarHeightPx.toDp() }
+    val connectionBar: @Composable (Modifier) -> Unit = { modifier ->
+        MainBottomBar(
+            displayText = displayText,
+            testDisplayText = testDisplayText,
+            accessibilityText = accessibilityText,
+            testStatus = uiState.testStatus,
+            testAnnouncements = mainViewModel.testAnnouncements,
+            formatTestAnnouncement = mainViewModel::formatTestAnnouncement,
+            isRunning = isRunning,
+            isDarkTheme = isDarkTheme,
+            onAction = onAction,
+            modifier = modifier,
+        )
+    }
     val drawerState = if (!isTelevision) rememberDrawerState(DrawerValue.Closed) else null
     val drawerScope = rememberCoroutineScope()
     val tvDrawerCoordinator = if (isTelevision) rememberMainTvDrawerCoordinator() else null
@@ -217,21 +239,17 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                     )
                 },
                 bottomBar = {
-                    MainBottomBar(
-                        displayText = displayText,
-                        testDisplayText = testDisplayText,
-                        accessibilityText = accessibilityText,
-                        testStatus = uiState.testStatus,
-                        testAnnouncements = mainViewModel.testAnnouncements,
-                        formatTestAnnouncement = mainViewModel::formatTestAnnouncement,
-                        isRunning = isRunning,
-                        isDarkTheme = isDarkTheme,
-                        onAction = onAction,
-                    )
+                    if (isTelevision) connectionBar(Modifier)
                 }
             ) { innerPadding ->
                 if (groups.isNotEmpty()) {
-                    Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                    val layoutDirection = LocalLayoutDirection.current
+                    val contentInsets = if (isTelevision) innerPadding else PaddingValues(
+                        start = innerPadding.calculateStartPadding(layoutDirection),
+                        top = innerPadding.calculateTopPadding(),
+                        end = innerPadding.calculateEndPadding(layoutDirection),
+                    )
+                    Column(modifier = Modifier.fillMaxSize().padding(contentInsets)) {
                         if (groups.size > 1) {
                             GroupTabBar(
                                 groups = groups,
@@ -284,12 +302,17 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
                                     start = if (isTelevision) 48.dp else 0.dp,
                                     top = if (isTelevision) 16.dp else 0.dp,
                                     end = if (isTelevision) 48.dp else 0.dp,
-                                    bottom = 80.dp
+                                    bottom = if (isTelevision) 80.dp else bottomBarHeight + 8.dp
                                 )
                             )
                         }
                     }
                 }
+            }
+            if (!isTelevision) {
+                connectionBar(
+                    Modifier.align(Alignment.BottomCenter).onSizeChanged { bottomBarHeightPx = it.height }
+                )
             }
         }
     }

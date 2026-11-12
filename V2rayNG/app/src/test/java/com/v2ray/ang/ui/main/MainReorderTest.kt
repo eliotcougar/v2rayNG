@@ -44,7 +44,7 @@ class MainReorderTest {
             true
         }
         viewModel = spy(MainViewModel(mock(), source, dispatcher, dispatcher))
-        doNothing().whenever(viewModel).toastError(any<Int>(), any())
+        doNothing().whenever(viewModel).toastError(any<Int>())
     }
 
     @AfterEach fun tearDown() {
@@ -72,8 +72,10 @@ class MainReorderTest {
     @Test fun `failed final drag restores persisted order`() = runTest(dispatcher) {
         advanceUntilIdle()
         whenever(source.reorderServerList(any(), any())).thenReturn(false)
-        viewModel.moveServer("s", 0, 2)
+        val write = requireNotNull(viewModel.moveServer("s", 0, 2))
+        assertEquals(false, write.isCompleted)
         advanceUntilIdle()
+        assertEquals(false, write.await())
         assertEquals(listOf("a", "b", "c"), visible())
     }
 
@@ -83,8 +85,10 @@ class MainReorderTest {
             persisted = listOf("c", "a", "new")
             true
         }
-        viewModel.moveServer("s", 2, 0)
+        val write = requireNotNull(viewModel.moveServer("s", 2, 0))
+        assertEquals(false, write.isCompleted)
         advanceUntilIdle()
+        assertEquals(true, write.await())
         assertEquals(persisted, visible())
     }
 

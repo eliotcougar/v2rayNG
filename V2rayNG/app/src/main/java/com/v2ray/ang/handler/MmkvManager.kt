@@ -23,7 +23,6 @@ import com.v2ray.ang.BuildConfig
 import com.v2ray.ang.dto.entities.AssetUrlCache
 import com.v2ray.ang.dto.entities.AssetUrlItem
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.extension.isGroupType
 import com.v2ray.ang.dto.entities.RulesetItem
 import com.v2ray.ang.dto.entities.ServerAffiliationInfo
 import com.v2ray.ang.dto.entities.SubscriptionCache
@@ -32,7 +31,6 @@ import com.v2ray.ang.dto.entities.WebDavConfig
 import com.v2ray.ang.util.JsonUtil
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
-import com.v2ray.ang.helper.MessageHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -108,10 +106,6 @@ object MmkvManager {
                 storage.unlock()
             }
         }
-    }
-
-    private fun notifySelectedProfileChanged() {
-        MessageHelper.sendMsg2UI(AngApplication.application, AppConfig.MSG_SELECTED_PROFILE_CHANGED, "")
     }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
@@ -288,15 +282,12 @@ object MmkvManager {
         resolveSubscriptionId: () -> String,
     ): Boolean {
         return try {
-            val selectedProfileChanged = withProfileIndexLock {
-                val selectedServer = getSelectServer()
+            withProfileIndexLock {
                 val removablePayloads = runStorageMutationTransaction {
                     removeProfilesFromGroup(resolveSubscriptionId(), requestedGuids)
                 }
                 removeProfilePayloads(removablePayloads)
-                selectedServer != null && selectedServer in removablePayloads
             }
-            if (selectedProfileChanged) notifySelectedProfileChanged()
             true
         } catch (e: Exception) {
             LogUtil.e(TAG, failureMessage, e)
@@ -366,10 +357,9 @@ object MmkvManager {
      * @param guid The server GUID.
      */
     fun setSelectServer(guid: String) {
-        val saved = withProfileIndexLock {
+        withProfileIndexLock {
             mainStorage.encode(KEY_SELECTED_SERVER, guid)
         }
-        if (saved) notifySelectedProfileChanged()
     }
 
     /**
@@ -488,7 +478,7 @@ object MmkvManager {
     ): String? {
         val key = guid.ifBlank { Utils.getUuid() }
         return try {
-            val selectedProfileChanged = withProfileIndexLock {
+            withProfileIndexLock {
                 // Decode every index before changing a payload so unreadable state fails closed.
                 val subId = getSubscriptionId(config.subscriptionId)
                 val serverList = decodeServerListForWrite(subId)
@@ -510,9 +500,7 @@ object MmkvManager {
                         writeProfileIndex(serverListKey(subId), serverList)
                     }
                 }
-                key == getSelectServer()
             }
-            if (selectedProfileChanged) notifySelectedProfileChanged()
             key
         } catch (e: Exception) {
             LogUtil.e(TAG, "Failed to persist profile $key", e)
@@ -537,7 +525,7 @@ object MmkvManager {
     ) {
         if (profiles.isEmpty()) return
 
-        val selectedProfileChanged = withProfileIndexLock {
+        withProfileIndexLock {
             val updatedSubscription = subscriptionUpdate?.let { update ->
                 prepareSubscriptionUpdate(subscriptionId, update.expected, update.replacement, update.replacement.lastUpdated)
             }
@@ -564,9 +552,10 @@ object MmkvManager {
             val serverList = if (append) {
                 decodeServerListForWrite(subscriptionId)
             } else {
-                replacedServers.filter { guid ->
-                    decodeServerConfig(guid)?.configType?.isGroupType() == true
-                }.toMutableList()
+                ProfileReplacement.findKeptGroups(
+                    replacedProfiles = replacedServers.associateWith(::decodeServerConfig),
+                    profiles = profiles.values,
+                ).toMutableList()
             }
             val indexedServers = serverList.toHashSet()
             profiles.keys.forEach { guid ->
@@ -596,9 +585,7 @@ object MmkvManager {
                 removable
             }
             removeProfilePayloads(removablePayloads)
-            getSelectServer() in profiles
         }
-        if (selectedProfileChanged) notifySelectedProfileChanged()
     }
 
     /**
@@ -703,7 +690,6 @@ object MmkvManager {
             serverRawStorage.clearAll()
             count
         }
-        notifySelectedProfileChanged()
         return count
     }
 
@@ -845,7 +831,7 @@ object MmkvManager {
      */
     fun removeSubscription(subid: String): Boolean {
         return try {
-            val selectedProfileChanged = withProfileIndexLock {
+            withProfileIndexLock {
                 val subsList = decodeSubsListForWrite()
                 runStorageMutationTransaction {
                     if (subsList.remove(subid)) {
@@ -867,12 +853,10 @@ object MmkvManager {
                 }
 
                 try {
-                    val selectedServer = getSelectServer()
                     val removablePayloads = runStorageMutationTransaction {
                         removeProfilesFromGroup(subid, requestedGuids = null)
                     }
                     removeProfilePayloads(removablePayloads)
-                    selectedServer != null && selectedServer in removablePayloads
                 } catch (e: Exception) {
                     // The subscription is already unpublished. Retaining orphaned payloads is
                     // safer than reporting the user-requested deletion as if it never happened.
@@ -880,7 +864,6 @@ object MmkvManager {
                     false
                 }
             }
-            if (selectedProfileChanged) notifySelectedProfileChanged()
             true
         } catch (e: Exception) {
             LogUtil.e(TAG, "Failed to remove subscription $subid", e)

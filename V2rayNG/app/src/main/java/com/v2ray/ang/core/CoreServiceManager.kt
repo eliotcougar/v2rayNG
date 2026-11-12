@@ -19,6 +19,7 @@ import com.v2ray.ang.R
 import com.v2ray.ang.contracts.IDialerService
 import com.v2ray.ang.contracts.ServiceControl
 import com.v2ray.ang.dto.CoreUrlDownloadRequest
+import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.ConfigResult
 import com.v2ray.ang.dto.OutboundTrafficStat
 import com.v2ray.ang.dto.entities.ProfileItem
@@ -49,8 +50,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -87,8 +86,6 @@ object CoreServiceManager {
     private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val feedbackState = ServiceFeedbackState()
     private val xhttpWakeRefresh = XhttpWakeRefresh()
-    private val mutableRunningState = MutableStateFlow(false)
-    internal val runningState = mutableRunningState.asStateFlow()
 
     @Volatile private var runningProfileGuid = ""
     private val networkResetMutex = Mutex()
@@ -197,7 +194,6 @@ object CoreServiceManager {
                             e,
                         )
                     } else {
-                        mutableRunningState.value = false
                         feedbackState.startFailed()
                         coreRecoveryEnabled.set(false)
                         primaryPolicyBalancerAvailable.set(false)
@@ -532,7 +528,6 @@ object CoreServiceManager {
             result.content,
             usesHevTun,
         )
-        mutableRunningState.value = true
         NotificationManager.startSpeedNotification()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
         return config.remarks
@@ -570,7 +565,6 @@ object CoreServiceManager {
     }
 
     private fun cancelCoreWork() {
-        mutableRunningState.value = false
         xhttpWakeRefresh.stop()
         stopActiveOutboundPolling()
         coreRecoveryEnabled.set(false)
@@ -848,21 +842,33 @@ object CoreServiceManager {
             }
 
             ensureActive()
-            val result = SpeedtestManager.buildConnectionTestResult(time, errorStr) {
+            val initialResult = ConnectionTestResult(
+                delayMillis = time,
+                errorMessage = errorStr,
+                isFinal = time < 0,
+            )
+            suspend fun publish(result: ConnectionTestResult): Boolean = withContext(Dispatchers.Main.immediate) {
+                if (!isRunning()) {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
+                    false
+                } else {
+                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
+                    true
+                }
+            }
+            if (!publish(initialResult)) return@launch
+
+            if (time >= 0) {
                 val fetchViaCore = if (SettingsManager.shouldUseCoreForAppRequests()) {
-                    { url: String ->
-                        coreController.getUrlContent(url, currentOutboundTag())
-                    }
+                    { url: String -> coreController.getUrlContent(url, currentOutboundTag()) }
                 } else {
                     null
                 }
-                SpeedtestManager.getRemoteIPInfo(fetchViaCore)
-            }
-            withContext(Dispatchers.Main.immediate) {
-                if (isRunning()) {
-                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
+                val endpoint = SpeedtestManager.getRemoteIPInfo(fetchViaCore)
+                if (endpoint != null && (endpoint.country != null || endpoint.ipAddress != null)) {
+                    publish(initialResult.copy(country = endpoint.country, ipAddress = endpoint.ipAddress, isFinal = true))
                 } else {
-                    MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
+                    publish(initialResult.copy(isFinal = true))
                 }
             }
         }.invokeOnCompletion { cause ->

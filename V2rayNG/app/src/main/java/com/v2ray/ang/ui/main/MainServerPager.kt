@@ -76,6 +76,7 @@ import com.v2ray.ang.ui.compose.DpadReorderDirection
 import com.v2ray.ang.ui.compose.DpadReorderItem
 import com.v2ray.ang.ui.compose.DpadReorderState
 import com.v2ray.ang.ui.compose.ReorderableGridItem
+import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.ReorderableListItem
 import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.ui.compose.reorderAccessibilityActions
@@ -468,6 +469,7 @@ private fun ServerListPage(
                 if (canReorder && reorderableState != null) {
                     ReorderableItem(reorderableState, key = row.guid, modifier = Modifier.zIndex(if (isMoving) 1f else 0f)) { isDragging ->
                         ReorderableListItem(this, isDragging, isMoving, moveModeCornerRadius = 12.dp) { content() }
+                        ItemDivider()
                     }
                 } else {
                     content()

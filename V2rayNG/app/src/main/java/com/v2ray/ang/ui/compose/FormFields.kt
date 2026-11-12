@@ -130,10 +130,8 @@ fun FormDropdownField(
     enabled: Boolean = true,
     config: FormDropdownConfig = FormDropdownConfig(),
     tvNavigation: TvTextFieldNavigation = TvTextFieldNavigation(),
-    state: FormDropdownState? = null,
-    fieldModifier: Modifier = Modifier,
 ) {
-    val dropdownState = state ?: remember { FormDropdownState() }
+    val dropdownState = remember { FormDropdownState() }
     val menuScrollState = rememberScrollState()
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -144,7 +142,13 @@ fun FormDropdownField(
         null
     }
     val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
-    val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel)
+    val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel).let { choices ->
+        if (config.editable && value.isNotBlank() && value !in options) {
+            choices.filter { it.contains(value, ignoreCase = true) }
+        } else {
+            choices
+        }
+    }
     val selectedOptionIndex = formDropdownSelectedOptionIndex(menuOptions, value)
     val displayedValue = if (!config.editable && value.isEmpty()) {
         config.emptyOptionLabel.orEmpty()
@@ -214,7 +218,7 @@ fun FormDropdownField(
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownState.expanded)
             },
-            modifier = fieldModifier
+            modifier = Modifier
                 .then(tvFieldState?.let {
                     Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
                 } ?: Modifier)

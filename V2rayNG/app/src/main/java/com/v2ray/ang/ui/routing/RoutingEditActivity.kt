@@ -5,10 +5,12 @@ import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -25,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
@@ -37,6 +40,7 @@ import com.v2ray.ang.AppConfig.BUILTIN_OUTBOUND_TAGS
 import com.v2ray.ang.AppConfig.TAG_PROXY
 import com.v2ray.ang.R
 import com.v2ray.ang.AppConfig
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBarAction
 import com.v2ray.ang.ui.compose.tvSafeAreaPadding
 import com.v2ray.ang.ui.compose.tvAwareImePadding
@@ -52,11 +56,13 @@ import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.ui.apppicker.AppPickerActivity
 import com.v2ray.ang.ui.base.BaseComponentActivity
+import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
+import com.v2ray.ang.ui.compose.ServerSelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import kotlinx.coroutines.Dispatchers
@@ -163,6 +169,7 @@ fun RoutingEditScreen(
         mutableStateOf(initial?.outboundTag ?: BUILTIN_OUTBOUND_TAGS.first())
     }
     var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
+    var showOutboundDialog by rememberSaveable { mutableStateOf(false) }
 
     val processPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -334,23 +341,33 @@ fun RoutingEditScreen(
             )
             FormDropdownField(
                 label = stringResource(R.string.routing_settings_network),
-                value = network,
+                value = network.ifBlank { ROUTING_NETWORK_OPTIONS.last() },
                 options = ROUTING_NETWORK_OPTIONS,
                 onValueChange = { network = it }
             )
-            FormDropdownField(
-                label = stringResource(R.string.routing_settings_outbound_tag),
-                value = outboundTag,
-                options = outboundSuggestions,
-                onValueChange = { outboundTag = it },
-                config = FormDropdownConfig(
-                    editable = !isTelevision,
-                    placeholder = stringResource(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FormDropdownField(
+                    label = stringResource(R.string.routing_settings_outbound_tag),
+                    config = FormDropdownConfig(placeholder = stringResource(
                         R.string.routing_settings_outbound_tag_hint,
                         stringResource(R.string.server_lab_remarks)
-                    )
+                    )),
+                    value = outboundTag,
+                    options = BUILTIN_OUTBOUND_TAGS.toList(),
+                    onValueChange = { outboundTag = it },
+                    modifier = Modifier.weight(1f)
                 )
-            )
+                AppIconButton(
+                    icon = painterResource(R.drawable.ic_search_24dp),
+                    label = stringResource(R.string.acc_search),
+                    onClick = { showOutboundDialog = true }
+                )
+            }
             Spacer(modifier = Modifier.height(36.dp))
             NavigationBarsSpacer()
         }
@@ -359,8 +376,23 @@ fun RoutingEditScreen(
             DeleteConfirmDialog(
                 message = stringResource(R.string.confirm_delete_routing_rule),
                 itemName = initial?.remarks.orEmpty(),
-                onConfirm = onDelete,
+                onConfirm = {
+                    showDeleteConfirm = false
+                    onDelete()
+                },
                 onDismiss = { showDeleteConfirm = false }
+            )
+        }
+        if (showOutboundDialog) {
+            ServerSelectListDialog(
+                title = stringResource(R.string.routing_settings_outbound_tag),
+                options = outboundSuggestions,
+                selectedOption = outboundTag,
+                onSelected = {
+                    outboundTag = it
+                    showOutboundDialog = false
+                },
+                onDismiss = { showOutboundDialog = false }
             )
         }
     }

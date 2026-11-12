@@ -15,10 +15,8 @@ import com.v2ray.ang.extension.serializable
 import com.v2ray.ang.handler.AngConfigManager
 import com.v2ray.ang.handler.AppLocaleManager
 import com.v2ray.ang.handler.MmkvManager
-import com.v2ray.ang.helper.MessageHelper
 import com.v2ray.ang.helper.NotificationHelper
 import com.v2ray.ang.util.LogUtil
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,37 +94,24 @@ class SubscriptionUpdateService : Service() {
 
         runningTasks.incrementAndGet()
         serviceScope.launch {
-            val changedSubscriptionIds = linkedSetOf<String>()
-            try {
-                updateSemaphore.withPermit {
+            updateSemaphore.withPermit {
+                try {
                     message.subIds.forEach { subId ->
-                        updateSingle(subId, message.forcedUpdate) {
-                            changedSubscriptionIds += subId
-                        }
+                        updateSingle(subId, message.forcedUpdate)
                     }
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (e: Exception) {
-                LogUtil.e(AppConfig.TAG, "SubscriptionUpdateService batch update failed for IDs ${message.subIds}", e)
-            } finally {
-                MessageHelper.sendSubscriptionDataChanged(
-                    this@SubscriptionUpdateService,
-                    changedSubscriptionIds
-                )
-                if (runningTasks.decrementAndGet() == 0 && activeWorkers.isEmpty()) {
-                    NotificationHelper.stopForeground(this@SubscriptionUpdateService)
-                    stopSelf()
+                } catch (e: Exception) {
+                    LogUtil.e(AppConfig.TAG, "SubscriptionUpdateService update failed", e)
+                } finally {
+                    if (runningTasks.decrementAndGet() == 0 && activeWorkers.isEmpty()) {
+                        NotificationHelper.stopForeground(this@SubscriptionUpdateService)
+                        stopSelf()
+                    }
                 }
             }
         }
     }
 
-    private suspend fun updateSingle(
-        subId: String,
-        forcedUpdate: Boolean,
-        onDataChanged: () -> Unit
-    ) {
+    private suspend fun updateSingle(subId: String, forcedUpdate: Boolean) {
         val subItem = MmkvManager.decodeSubscription(subId) ?: return
         if (!subItem.enabled || subItem.url.isEmpty()) {
             return
@@ -141,42 +126,37 @@ class SubscriptionUpdateService : Service() {
             content = getString(R.string.subscription_update_updating, subItem.remarks)
         )
 
-        var dataChanged = false
-        try {
-            if (forcedUpdate || MmkvManager.decodeSettingsBool(AppConfig.PREF_UPDATE_SUBSCRIPTION, false)) {
-                dataChanged = AngConfigManager.updateConfigViaSub(sub).configCount > 0
-            }
-
-            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_TEST_AFTER_UPDATE_SUBSCRIPTION, false)) {
-                dataChanged = testSubscriptionServers(sub) || dataChanged
-
-                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)) {
-                    LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: removing invalid servers for ${subItem.remarks}")
-                    showNotification(
-                        context = this,
-                        titleResId = R.string.title_del_invalid_config,
-                        content = subItem.remarks
-                    )
-                    AngConfigManager.removeInvalidServer(subId)
-                }
-                if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_SORT_AFTER_TEST, false)) {
-                    LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: sorting servers for ${subItem.remarks}")
-                    showNotification(
-                        context = this,
-                        titleResId = R.string.title_sort_by_test_results,
-                        content = subItem.remarks
-                    )
-                    AngConfigManager.sortByTestResultsForSub(subId)
-                }
-            }
-
-            LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: Finished ${subItem.remarks}")
-        } finally {
-            if (dataChanged) onDataChanged()
+        if (forcedUpdate || MmkvManager.decodeSettingsBool(AppConfig.PREF_UPDATE_SUBSCRIPTION, false)) {
+            AngConfigManager.updateConfigViaSub(sub)
         }
+
+        if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_TEST_AFTER_UPDATE_SUBSCRIPTION, false)) {
+            testSubscriptionServers(sub)
+
+            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_REMOVE_INVALID_AFTER_TEST, false)) {
+                LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: removing invalid servers for ${subItem.remarks}")
+                showNotification(
+                    context = this,
+                    titleResId = R.string.title_del_invalid_config,
+                    content = subItem.remarks
+                )
+                AngConfigManager.removeInvalidServer(subId)
+            }
+            if (MmkvManager.decodeSettingsBool(AppConfig.PREF_AUTO_SORT_AFTER_TEST, false)) {
+                LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: sorting servers for ${subItem.remarks}")
+                showNotification(
+                    context = this,
+                    titleResId = R.string.title_sort_by_test_results,
+                    content = subItem.remarks
+                )
+                AngConfigManager.sortByTestResultsForSub(subId)
+            }
+        }
+
+        LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: Finished ${subItem.remarks}")
     }
 
-    private suspend fun testSubscriptionServers(sub: SubscriptionCache): Boolean {
+    private suspend fun testSubscriptionServers(sub: SubscriptionCache) {
         val subId = sub.guid
         LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: starting test phase for ${sub.subscription.remarks}")
         showNotification(
@@ -186,25 +166,24 @@ class SubscriptionUpdateService : Service() {
         )
 
         val guids = MmkvManager.decodeServerList(subId)
-        if (guids.isEmpty()) return false
-
-        val deferred = CompletableDeferred<Unit>()
-        lateinit var worker: RealPingWorkerService
-        worker = RealPingWorkerService(
-            context = this,
-            guids = guids,
-            onEvent = { event ->
-                handleWorkerEvent(event, sub.subscription.remarks) {
-                    activeWorkers.remove(worker)
-                    deferred.complete(Unit)
+        if (guids.isNotEmpty()) {
+            val deferred = CompletableDeferred<Unit>()
+            lateinit var worker: RealPingWorkerService
+            worker = RealPingWorkerService(
+                context = this,
+                guids = guids,
+                onEvent = { event ->
+                    handleWorkerEvent(event, sub.subscription.remarks) {
+                        activeWorkers.remove(worker)
+                        deferred.complete(Unit)
+                    }
                 }
-            }
-        )
-        activeWorkers.add(worker)
-        worker.start()
-        deferred.await()
-        LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: test phase finished for ${sub.subscription.remarks}")
-        return true
+            )
+            activeWorkers.add(worker)
+            worker.start()
+            deferred.await()
+            LogUtil.i(AppConfig.TAG, "SubscriptionUpdateService: test phase finished for ${sub.subscription.remarks}")
+        }
     }
 
     private fun handleWorkerEvent(event: RealPingEvent, remarks: String, onWorkerDone: () -> Unit) {

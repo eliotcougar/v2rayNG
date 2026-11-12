@@ -16,157 +16,6 @@ class MmkvPersistenceTest {
     @BeforeEach fun setUp() { stores = MmkvTestStore() }
     @AfterEach fun tearDown() { stores.close() }
 
-    @Test fun `selection notifies only after a successful unlocked write`() {
-        stores.main.values["SELECTED_SERVER"] = "old"
-        stores.onSelectedProfileChanged = { assertEquals(0, stores.main.lockDepth) }
-
-        MmkvManager.setSelectServer("new")
-        stores.main.failWrite = { it == "SELECTED_SERVER" }
-        MmkvManager.setSelectServer("failed")
-
-        assertEquals("new", MmkvManager.getSelectServer())
-        assertEquals(listOf("new"), stores.selectedProfileChanges)
-    }
-
-    @Test fun `initial profile and selected edits notify after publication but other profiles do not`() {
-        val profile = ProfileItem.create(EConfigType.VLESS).apply { subscriptionId = "s" }
-        stores.onSelectedProfileChanged = {
-            assertEquals(0, stores.main.lockDepth)
-            assertEquals(listOf("p"), MmkvManager.decodeServerList("s"))
-            assertNotNull(MmkvManager.decodeServerConfig("p"))
-            assertEquals("raw-p", MmkvManager.decodeServerRaw("p"))
-        }
-
-        assertEquals("p", MmkvManager.encodeServerConfig("p", profile, "raw-p"))
-        assertEquals("p", MmkvManager.encodeServerConfig("p", profile.copy(remarks = "edited")))
-        assertEquals("other", MmkvManager.encodeServerConfig("other", profile))
-        var failNextWrite = true
-        stores.profiles.failWrite = { key ->
-            (key == "p" && failNextWrite).also { if (it) failNextWrite = false }
-        }
-        assertNull(MmkvManager.encodeServerConfig("p", profile.copy(remarks = "failed")))
-
-        assertEquals("edited", MmkvManager.decodeServerConfig("p")!!.remarks)
-        assertEquals(listOf("p", "p"), stores.selectedProfileChanges)
-    }
-
-    @Test fun `failed initial profile publication rolls back without notifying`() {
-        var failNextIndex = true
-        stores.main.failWrite = { key ->
-            (key == "SUB_SERVERS_s" && failNextIndex).also { if (it) failNextIndex = false }
-        }
-        val profile = ProfileItem.create(EConfigType.VLESS).apply { subscriptionId = "s" }
-
-        assertNull(MmkvManager.encodeServerConfig("p", profile, "raw-p"))
-
-        assertNull(MmkvManager.getSelectServer())
-        assertTrue(stores.main.values.isEmpty())
-        assertTrue(stores.profiles.values.isEmpty())
-        assertTrue(stores.raw.values.isEmpty())
-        assertTrue(stores.selectedProfileChanges.isEmpty())
-    }
-
-    @Test fun `every selected profile removal path notifies after committed cleanup`() {
-        val removals = listOf<() -> Boolean>(
-            { MmkvManager.removeServer("old") },
-            { MmkvManager.removeServers(listOf("old"), "s") },
-            { MmkvManager.removeServerViaSubid("s") },
-            { MmkvManager.removeSubscription("s") },
-        )
-        removals.forEach { remove ->
-            seedReplacementWithGroups()
-            stores.selectedProfileChanges.clear()
-            stores.onSelectedProfileChanged = {
-                assertEquals(0, stores.main.lockDepth)
-                assertNull(MmkvManager.getSelectServer())
-                assertFalse("old" in MmkvManager.decodeServerList("s"))
-                assertFalse(stores.profiles.values.containsKey("old"))
-                assertFalse(stores.raw.values.containsKey("old"))
-                assertFalse(stores.affiliations.values.containsKey("old"))
-            }
-
-            assertTrue(remove())
-
-            assertEquals(listOf<String?>(null), stores.selectedProfileChanges)
-        }
-    }
-
-    @Test fun `failed centralized removals restore selection and emit no notification`() {
-        val removals = listOf<() -> Boolean>(
-            { MmkvManager.removeServer("old") },
-            { MmkvManager.removeServers(listOf("old"), "s") },
-            { MmkvManager.removeServerViaSubid("s") },
-        )
-        removals.forEach { remove ->
-            seedReplacementWithGroups()
-            var failNextIndex = true
-            stores.main.failWrite = { key ->
-                (key == "SUB_SERVERS_s" && failNextIndex).also { if (it) failNextIndex = false }
-            }
-
-            assertFalse(remove())
-
-            assertEquals("old", MmkvManager.getSelectServer())
-            assertEquals(listOf("old", "policy", "chain"), MmkvManager.decodeServerList("s"))
-            assertNotNull(MmkvManager.decodeServerConfig("old"))
-            assertTrue(stores.selectedProfileChanges.isEmpty())
-        }
-    }
-
-    @Test fun `subscription cleanup rollback preserves completed deletion without notifying`() {
-        seedReplacementWithGroups()
-        var failNextIndex = true
-        stores.main.failWrite = { key ->
-            (key == "SUB_SERVERS_s" && failNextIndex).also { if (it) failNextIndex = false }
-        }
-
-        assertTrue(MmkvManager.removeSubscription("s"))
-
-        assertTrue(MmkvManager.decodeSubsList().isEmpty())
-        assertEquals("old", MmkvManager.getSelectServer())
-        assertEquals(listOf("old", "policy", "chain"), MmkvManager.decodeServerList("s"))
-        assertTrue(stores.selectedProfileChanges.isEmpty())
-    }
-
-    @Test fun `removing a group reference retains a shared selection without notifying`() {
-        seedReplacementWithGroups()
-        stores.main.values["SUB_SERVERS_other"] = "[\"old\"]"
-
-        assertTrue(MmkvManager.removeServers(listOf("old"), "s"))
-
-        assertEquals("old", MmkvManager.getSelectServer())
-        assertNotNull(MmkvManager.decodeServerConfig("old"))
-        assertTrue(stores.selectedProfileChanges.isEmpty())
-    }
-
-    @Test fun `clear all notifies only after indexes selection and payloads are cleared`() {
-        seedReplacementWithGroups()
-        stores.onSelectedProfileChanged = {
-            assertEquals(0, stores.main.lockDepth)
-            assertNull(MmkvManager.getSelectServer())
-            assertTrue(MmkvManager.decodeServerList("s").isEmpty())
-            assertTrue(stores.profiles.values.isEmpty())
-            assertTrue(stores.raw.values.isEmpty())
-            assertTrue(stores.affiliations.values.isEmpty())
-        }
-
-        assertEquals(3, MmkvManager.removeAllServer())
-
-        assertEquals(listOf<String?>(null), stores.selectedProfileChanges)
-    }
-
-    @Test fun `failed clear restores indexes and selection without notifying`() {
-        seedReplacementWithGroups()
-        val affectedStores = listOf(stores.main, stores.profiles, stores.raw, stores.affiliations)
-        val before = affectedStores.map { it.values.toMap() }
-        stores.main.failRemove = true
-
-        assertThrows(ProfileStorageException::class.java) { MmkvManager.removeAllServer() }
-
-        assertEquals(before, affectedStores.map { it.values.toMap() })
-        assertTrue(stores.selectedProfileChanges.isEmpty())
-    }
-
     @Test fun `stale profile reorder preserves additions and excludes deleted IDs`() {
         stores.main.values["SUB_SERVERS_s"] = "[\"new\",\"a\",\"c\"]"
         assertTrue(MmkvManager.reorderServerList(listOf("c", "deleted", "a", "a"), "s"))
@@ -256,12 +105,6 @@ class MmkvPersistenceTest {
             val guid = "new-$index"
             val replacement = expected.copy(lastUpdated = expected.lastUpdated + 100, usageInfo = responseInfo)
             val profile = ProfileItem.create(EConfigType.VLESS).apply { subscriptionId = "s" }
-            stores.onSelectedProfileChanged = {
-                assertEquals(0, stores.main.lockDepth)
-                assertEquals(replacement, MmkvManager.decodeSubscription("s"))
-                assertEquals(listOf(guid), MmkvManager.decodeServerList("s"))
-                assertEquals("raw-$guid", stores.raw.values[guid])
-            }
 
             MmkvManager.saveServerProfiles(mapOf(guid to profile), mapOf(guid to "raw-$guid"), "s", false,
                 SubscriptionUpdateCommit(expected, replacement))
@@ -270,7 +113,6 @@ class MmkvPersistenceTest {
             assertEquals(listOf(guid), MmkvManager.decodeServerList("s"))
             assertEquals(guid, MmkvManager.getSelectServer())
             assertEquals("raw-$guid", stores.raw.values[guid])
-            assertEquals(index + 1, stores.selectedProfileChanges.size)
             expected = replacement
         }
     }
@@ -301,7 +143,6 @@ class MmkvPersistenceTest {
 
                 assertFalse(failNextWrite)
                 assertEquals(before, affectedStores.map { it.values.toMap() })
-                assertTrue(stores.selectedProfileChanges.isEmpty())
                 failedStore.failWrite = { false }
             }
         }
@@ -321,7 +162,6 @@ class MmkvPersistenceTest {
         }
         assertEquals(current, MmkvManager.decodeSubscription("s"))
         assertNull(MmkvManager.decodeServerConfig("p"))
-        assertTrue(stores.selectedProfileChanges.isEmpty())
     }
 
     @Test fun `settings edits preserve usage metadata from a completed refresh`() {
@@ -381,8 +221,6 @@ class MmkvPersistenceTest {
         assertFalse(stores.profiles.values.containsKey("old"))
         assertFalse(stores.raw.values.containsKey("old"))
         assertFalse(stores.affiliations.values.containsKey("old"))
-        assertEquals(listOf("new"), stores.selectedProfileChanges)
-        assertEquals(0, stores.notificationsWhileLocked)
     }
 
     @Test fun `failed replacement publication restores selection metadata and all grouped payloads`() {
@@ -406,7 +244,6 @@ class MmkvPersistenceTest {
 
         assertFalse(failNextIndexWrite)
         assertEquals(before, affectedStores.map { it.values.toMap() })
-        assertTrue(stores.selectedProfileChanges.isEmpty())
     }
 
     private fun seedReplacementWithGroups() {

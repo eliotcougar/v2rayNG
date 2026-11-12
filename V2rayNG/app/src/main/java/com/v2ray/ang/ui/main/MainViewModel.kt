@@ -78,7 +78,6 @@ class MainViewModel(
     private val dataSource: MainDataSource,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
-    private val serviceEventDispatcher: CoroutineDispatcher = Dispatchers.Main.immediate,
 ) : BaseViewModel(application) {
 
     private val preloadDispatcher: CoroutineDispatcher = ioDispatcher.limitedParallelism(1)
@@ -134,7 +133,7 @@ class MainViewModel(
     }
 
     private fun collectServiceEvents() {
-        viewModelScope.launch(serviceEventDispatcher) {
+        viewModelScope.launch {
             dataSource.mainServiceEvent.collect { event ->
                 handleServiceEvent(event)
             }
@@ -149,9 +148,12 @@ class MainViewModel(
             is MainServiceEvent.StateStartFailure -> updateRunningState(false)
             MainServiceEvent.StateStopSuccess -> updateRunningState(false)
             is MainServiceEvent.MeasureDelayResult -> {
-                if (!uiState.value.isRunning || !testRequests.completeCurrent(event.requestId)) return
-                _uiState.update { it.copy(isTesting = testRequests.isTesting, testStatus = MainStatus.ConnectionTest(event.result)) }
-                publishTestAnnouncement(MainStatus.ConnectionTest(event.result))
+                if (!uiState.value.isRunning ||
+                    !testRequests.acceptCurrentResult(event.requestId, event.result.isFinal)
+                ) return
+                val status = MainStatus.ConnectionTest(event.result)
+                _uiState.update { it.copy(isTesting = testRequests.isTesting, testStatus = status) }
+                if (event.result.isFinal) publishTestAnnouncement(status)
             }
             is MainServiceEvent.ActiveOutboundChanged -> {
                 val displayName = outboundTargetDisplayName(event.target)
@@ -200,15 +202,6 @@ class MainViewModel(
                 }
             }
 
-            is MainServiceEvent.SubscriptionDataChanged -> {
-                refreshSubscriptionGroupData(event.subscriptionIds)
-            }
-        }
-    }
-
-    private fun refreshSubscriptionGroupData(subscriptionIds: Collection<String>) {
-        viewModelScope.launch(preloadDispatcher) {
-            populateSubscriptionGroupData(subscriptionIds)
         }
     }
 
@@ -870,42 +863,6 @@ class MainViewModel(
         }
     }
 
-    internal suspend fun populateSubscriptionGroupData(subscriptionIds: Collection<String>) {
-        initialPageReady.await()
-        val refreshOrder = subscriptionGroupRefreshOrder(
-            visibleGroupIds = uiState.value.groups.map { it.id },
-            selectedGroupId = uiState.value.selectedGroupId,
-            changedSubscriptionIds = subscriptionIds,
-        )
-        refreshOrder.forEach { groupId ->
-            try {
-                updateGroupUi(groupId, loadGroup(groupId, forceRefresh = true))
-                if (groupId.isNotEmpty()) {
-                    val subscription = dataSource.getSubscriptionItem(groupId)
-                    if (subscription != null) {
-                        val usageInfo = subscription.usageInfo?.let { info ->
-                            SubscriptionInfoParser.withWebPageFallback(info, subscription.url)
-                        }
-                        _uiState.update { current ->
-                            current.copy(groups = current.groups.map { group ->
-                                if (group.id == groupId) {
-                                    group.copy(remarks = subscription.remarks, usageInfo = usageInfo)
-                                } else {
-                                    group
-                                }
-                            })
-                        }
-                    }
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (error: Exception) {
-                LogUtil.e(AppConfig.TAG, "Failed to refresh subscription group: $groupId", error)
-            }
-        }
-        refreshSelectedGuid()
-    }
-
     fun filterConfig(keyword: String) {
         if (keyword == keywordFilter) return
         keywordFilter = keyword
@@ -958,19 +915,18 @@ class MainViewModel(
         }
     }
 
-    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int, onMoved: (() -> Unit)? = null) {
-        if (groupId.isEmpty()) return
-        val groupFlow = mutableServerGroupState(groupId)
-        val groupState = groupFlow.value
+    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int): Deferred<Boolean>? {
+        if (groupId.isEmpty()) return null
+        val groupState = mutableServerGroupState(groupId).value
         val servers = groupState.servers.toMutableList()
-        if (!servers.moveItem(fromPosition, toPosition)) return
+        if (!servers.moveItem(fromPosition, toPosition)) return null
         val rows = groupState.rows.toMutableList()
-        rows.moveItem(fromPosition, toPosition)
+        if (!rows.moveItem(fromPosition, toPosition)) return null
         val guids = servers.map { it.guid }
-        groupFlow.value = ServerGroupUiState(servers, rows)
+        mutableServerGroupState(groupId).value = ServerGroupUiState(servers, rows)
         // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
-        serverOrderPersistenceJobs[groupId] = viewModelScope.launch {
+        val write = viewModelScope.async(start = CoroutineStart.LAZY) {
             previousPersistenceJob?.join()
             val saved = withContext(ioDispatcher) { dataSource.reorderServerList(guids, groupId) }
             if (!saved) {
@@ -988,8 +944,11 @@ class MainViewModel(
                     serverOrderPersistenceJobs.remove(groupId)
                 }
             }
-            if (saved) onMoved?.invoke()
+            saved
         }
+        serverOrderPersistenceJobs[groupId] = write
+        write.start()
+        return write
     }
 
     internal fun moveServer(groupId: String, guid: String, command: ReorderCommand, onMoved: () -> Unit): Boolean {
@@ -997,7 +956,10 @@ class MainViewModel(
         val servers = mutableServerGroupState(groupId).value.servers
         val fromPosition = servers.indexOfFirst { it.guid == guid }
         val toPosition = command.targetIndex(fromPosition, servers.size) ?: return false
-        moveServer(groupId, fromPosition, toPosition, onMoved)
+        val write = moveServer(groupId, fromPosition, toPosition) ?: return false
+        viewModelScope.launch {
+            if (write.await()) onMoved()
+        }
         return true
     }
 
@@ -1176,25 +1138,5 @@ class MainViewModel(
 
     private companion object {
         const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
-    }
-}
-
-internal fun subscriptionGroupRefreshOrder(
-    visibleGroupIds: List<String>,
-    selectedGroupId: String,
-    changedSubscriptionIds: Collection<String>,
-): List<String> {
-    val changedIds = changedSubscriptionIds.filterTo(LinkedHashSet()) { it.isNotBlank() }
-    if (changedIds.isEmpty()) return emptyList()
-
-    val affectedIds = visibleGroupIds.filterTo(LinkedHashSet()) {
-        it.isNotEmpty() && it in changedIds
-    }
-    if (visibleGroupIds.any { it.isEmpty() }) affectedIds += ""
-    if (affectedIds.isEmpty()) return emptyList()
-
-    return buildList(affectedIds.size) {
-        if (selectedGroupId in affectedIds) add(selectedGroupId)
-        addAll(affectedIds.filter { it != selectedGroupId })
     }
 }
