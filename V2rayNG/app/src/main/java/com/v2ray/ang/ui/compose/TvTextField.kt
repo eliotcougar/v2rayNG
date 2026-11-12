@@ -193,11 +193,14 @@ internal fun Modifier.tvAwareTextFieldFocus(
 ): Modifier {
     if (state == null) return this
     val focusManager = LocalFocusManager.current
-    return then(
-        Modifier.tvPassiveTextFieldFocus(
-            state = state,
+    return bringIntoViewRequester(state.bringIntoViewRequester)
+        .onSizeChanged { state.measuredSize = it }
+        .tvPassiveTextFieldFocus(
+            focusRequester = state.passiveFocusRequester,
+            interactionSource = state.interactionSource,
             enabled = enabled,
             onActivate = onActivate,
+            canActivate = { !state.isEditing },
             onMoveUp = {
                 state.finishEditing()
                 navigation.onMoveUp?.invoke()
@@ -209,22 +212,22 @@ internal fun Modifier.tvAwareTextFieldFocus(
                     ?: focusManager.moveFocus(FocusDirection.Down)
             }
         )
-    ).then(
-        if (navigation.onMovePrevious != null || navigation.onMoveNext != null) {
-            Modifier.dpadLogicalHorizontalNavigation(
-                onMovePrevious = {
-                    navigation.onMovePrevious?.invoke()
-                        ?: state.passiveFocusRequester.requestFocus()
-                },
-                onMoveNext = {
-                    navigation.onMoveNext?.invoke()
-                        ?: state.passiveFocusRequester.requestFocus()
-                }
-            )
-        } else {
-            Modifier
-        }
-    )
+        .then(
+            if (navigation.onMovePrevious != null || navigation.onMoveNext != null) {
+                Modifier.dpadLogicalHorizontalNavigation(
+                    onMovePrevious = {
+                        navigation.onMovePrevious?.invoke()
+                            ?: state.passiveFocusRequester.requestFocus()
+                    },
+                    onMoveNext = {
+                        navigation.onMoveNext?.invoke()
+                            ?: state.passiveFocusRequester.requestFocus()
+                    }
+                )
+            } else {
+                Modifier
+            }
+        )
 }
 
 @Composable
@@ -234,7 +237,8 @@ internal fun OutlinedTextField(
     spec: OutlinedTextFieldSpec,
     tvFieldState: TvTextFieldState?,
     modifier: Modifier = Modifier,
-    trailingIcon: (@Composable () -> Unit)? = null
+    trailingIcon: (@Composable () -> Unit)? = null,
+    interactionSource: MutableInteractionSource? = tvFieldState?.interactionSource
 ) {
     val isTelevision = isTelevisionDevice()
     MaterialOutlinedTextField(
@@ -251,7 +255,7 @@ internal fun OutlinedTextField(
         keyboardOptions = spec.keyboardOptions,
         visualTransformation = spec.visualTransformation,
         trailingIcon = trailingIcon,
-        interactionSource = tvFieldState?.interactionSource,
+        interactionSource = interactionSource,
         colors = OutlinedTextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
@@ -277,33 +281,29 @@ internal fun OutlinedTextField(
 
 @Composable
 internal fun Modifier.tvPassiveTextFieldFocus(
-    state: TvTextFieldState,
+    focusRequester: FocusRequester,
+    interactionSource: MutableInteractionSource,
     enabled: Boolean,
     onActivate: () -> Unit,
-    onMoveUp: () -> Boolean,
-    onMoveDown: () -> Boolean
+    canActivate: () -> Boolean = { true },
+    onMoveUp: (() -> Boolean)? = null,
+    onMoveDown: (() -> Boolean)? = null
 ): Modifier {
-    return bringIntoViewRequester(state.bringIntoViewRequester)
-        .onSizeChanged { state.measuredSize = it }
-        .onPreviewKeyEvent { event ->
-            if (
-                event.type == KeyEventType.KeyDown &&
-                event.key.isDpadActivationKey() &&
-                !state.isEditing
-            ) {
-                onActivate()
-                true
-            } else {
-                false
-            }
+    return onPreviewKeyEvent { event ->
+        if (event.type == KeyEventType.KeyDown && event.key.isDpadActivationKey() && canActivate()) {
+            onActivate()
+            true
+        } else {
+            false
         }
+    }
         .dpadTextFieldNavigation(onMoveUp = onMoveUp, onMoveDown = onMoveDown)
-        .focusRequester(state.passiveFocusRequester)
-        .focusable(enabled = enabled, interactionSource = state.interactionSource)
+        .focusRequester(focusRequester)
+        .focusable(enabled = enabled, interactionSource = interactionSource)
 }
 
-internal fun Modifier.tvTextFieldEditorFocus(state: TvTextFieldState, enabled: Boolean = true): Modifier {
+internal fun Modifier.tvTextFieldEditorFocus(state: TvTextFieldState): Modifier {
     return focusRequester(state.editorFocusRequester)
-        .focusProperties { canFocus = enabled && state.isEditing }
+        .focusProperties { canFocus = state.isEditing }
         .onFocusChanged { state.onEditorFocusChanged(it.isFocused) }
 }

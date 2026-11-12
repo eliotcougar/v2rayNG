@@ -84,7 +84,6 @@ fun ServerSelectListDialog(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.weight(1f).dpadPopupHorizontalNavigation(
-                            onMovePrevious = {},
                             onMoveNext = if (showClear) ({ clearFocus.requestFocus() }) else null
                         ),
                         maxLines = 1,

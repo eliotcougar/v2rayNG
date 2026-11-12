@@ -314,14 +314,15 @@ internal fun Modifier.dpadOrderedFocusNavigation(
     current: FocusRequester,
     order: List<FocusRequester>,
     onBeforeFirst: (() -> Unit)? = null,
-    onAfterLast: (() -> Unit)? = null
+    onAfterLast: (() -> Unit)? = null,
+    requestFocus: (FocusRequester) -> Boolean = { it.requestFocus() }
 ): Modifier {
     fun move(direction: DpadHorizontalDirection, onEdge: (() -> Unit)?) {
         val target = adjacentDpadFocusTarget(current, order, direction)
         if (target == null) {
             onEdge?.invoke() ?: current.requestFocus()
         } else {
-            target.requestFocus()
+            requestFocus(target)
         }
     }
 
@@ -336,32 +337,24 @@ internal fun Modifier.dpadOrderedFocusNavigation(
 }
 
 /**
- * Handles popup exits using the same logical ordering convention as ordinary action rows. Preview
- * events are required here because popup content otherwise consumes the physical D-pad event first.
+ * Handles horizontal navigation inside menus and dialogs before controls such as text fields
+ * consume the D-pad event. Unspecified directions keep their default behavior.
  */
 @Composable
 internal fun Modifier.dpadPopupHorizontalNavigation(
-    onMovePrevious: () -> Unit, onMoveNext: (() -> Unit)? = null
+    onMovePrevious: (() -> Unit)? = null, onMoveNext: (() -> Unit)? = null
 ): Modifier {
-    if (!isTelevisionDevice()) return this
+    if (!isTelevisionDevice() || (onMovePrevious == null && onMoveNext == null)) return this
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     return onPreviewKeyEvent { event ->
         if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-        when (logicalHorizontalDirection(event.key, isRtl)) {
-            DpadHorizontalDirection.Previous -> {
-                onMovePrevious()
-                true
-            }
-
-            DpadHorizontalDirection.Next -> {
-                if (onMoveNext == null) false else {
-                    onMoveNext()
-                    true
-                }
-            }
-
-            null -> false
-        }
+        val move = when (logicalHorizontalDirection(event.key, isRtl)) {
+            DpadHorizontalDirection.Previous -> onMovePrevious
+            DpadHorizontalDirection.Next -> onMoveNext
+            null -> null
+        } ?: return@onPreviewKeyEvent false
+        move()
+        true
     }
 }
 
@@ -441,6 +434,19 @@ internal fun Modifier.dpadRowActionNavigation(
         onMoveUp = { previousRow?.let(requestFocus) ?: false },
         onMoveDown = { nextRow?.let(requestFocus) ?: true }
     )
+}
+
+/** Wires corresponding actions across adjacent rows without imposing an action order on either screen. */
+internal class DpadRowActionFocus<T>(
+    private val current: T,
+    private val previous: T?,
+    private val next: T?,
+    private val order: List<FocusRequester>,
+    private val requestFocus: (FocusRequester) -> Boolean
+) {
+    @Composable
+    fun modifier(action: (T) -> FocusRequester): Modifier =
+        Modifier.dpadRowActionNavigation(action(current), order, previous?.let(action), next?.let(action), requestFocus)
 }
 
 /**

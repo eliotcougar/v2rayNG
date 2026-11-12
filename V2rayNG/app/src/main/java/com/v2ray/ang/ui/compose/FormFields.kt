@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
@@ -220,7 +221,7 @@ fun FormDropdownField(
             },
             modifier = Modifier
                 .then(tvFieldState?.let {
-                    Modifier.tvTextFieldEditorFocus(it, enabled = config.editable)
+                    if (config.editable) Modifier.tvTextFieldEditorFocus(it) else Modifier.focusProperties { canFocus = false }
                 } ?: Modifier)
                 .menuAnchor(
                     type = if (config.editable) ExposedDropdownMenuAnchorType.PrimaryEditable
