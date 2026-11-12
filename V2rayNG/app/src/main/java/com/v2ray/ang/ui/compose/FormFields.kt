@@ -143,14 +143,11 @@ fun FormDropdownField(
         null
     }
     val selectedOptionFocusRequester = if (isTelevision) remember { FocusRequester() } else null
-    val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel).let { choices ->
-        if (config.editable && value.isNotBlank() && value !in options) {
-            choices.filter { it.contains(value, ignoreCase = true) }
-        } else {
-            choices
-        }
+    val menuOptions = formDropdownMenuOptions(options, config.emptyOptionLabel)
+    val visibleOptions = remember(menuOptions, value, config.editable) {
+        if (config.editable) filterDropdownOptions(menuOptions, value) else menuOptions
     }
-    val selectedOptionIndex = formDropdownSelectedOptionIndex(menuOptions, value)
+    val selectedOptionIndex = formDropdownSelectedOptionIndex(visibleOptions, value)
     val displayedValue = if (!config.editable && value.isEmpty()) {
         config.emptyOptionLabel.orEmpty()
     } else {
@@ -174,7 +171,7 @@ fun FormDropdownField(
     LaunchedEffect(dropdownState.expanded, dropdownState.restoreFieldFocus, selectedOptionIndex) {
         when {
             dropdownState.expanded &&
-                menuOptions.isNotEmpty() &&
+                visibleOptions.isNotEmpty() &&
                 selectedOptionFocusRequester != null ->
                 requestFocusWhenReady(selectedOptionFocusRequester)
 
@@ -207,7 +204,15 @@ fun FormDropdownField(
     ) {
         OutlinedTextField(
             value = displayedValue,
-            onValueChange = { if (config.editable) onValueChange(it) },
+            onValueChange = { query ->
+                if (config.editable) {
+                    onValueChange(query)
+                    if (!isTelevision) {
+                        if (filterDropdownOptions(menuOptions, query).isNotEmpty()) dropdownState.open()
+                        else dismissMenu()
+                    }
+                }
+            },
             spec = OutlinedTextFieldSpec(
                 label = label,
                 placeholder = config.placeholder,
@@ -239,7 +244,7 @@ fun FormDropdownField(
             scrollState = menuScrollState,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            menuOptions.forEachIndexed { index, option ->
+            visibleOptions.forEachIndexed { index, option ->
                 AppDropdownMenuItem(
                     text = if (option.isEmpty() && config.emptyOptionLabel != null) {
                         config.emptyOptionLabel
@@ -259,5 +264,21 @@ fun FormDropdownField(
                 )
             }
         }
+    }
+}
+
+/**
+ * Options an editable dropdown offers for the text the user has typed.
+ *
+ * A blank query, or one that already equals an option, keeps every option so the menu still works
+ * as a plain picker. Any other query keeps the options containing it anywhere, ignoring case, so a
+ * partly remembered or mid-string fragment still finds its entry.
+ */
+internal fun filterDropdownOptions(options: List<String>, query: String): List<String> {
+    val trimmed = query.trim()
+    return if (trimmed.isEmpty() || trimmed in options) {
+        options
+    } else {
+        options.filter { it.contains(trimmed, ignoreCase = true) }
     }
 }

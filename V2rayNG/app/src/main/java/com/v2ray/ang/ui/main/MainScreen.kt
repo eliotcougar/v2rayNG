@@ -143,9 +143,10 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect((tvDrawerCoordinator?.isOpen == true), resumeFocusGeneration, isTelevision) {
-        if (!isTelevision || (tvDrawerCoordinator?.isOpen == true)) return@LaunchedEffect
-        if (tvDrawerCoordinator?.focusToRestore?.invoke() != true) requestFocusWhenReady(topBarFocus.start)
+    LaunchedEffect(tvDrawerCoordinator, tvDrawerCoordinator?.isOpen) {
+        if (tvDrawerCoordinator?.isOpen != false) return@LaunchedEffect
+        val restore = tvDrawerCoordinator.takeFocusToRestore() ?: return@LaunchedEffect
+        if (!restore()) requestFocusWhenReady(topBarFocus.start)
     }
 
     BackHandler(enabled = isTelevision && showSearch) {
@@ -153,7 +154,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         showSearch = false
     }
     BackHandler(enabled = isTelevision && (tvDrawerCoordinator?.isOpen == true)) {
-        tvDrawerCoordinator?.closeAndRestore()
+        tvDrawerCoordinator?.close()
     }
 
     val groupTabTargets = rememberDpadFocusTargets(groups.map { it.id }) { FocusRequester() }
@@ -321,7 +322,7 @@ fun MainScreen(mainViewModel: MainViewModel, onAction: (MainAction) -> Unit, onN
         TvMainNavigationDrawer(
             drawerState = tvDrawerCoordinator.state,
             focusGeneration = resumeFocusGeneration,
-            onClose = tvDrawerCoordinator::closeAndRestore,
+            onClose = tvDrawerCoordinator::close,
             onNavigate = onNavigate,
             content = mainContent
         )

@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.logcat
 
 import android.content.ClipData
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.activity.viewModels
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.focusable
@@ -167,8 +168,15 @@ fun LogcatScreen(
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
 
+    fun closeSearch() {
+        searchQuery = ""
+        viewModel.filter("")
+        showSearch = false
+    }
+    BackHandler(enabled = isTelevision && showSearch, onBack = ::closeSearch)
+
     val listState = rememberLazyListState()
-    val backFocusRequester = rememberDpadFocusRequester()
+    val backFocusRequester = rememberDpadFocusRequester(requestFocus = !showSearch, requestKey = showSearch)
     val rowFocusTargets = rememberDpadFocusTargets(rows.map { it.key }) { FocusRequester() }
     val requestRowFocus = rememberLazyDpadFocus(rows.map { listOf(rowFocusTargets.getValue(it.key)) }) {
         listState.scrollToItem(it)
@@ -194,11 +202,7 @@ fun LogcatScreen(
                     searchQuery = it
                     viewModel.filter(it)
                 },
-                onSearchClose = {
-                    searchQuery = ""
-                    viewModel.filter("")
-                    showSearch = false
-                },
+                onSearchClose = ::closeSearch,
                 searchPlaceholder = stringResource(R.string.menu_item_search),
                 navigationFocusRequester = backFocusRequester,
                 onMoveDown = { rows.firstOrNull()?.let { requestRowFocus(rowFocusTargets.getValue(it.key)) } ?: false },

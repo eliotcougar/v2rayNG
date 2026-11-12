@@ -25,8 +25,7 @@ import kotlinx.coroutines.flow.drop
 
 @Stable
 internal class MainTvDrawerCoordinator(val state: TvDrawerState) {
-    var focusToRestore by mutableStateOf<(() -> Boolean)?>(null)
-        private set
+    private var focusToRestore: (() -> Boolean)? = null
 
     val isOpen: Boolean
         get() = state.currentValue == TvDrawerValue.Open
@@ -36,10 +35,11 @@ internal class MainTvDrawerCoordinator(val state: TvDrawerState) {
         state.setValue(TvDrawerValue.Open)
     }
 
-    fun closeAndRestore() {
-        // MainScreen restores after the drawer state change, including activity resume.
+    fun close() {
         state.setValue(TvDrawerValue.Closed)
     }
+
+    fun takeFocusToRestore(): (() -> Boolean)? = focusToRestore.also { focusToRestore = null }
 }
 
 @Composable
