@@ -44,7 +44,7 @@ class MainReorderTest {
             true
         }
         viewModel = spy(MainViewModel(mock(), source, dispatcher, dispatcher))
-        doNothing().whenever(viewModel).toastError(any<Int>())
+        doNothing().whenever(viewModel).toastError(any<Int>(), any())
     }
 
     @AfterEach fun tearDown() {

@@ -69,6 +69,7 @@ import com.v2ray.ang.ui.compose.dpadFocusOutline
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
 import com.v2ray.ang.ui.compose.isTelevisionDevice
+import com.v2ray.ang.ui.compose.rememberLazyDpadFocus
 
 private val TAB_BAR_PADDING = 3.dp
 private val TAB_SPACING = 2.dp
@@ -261,6 +262,7 @@ private fun TvGroupTabBar(
     onMoveUp: () -> Unit, onTabClick: (Int) -> Unit, modifier: Modifier
 ) {
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = selectedIndex)
+    val requestTabFocus = rememberLazyDpadFocus(tabFocusRequesters.map { listOf(it) }) { listState.scrollToItem(it) }
 
     LaunchedEffect(selectedIndex) {
         if (listState.layoutInfo.visibleItemsInfo.none { it.index == selectedIndex }) {
@@ -284,7 +286,8 @@ private fun TvGroupTabBar(
                     .dpadOrderedFocusNavigation(
                         current = focusRequester,
                         order = tabFocusRequesters,
-                        onBeforeFirst = { onOpenDrawer(focusRequester) }
+                        onBeforeFirst = { onOpenDrawer(focusRequester) },
+                        requestFocus = requestTabFocus
                     )
                     .dpadVerticalFocusNavigation(
                         onMoveUp = { onMoveUp(); true },
