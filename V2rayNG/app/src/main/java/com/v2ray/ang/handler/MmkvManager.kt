@@ -543,30 +543,31 @@ object MmkvManager {
             } else {
                 null
             }
-            val replacementSelection = ProfileReplacement.findSelectedReplacement(
-                profiles = profiles,
-                currentSelection = previousSelection,
-                selectedProfile = selectedProfile,
-            )
+            val replacedProfiles = replacedServers.associateWith(::decodeServerConfig)
+            val reusedGuids = ProfileReplacement.reusedGroupGuids(replacedProfiles, profiles, previousSelection)
+            val publishedProfiles = profiles.mapKeys { (guid, _) -> reusedGuids[guid] ?: guid }
+            val keptGroups = ProfileReplacement.findKeptGroups(replacedProfiles, profiles.values)
+            val replacementSelection = if (previousSelection in reusedGuids.values || previousSelection in keptGroups) {
+                null
+            } else {
+                ProfileReplacement.findSelectedReplacement(publishedProfiles, previousSelection, selectedProfile)
+            }
 
             val serverList = if (append) {
                 decodeServerListForWrite(subscriptionId)
             } else {
-                ProfileReplacement.findKeptGroups(
-                    replacedProfiles = replacedServers.associateWith(::decodeServerConfig),
-                    profiles = profiles.values,
-                ).toMutableList()
+                keptGroups.toMutableList()
             }
             val indexedServers = serverList.toHashSet()
-            profiles.keys.forEach { guid ->
+            publishedProfiles.keys.forEach { guid ->
                 if (indexedServers.add(guid)) {
                     serverList.add(0, guid)
                 }
             }
 
             val removablePayloads = runStorageMutationTransaction {
-                rawConfigs.forEach { (guid, raw) -> writeRawProfilePayload(guid, raw) }
-                profiles.forEach { (guid, profile) -> writeProfilePayload(guid, profile) }
+                rawConfigs.forEach { (guid, raw) -> writeRawProfilePayload(reusedGuids[guid] ?: guid, raw) }
+                publishedProfiles.forEach { (guid, profile) -> writeProfilePayload(guid, profile) }
                 updatedSubscription?.let { writeSubscriptionPayload(subscriptionId, it) }
                 replacementSelection?.let { writeSelectedProfile(it) }
 

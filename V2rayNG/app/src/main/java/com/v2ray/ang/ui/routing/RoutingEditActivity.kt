@@ -56,12 +56,12 @@ import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.ui.apppicker.AppPickerActivity
 import com.v2ray.ang.ui.base.BaseComponentActivity
-import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.DeleteConfirmDialog
 import com.v2ray.ang.ui.compose.FormDropdownField
 import com.v2ray.ang.ui.compose.FormTextField
 import com.v2ray.ang.ui.compose.NavigationBarsSpacer
+import com.v2ray.ang.ui.compose.ServerSelectButton
 import com.v2ray.ang.ui.compose.ServerSelectListDialog
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -345,28 +345,43 @@ fun RoutingEditScreen(
                 options = ROUTING_NETWORK_OPTIONS,
                 onValueChange = { network = it }
             )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FormDropdownField(
-                    label = stringResource(R.string.routing_settings_outbound_tag),
-                    config = FormDropdownConfig(placeholder = stringResource(
-                        R.string.routing_settings_outbound_tag_hint,
-                        stringResource(R.string.server_lab_remarks)
-                    )),
+            val outboundLabel = stringResource(R.string.routing_settings_outbound_tag)
+            if (isTelevision) {
+                Text(
+                    text = outboundLabel,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+                )
+                ServerSelectButton(
+                    label = outboundLabel,
                     value = outboundTag,
-                    options = BUILTIN_OUTBOUND_TAGS.toList(),
-                    onValueChange = { outboundTag = it },
-                    modifier = Modifier.weight(1f)
+                    onClick = { showOutboundDialog = true },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
                 )
-                AppIconButton(
-                    icon = painterResource(R.drawable.ic_search_24dp),
-                    label = stringResource(R.string.acc_search),
-                    onClick = { showOutboundDialog = true }
-                )
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    FormDropdownField(
+                        label = outboundLabel,
+                        config = FormDropdownConfig(placeholder = stringResource(
+                            R.string.routing_settings_outbound_tag_hint,
+                            stringResource(R.string.server_lab_remarks)
+                        )),
+                        value = outboundTag,
+                        options = BUILTIN_OUTBOUND_TAGS.toList(),
+                        onValueChange = { outboundTag = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                    AppIconButton(
+                        icon = painterResource(R.drawable.ic_search_24dp),
+                        label = stringResource(R.string.acc_search),
+                        onClick = { showOutboundDialog = true }
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(36.dp))
             NavigationBarsSpacer()

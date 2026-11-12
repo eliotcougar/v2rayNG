@@ -117,6 +117,52 @@ class MmkvPersistenceTest {
         }
     }
 
+    @Test fun `custom outbound refresh commits metadata and rejects a stale response`() {
+        val original = SubscriptionItem(remarks = "Subscription", lastUpdated = 100)
+        val updated = original.copy(lastUpdated = 200, usageInfo = SubscriptionUsageInfo(download = 42))
+        MmkvManager.encodeSubscription("s", original)
+
+        val outbound = """{"protocol":"freedom","tag":"custom"}"""
+        assertEquals(1, AngConfigManager.parseAndCommitProfiles(
+            outbound, "s", append = false, SubscriptionUpdateCommit(original, updated),
+        ))
+
+        val guid = MmkvManager.decodeServerList("s").single()
+        assertEquals(updated, MmkvManager.decodeSubscription("s"))
+        assertEquals(EConfigType.CUSTOM_OUTBOUND, MmkvManager.decodeServerConfig(guid)?.configType)
+        assertNotNull(MmkvManager.decodeServerRaw(guid))
+
+        assertThrows(SubscriptionUpdateAbortedException::class.java) {
+            AngConfigManager.parseAndCommitProfiles(
+                outbound, "s", append = false, SubscriptionUpdateCommit(original, updated),
+            )
+        }
+        assertEquals(listOf(guid), MmkvManager.decodeServerList("s"))
+        assertEquals(updated, MmkvManager.decodeSubscription("s"))
+    }
+
+    @Test fun `refresh updates the selected policy group under its running GUID`() {
+        val group = ProfileItem.create(EConfigType.POLICYGROUP).apply {
+            subscriptionId = "s"
+            remarks = "Automatic"
+            policyGroupFilter = "old"
+        }
+        val member = ProfileItem.create(EConfigType.VLESS).apply { subscriptionId = "s" }
+        MmkvManager.saveServerProfiles(mapOf("running" to group, "old-member" to member), emptyMap(), "s", false)
+
+        MmkvManager.saveServerProfiles(
+            mapOf("imported" to group.copy(policyGroupFilter = "new"), "new-member" to member),
+            emptyMap(),
+            "s",
+            false,
+        )
+
+        assertEquals("running", MmkvManager.getSelectServer())
+        assertEquals(setOf("running", "new-member"), MmkvManager.decodeServerList("s").toSet())
+        assertEquals("new", MmkvManager.decodeServerConfig("running")?.policyGroupFilter)
+        assertNull(MmkvManager.decodeServerConfig("imported"))
+    }
+
     @Test fun `failed refresh restores usage metadata profiles raw payloads indexes and selection`() {
         val affectedStores = listOf(stores.main, stores.profiles, stores.raw, stores.affiliations, stores.subscriptions)
         val oldUsage = SubscriptionUsageInfo(download = 42, total = 100)

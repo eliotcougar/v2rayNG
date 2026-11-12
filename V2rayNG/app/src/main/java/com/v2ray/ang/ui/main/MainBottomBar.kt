@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,7 +49,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
@@ -77,7 +75,6 @@ import kotlinx.coroutines.launch
 private val KNOB_SIZE = 56.dp
 private val BAR_MAX_WIDTH = 480.dp
 private const val TEXT_MAX_SP = 14f
-private const val TEXT_MIN_SP = 10f
 private const val TEXT_LINE_HEIGHT_FACTOR = 1.3f
 
 /**
@@ -234,38 +231,38 @@ fun MainBottomBar(
                         .then(connectionActionModifier)
                 )
                 CompositionLocalProvider(LocalLayoutDirection provides textLayoutDirection) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .fillMaxWidth()
                             // Room for the button on the right; absolute so it does not flip with the language.
                             .absolutePadding(left = 20.dp, right = KNOB_SIZE + knobInset + 8.dp),
-                        contentAlignment = Alignment.CenterStart
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        // At most two lines of a fixed line height, shrinking the font if needed, so a longer
-                        // message (for example a ping result in Persian) never makes the bar taller.
-                        val visibleStatus = listOf(displayText, testDisplayText).filter(String::isNotBlank).joinToString("\n")
-                        var fontSizeSp by remember(visibleStatus) { mutableFloatStateOf(TEXT_MAX_SP) }
+                        val statusStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = TEXT_MAX_SP.sp,
+                            lineHeight = (TEXT_MAX_SP * TEXT_LINE_HEIGHT_FACTOR).sp,
+                            lineHeightStyle = LineHeightStyle(
+                                alignment = LineHeightStyle.Alignment.Center,
+                                trim = LineHeightStyle.Trim.None
+                            )
+                        )
                         Text(
-                            text = visibleStatus,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = fontSizeSp.sp,
-                                lineHeight = (fontSizeSp * TEXT_LINE_HEIGHT_FACTOR).sp,
-                                lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
-                                    trim = LineHeightStyle.Trim.None
-                                )
-                            ),
-                            textAlign = TextAlign.Start,
-                            maxLines = 2,
+                            text = displayText,
+                            style = statusStyle,
+                            maxLines = if (testDisplayText.isBlank()) 2 else 1,
                             overflow = TextOverflow.Ellipsis,
-                            onTextLayout = { layout ->
-                                if (layout.hasVisualOverflow && fontSizeSp > TEXT_MIN_SP) {
-                                    fontSizeSp = (fontSizeSp - 1f).coerceAtLeast(TEXT_MIN_SP)
-                                }
-                            },
                             modifier = Modifier.clearAndSetSemantics { hideFromAccessibility() }
                         )
+                        if (testDisplayText.isNotBlank()) {
+                            Text(
+                                text = testDisplayText,
+                                style = statusStyle.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.clearAndSetSemantics { hideFromAccessibility() }
+                            )
+                        }
                     }
                 }
                 FloatingActionButton(
