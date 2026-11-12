@@ -1,6 +1,7 @@
 package com.v2ray.ang.handler
 
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.enums.EConfigType
 import com.v2ray.ang.extension.isGroupType
 
 internal object ProfileReplacement {
@@ -73,24 +74,40 @@ internal object ProfileReplacement {
     /**
      * Finds the replaced group profiles that stay in the replaced group index.
      *
-     * Groups are kept so that groups created by hand survive a subscription update. A group
-     * that the batch imports again (same type and remarks) is dropped: share links such as
-     * v2rayn:// create it with a new GUID on every update, so keeping it would add a copy.
+     * Keep hand-made groups. Reimported groups are published with the batch under their reused GUID.
      */
     fun findKeptGroups(
         replacedProfiles: Map<String, ProfileItem?>,
         profiles: Collection<ProfileItem>,
     ): List<String> {
-        val importedGroups = profiles
-            .filter { it.configType.isGroupType() }
-            .mapTo(hashSetOf()) { it.configType to it.remarks }
-
+        val importedGroups = profiles.mapNotNullTo(hashSetOf()) { it.groupIdentity() }
         return replacedProfiles.filter { (_, profile) ->
-            profile != null &&
-                    profile.configType.isGroupType() &&
-                    (profile.configType to profile.remarks) !in importedGroups
+            profile?.groupIdentity()?.let { it !in importedGroups } == true
         }.keys.toList()
     }
+
+    /** Reuse each matching group GUID once so a running core can reload it after a refresh. */
+    fun reusedGroupGuids(
+        replacedProfiles: Map<String, ProfileItem?>,
+        profiles: Map<String, ProfileItem>,
+        selectedGuid: String?,
+    ): Map<String, String> {
+        val existingGuids = mutableMapOf<Pair<EConfigType, String>, String>()
+        replacedProfiles.forEach { (guid, profile) ->
+            val identity = profile?.groupIdentity() ?: return@forEach
+            if (guid == selectedGuid) existingGuids[identity] = guid
+            else existingGuids.putIfAbsent(identity, guid)
+        }
+        return buildMap {
+            profiles.forEach { (guid, profile) ->
+                val identity = profile.groupIdentity() ?: return@forEach
+                existingGuids.remove(identity)?.let { put(guid, it) }
+            }
+        }
+    }
+
+    private fun ProfileItem.groupIdentity() =
+        if (configType.isGroupType()) configType to remarks else null
 
     private fun isSameText(left: String?, right: String?): Boolean {
         if (left.isNullOrBlank() || right.isNullOrBlank()) return false

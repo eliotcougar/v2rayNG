@@ -136,15 +136,28 @@ class ProfileReplacementTest {
                 "node-$update" to profile(remarks = "node", server = "host"),
                 "group-$update" to group(EConfigType.POLICYGROUP, "Auto"),
             )
-            val kept = ProfileReplacement.findKeptGroups(
-                replacedProfiles = index.associateWith(stored::get),
-                profiles = batch.values,
-            )
-            stored.putAll(batch)
-            index = batch.keys.reversed() + kept
+            val replaced = index.associateWith(stored::get)
+            val reused = ProfileReplacement.reusedGroupGuids(replaced, batch, selectedGuid = "group-0")
+            val kept = ProfileReplacement.findKeptGroups(replaced, batch.values)
+            val published = batch.mapKeys { (guid, _) -> reused[guid] ?: guid }
+            stored.putAll(published)
+            index = published.keys.reversed() + kept
         }
 
-        assertEquals(listOf("group-2", "node-2"), index)
+        assertEquals(listOf("group-0", "node-2"), index)
+    }
+
+    @Test
+    fun `reuses the selected group identity when cleaning up old copies`() {
+        val automatic = group(EConfigType.POLICYGROUP, "Auto")
+        val chain = group(EConfigType.PROXYCHAIN, "Auto")
+        val replaced = linkedMapOf("old-copy" to automatic, "running" to automatic, "chain" to chain)
+        val imported = linkedMapOf("new" to automatic, "new-chain" to chain)
+
+        assertEquals(
+            mapOf("new" to "running", "new-chain" to "chain"),
+            ProfileReplacement.reusedGroupGuids(replaced, imported, selectedGuid = "running"),
+        )
     }
 
     @Test

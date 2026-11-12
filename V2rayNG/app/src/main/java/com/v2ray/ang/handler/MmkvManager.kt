@@ -327,18 +327,23 @@ object MmkvManager {
             } else {
                 null
             }
-            val replacementSelection = ProfileReplacement.findSelectedReplacement(
-                profiles = profiles,
-                currentSelection = previousSelection,
-                selectedProfile = selectedProfile,
-            )
+            val replacedProfiles = replacedServers.associateWith(::decodeServerConfig)
+            val reusedGuids = ProfileReplacement.reusedGroupGuids(replacedProfiles, profiles, previousSelection)
+            val publishedProfiles = profiles.mapKeys { (guid, _) -> reusedGuids[guid] ?: guid }
+            val keptGroups = ProfileReplacement.findKeptGroups(replacedProfiles, profiles.values)
+            val replacementSelection = if (previousSelection in reusedGuids.values || previousSelection in keptGroups) {
+                null
+            } else {
+                ProfileReplacement.findSelectedReplacement(publishedProfiles, previousSelection, selectedProfile)
+            }
 
-            profiles.forEach { (guid, profile) ->
+            profiles.forEach { (importedGuid, profile) ->
+                val guid = reusedGuids[importedGuid] ?: importedGuid
                 requireStorageWrite(
                     profileFullStorage.encode(guid, JsonUtil.toJson(profile)),
                     "Failed to save profile payload",
                 )
-                rawConfigs[guid]?.let { raw ->
+                rawConfigs[importedGuid]?.let { raw ->
                     requireStorageWrite(
                         serverRawStorage.encode(guid, raw),
                         "Failed to save raw profile payload",
@@ -349,13 +354,10 @@ object MmkvManager {
             val serverList = if (append) {
                 decodeServerList(subscriptionId)
             } else {
-                ProfileReplacement.findKeptGroups(
-                    replacedProfiles = replacedServers.associateWith(::decodeServerConfig),
-                    profiles = profiles.values,
-                ).toMutableList()
+                keptGroups.toMutableList()
             }
             val indexedServers = serverList.toHashSet()
-            profiles.keys.forEach { guid ->
+            publishedProfiles.keys.forEach { guid ->
                 if (indexedServers.add(guid)) {
                     serverList.add(0, guid)
                 }
