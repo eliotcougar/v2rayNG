@@ -17,7 +17,6 @@ import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
-import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.SubscriptionInfoParser
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
@@ -273,6 +272,7 @@ class MainViewModel(
             MainAction.LocateSelectedServer -> triggerLocateSelectedServer()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
+            is MainAction.MoveServer -> moveServer(action)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
             is MainAction.LocateHandled -> consumeLocateTarget(action.target)
@@ -765,22 +765,19 @@ class MainViewModel(
         }
     }
 
-    fun moveServer(groupId: String, fromPosition: Int, toPosition: Int) {
-        if (groupId.isEmpty()) return
+    private fun moveServer(action: MainAction.MoveServer) {
+        val groupId = action.groupId
+        if (groupId.isEmpty() || uiState.value.searchQuery.isNotEmpty()) return
         val groupFlow = mutableServerGroupState(groupId)
-        val groupState = groupFlow.value
-        val servers = groupState.servers.toMutableList()
-        if (!servers.moveItem(fromPosition, toPosition)) return
-        val rows = groupState.rows.toMutableList()
-        rows.moveItem(fromPosition, toPosition)
-        val guids = servers.map { it.guid }
-        groupFlow.value = ServerGroupUiState(servers, rows)
+        val reordered = groupFlow.value.moveServer(action.fromGuid, action.toGuid) ?: return
+        val guids = reordered.servers.map { it.guid }
+        groupFlow.value = reordered
         // A drag emits several moves; serialize writes so an older order cannot overwrite a newer one.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
         serverOrderPersistenceJobs[groupId] = viewModelScope.launch(ioDispatcher) {
             previousPersistenceJob?.join()
             dataSource.encodeServerList(guids, groupId)
-            cacheMutex.withLock { groupDataCache[groupId] = servers }
+            cacheMutex.withLock { groupDataCache[groupId] = reordered.servers }
         }
     }
 

@@ -18,7 +18,6 @@ import androidx.tv.material3.DrawerState as TvDrawerState
 import androidx.tv.material3.DrawerValue as TvDrawerValue
 import androidx.tv.material3.rememberDrawerState as rememberTvDrawerState
 import com.v2ray.ang.dto.GroupMapItem
-import com.v2ray.ang.dto.entities.ProfileItem
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 
@@ -45,18 +44,6 @@ internal class MainTvDrawerCoordinator(val state: TvDrawerState) {
 internal fun rememberMainTvDrawerCoordinator(): MainTvDrawerCoordinator {
     val drawerState = rememberTvDrawerState(TvDrawerValue.Closed)
     return remember(drawerState) { MainTvDrawerCoordinator(drawerState) }
-}
-
-internal data class MainShareTarget(
-    val guid: String,
-    val profile: ProfileItem,
-    val more: Boolean,
-    val restoreFocus: () -> Boolean
-)
-
-internal sealed interface MainDialog {
-    data class BulkDelete(val target: BulkDeleteTarget) : MainDialog
-    data class Share(val target: MainShareTarget) : MainDialog
 }
 
 internal class MainGroupScrollStates {

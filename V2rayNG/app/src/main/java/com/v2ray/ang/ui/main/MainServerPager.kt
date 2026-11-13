@@ -61,9 +61,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
+import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
 import com.v2ray.ang.dto.entities.ProfileItem
-import com.v2ray.ang.dto.entities.SubscriptionUsageInfo
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppIconButton
 import com.v2ray.ang.ui.compose.DpadReorderDirection
@@ -82,10 +82,8 @@ import com.v2ray.ang.ui.compose.dpadLongPressToMove
 import com.v2ray.ang.ui.compose.dpadOrderedFocusNavigation
 import com.v2ray.ang.ui.compose.dpadRowActionNavigation
 import com.v2ray.ang.ui.compose.dpadVerticalFocusNavigation
-import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.compose.keepDpadReorderItemVisible
 import com.v2ray.ang.ui.compose.rememberSyncedDpadReorderState
-import com.v2ray.ang.ui.compose.reorderIndicesForKeys
 import com.v2ray.ang.ui.compose.twoColumnDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalDpadReorderTarget
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -119,7 +117,7 @@ private data class ServerRowActions(
     val share: () -> Unit,
     val remove: () -> Unit,
     val more: () -> Unit,
-    val back: () -> Unit,
+    val back: (() -> Unit)?,
     val movePrevious: ((FocusRequester) -> Unit)?,
     val moveUp: (() -> Unit)?,
     val reorderItem: DpadReorderItem?
@@ -130,9 +128,10 @@ private data class ServerCollectionActions(
     val edit: (String, ProfileItem) -> Unit,
     val share: (String, ProfileItem, Boolean, () -> Boolean) -> Unit,
     val remove: (String, String) -> Unit,
-    val move: (Int, Int) -> Unit,
-    val back: () -> Unit,
-    val movePrevious: (() -> Boolean) -> Unit,
+    val move: (String, String) -> Unit,
+    val moveWithDpad: (String, Int) -> Unit,
+    val back: (() -> Unit)?,
+    val movePrevious: ((() -> Boolean) -> Unit)?,
     val moveUpFromFirstRow: (() -> Unit)?
 )
 
@@ -161,7 +160,7 @@ private fun ServerCollectionItem(
         rows.getOrNull(index + 1)?.let { focusRequesters?.get(it.guid) }
     } else null
     val reorderItem = reorderState?.let {
-        DpadReorderItem(it, row.guid, index, rows.size, reorderTarget, collectionActions.move)
+        DpadReorderItem(it, row.guid, index, rows.size, reorderTarget) { _, to -> collectionActions.moveWithDpad(row.guid, to) }
     }
     Column {
         ServerListItem(
@@ -177,20 +176,21 @@ private fun ServerCollectionItem(
                 back = collectionActions.back,
                 movePrevious = if (current == null) null else { target ->
                     if (previousColumn != null) requestFocus(previousColumn.more)
-                    else collectionActions.movePrevious { restoreFocus(row.guid) { if (target === current.more) it.more else it.row } }
+                    else collectionActions.movePrevious?.invoke {
+                        restoreFocus(row.guid) { if (target === current.more) it.more else it.row }
+                    }
                 },
                 moveUp = if (index < stride) collectionActions.moveUpFromFirstRow else null,
                 reorderItem = reorderItem
             ),
             focusTargets = current?.let { ServerRowFocusTargets(it, previous, next, adjacentColumn, requestFocus) }
         )
-        ServerItemDivider()
+        AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (current != null) 2.dp else 0.dp))
     }
 }
 
 @Composable
 private fun RevealSelectedServerEffect(
-    isTelevision: Boolean,
     generation: Int,
     selectedGuid: String?,
     selectedIndex: Int,
@@ -200,8 +200,8 @@ private fun RevealSelectedServerEffect(
     reveal: suspend (Int) -> Unit
 ) {
     val currentIndex by rememberUpdatedState(selectedIndex)
-    LaunchedEffect(isTelevision, generation, selectedGuid, doubleColumnDisplay) {
-        if (isTelevision && selectedGuid != null) {
+    LaunchedEffect(generation, selectedGuid, doubleColumnDisplay) {
+        if (selectedGuid != null) {
             val revealKey = Triple(generation, selectedGuid, doubleColumnDisplay)
             // Returning to an already revealed group must not reset the user's scroll position.
             if (scrollStates.lastReveal[groupId] == revealKey) return@LaunchedEffect
@@ -212,33 +212,31 @@ private fun RevealSelectedServerEffect(
     }
 }
 
+/** Remote-only inputs to the shared collection; touch pages do not create a focus graph. */
+internal class TvProfileNavigation(
+    val revealSelectedGeneration: Int,
+    val openDrawer: (() -> Boolean) -> Unit,
+    val backFromList: () -> Unit,
+    val moveUpFromFirstRow: (() -> Unit)?
+)
+
 @Composable
 internal fun GroupPagerPage(
-    groupId: String,
+    group: GroupMapItem,
     mainViewModel: MainViewModel,
-    selectedGuid: String?,
-    locateTarget: LocateTarget?,
-    doubleColumnDisplay: Boolean,
-    revealSelectedGeneration: Int,
-    searchQuery: String,
+    uiState: MainUiState,
     scrollStates: MainGroupScrollStates,
-    onSelectServer: (String) -> Unit,
-    onEditServer: (String, ProfileItem) -> Unit,
-    onShareServer: (String, ProfileItem, Boolean, () -> Boolean) -> Unit,
-    onRemoveServer: (String, String) -> Unit,
-    usageInfo: SubscriptionUsageInfo?,
-    groupTitle: String,
-    onOpenLink: (String) -> Unit,
-    onOpenDrawer: (() -> Boolean) -> Unit,
-    onBackFromList: () -> Unit,
-    onMoveUpFromFirstRow: (() -> Unit)?,
-    contentPadding: PaddingValues
+    onAction: (MainAction) -> Unit,
+    dialogs: MainDialogActions,
+    contentPadding: PaddingValues,
+    tvNavigation: TvProfileNavigation? = null
 ) {
+    val groupId = group.id
+    val usageInfo = group.usageInfo
     val groupStateFlow = remember(mainViewModel, groupId) { mainViewModel.serverGroupState(groupId) }
     val groupState by groupStateFlow.collectAsStateWithLifecycle()
-    val canReorder = groupId.isNotEmpty() && searchQuery.isEmpty()
-    val isTelevision = isTelevisionDevice()
-    val refreshFocusRequester = remember(groupId) { FocusRequester() }
+    val canReorder = groupId.isNotEmpty() && uiState.searchQuery.isEmpty()
+    val refreshFocusRequester = if (tvNavigation != null && usageInfo != null) remember(groupId) { FocusRequester() } else null
     // Keep the upstream floating card and reserve its height above the scrollable server rows.
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -253,39 +251,50 @@ internal fun GroupPagerPage(
             bottom = contentPadding.calculateBottomPadding()
         )
     }
-    val moveUpFromFirstRow: (() -> Unit)? = if (isTelevision && usageInfo != null) {
+    val moveUpFromFirstRow: (() -> Unit)? = if (refreshFocusRequester != null) {
         { refreshFocusRequester.requestFocus() }
-    } else onMoveUpFromFirstRow
+    } else tvNavigation?.moveUpFromFirstRow
 
     Box(Modifier.fillMaxSize()) {
         ServerListPage(
             rows = groupState.rows,
-            selectedGuid = selectedGuid,
-            locateTarget = locateTarget?.takeIf { it.groupId == groupId },
+            selectedGuid = uiState.selectedGuid,
+            locateTarget = uiState.locateTarget?.takeIf { it.groupId == groupId },
             canReorder = canReorder,
-            doubleColumnDisplay = doubleColumnDisplay,
-            revealSelectedGeneration = revealSelectedGeneration,
+            doubleColumnDisplay = uiState.doubleColumnDisplay,
+            revealSelectedGeneration = tvNavigation?.revealSelectedGeneration,
             groupId = groupId,
             scrollStates = scrollStates,
             collectionActions = ServerCollectionActions(
-                select = onSelectServer,
-                edit = onEditServer,
-                share = onShareServer,
-                remove = onRemoveServer,
-                move = { from, to -> mainViewModel.moveServer(groupId, from, to) },
-                back = onBackFromList,
-                movePrevious = onOpenDrawer,
+                select = { onAction(MainAction.SelectServer(it)) },
+                edit = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                share = dialogs.share,
+                remove = dialogs.remove,
+                move = { from, to -> onAction(MainAction.MoveServer(groupId, from, to)) },
+                moveWithDpad = { from, index ->
+                    // Repeated remote events can move again before Compose renders the latest order.
+                    groupStateFlow.value.rows.getOrNull(index)?.let { onAction(MainAction.MoveServer(groupId, from, it.guid)) }
+                },
+                back = tvNavigation?.backFromList,
+                movePrevious = tvNavigation?.openDrawer,
                 moveUpFromFirstRow = moveUpFromFirstRow
             ),
-            onLocateHandled = { mainViewModel.onAction(MainAction.LocateHandled(it)) },
+            onLocateHandled = { onAction(MainAction.LocateHandled(it)) },
             contentPadding = listPadding
         )
         if (usageInfo != null) {
+            val navigation = if (tvNavigation != null) Modifier
+                .dpadVerticalFocusNavigation(
+                    onMoveUp = { tvNavigation.moveUpFromFirstRow?.let { it(); true } ?: false },
+                    onMoveDown = { false }
+                )
+                .dpadBackNavigation(onBack = tvNavigation.backFromList)
+            else Modifier
             SubscriptionInfoCard(
                 info = usageInfo,
-                fallbackTitle = groupTitle,
-                onOpenLink = onOpenLink,
-                onRefresh = { mainViewModel.onAction(MainAction.UpdateGroupSubscription(groupId)) },
+                fallbackTitle = group.remarks,
+                onOpenLink = { onAction(MainAction.OpenSubscriptionLink(it)) },
+                onRefresh = { onAction(MainAction.UpdateGroupSubscription(groupId)) },
                 refreshFocusRequester = refreshFocusRequester,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -295,11 +304,7 @@ internal fun GroupPagerPage(
                         end = contentPadding.calculateEndPadding(layoutDirection)
                     )
                     .onSizeChanged { infoHeightPx = it.height }
-                    .dpadVerticalFocusNavigation(
-                        onMoveUp = { onMoveUpFromFirstRow?.let { it(); true } ?: false },
-                        onMoveDown = { false }
-                    )
-                    .dpadBackNavigation(onBack = onBackFromList)
+                    .then(navigation)
             )
         }
     }
@@ -312,18 +317,16 @@ private fun ServerListPage(
     locateTarget: LocateTarget?,
     canReorder: Boolean,
     doubleColumnDisplay: Boolean,
-    revealSelectedGeneration: Int,
+    revealSelectedGeneration: Int?,
     groupId: String,
     scrollStates: MainGroupScrollStates,
     collectionActions: ServerCollectionActions,
     onLocateHandled: (LocateTarget) -> Unit,
     contentPadding: PaddingValues
 ) {
-    val isTelevision = isTelevisionDevice()
-    val selectedServerIndex = rows.indexOfFirst { it.guid == selectedGuid }
     val serverGuids = rows.map { it.guid }
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val rowFocusTargets = if (isTelevision) rememberDpadFocusTargets(serverGuids) { ServerRowFocusRequesters() } else null
+    val rowFocusTargets = if (revealSelectedGeneration != null) rememberDpadFocusTargets(serverGuids) { ServerRowFocusRequesters() } else null
     val gridState = remember(groupId) {
         scrollStates.grids.getOrPut(groupId) { LazyGridState() }
     }
@@ -334,9 +337,12 @@ private fun ServerListPage(
         if (doubleColumnDisplay) gridState.scrollToItem(index, -gridState.layoutInfo.viewportSize.height / 3)
         else listState.scrollToItem(index, -listState.layoutInfo.viewportSize.height / 3)
     }
-    RevealSelectedServerEffect(
-        isTelevision, revealSelectedGeneration, selectedGuid, selectedServerIndex, doubleColumnDisplay, groupId, scrollStates, revealRow
-    )
+    if (revealSelectedGeneration != null) {
+        val selectedServerIndex = rows.indexOfFirst { it.guid == selectedGuid }
+        RevealSelectedServerEffect(
+            revealSelectedGeneration, selectedGuid, selectedServerIndex, doubleColumnDisplay, groupId, scrollStates, revealRow
+        )
+    }
     LocateTargetEffect(locateTarget, rows, doubleColumnDisplay, onLocateHandled, revealRow)
 
     val requestRowFocus: (FocusRequester) -> Boolean = if (rowFocusTargets != null) {
@@ -367,9 +373,7 @@ private fun ServerListPage(
     } else null
 
     fun moveByKey(fromKey: Any?, toKey: Any?) {
-        reorderIndicesForKeys(serverGuids, fromKey, toKey)?.let { (fromIndex, toIndex) ->
-            collectionActions.move(fromIndex, toIndex)
-        }
+        if (fromKey is String && toKey is String) collectionActions.move(fromKey, toKey)
     }
 
     if (doubleColumnDisplay) {
@@ -452,11 +456,6 @@ private fun LocateTargetEffect(
 }
 
 @Composable
-private fun ServerItemDivider() {
-    AppDivider(Modifier.padding(horizontal = 12.dp, vertical = if (isTelevisionDevice()) 2.dp else 0.dp))
-}
-
-@Composable
 private fun ServerListItem(
     model: ServerRowUiModel,
     isSelected: Boolean,
@@ -464,7 +463,6 @@ private fun ServerListItem(
     actions: ServerRowActions,
     focusTargets: ServerRowFocusTargets?
 ) {
-    val isTelevision = isTelevisionDevice()
     val currentFocus = focusTargets?.current
     val previousFocus = focusTargets?.previous
     val nextFocus = focusTargets?.next
@@ -473,7 +471,9 @@ private fun ServerListItem(
     val reorderItem = actions.reorderItem
     val isMoving = reorderItem?.let { it.state.isMoving(it.key) } == true
     val layoutDirection = LocalLayoutDirection.current
-    val compactActionModifier = if (isTelevision) Modifier else Modifier.size(36.dp)
+    val compactActionModifier = if (currentFocus != null) Modifier else Modifier.size(36.dp)
+    val back = actions.back
+    val backNavigation = if (back != null) Modifier.dpadBackNavigation(enabled = !isMoving, onBack = back) else Modifier
     val actionFocusOrder = remember(currentFocus, isTwoColumn) {
         when {
             currentFocus == null -> emptyList()
@@ -504,7 +504,7 @@ private fun ServerListItem(
                 focusRequester = currentFocus?.row,
                 showFocus = !isMoving
             )
-            .dpadBackNavigation(enabled = !isMoving, onBack = actions.back)
+            .then(backNavigation)
             .drawBehind {
                 if (isSelected && !isMoving) {
                     val stripWidth = 4.dp.toPx()
@@ -520,7 +520,7 @@ private fun ServerListItem(
             }
             .then(rowNavigation)
             .then(
-                if (!isTelevision) {
+                if (currentFocus == null) {
                     Modifier.clickable(onClick = actions.select)
                 } else if (reorderItem != null) {
                     Modifier.dpadLongPressToMove(enabled = true, item = reorderItem, onClick = actions.select)
@@ -584,7 +584,7 @@ private fun ServerListItem(
                 }
             }
 
-            if (isTelevision) {
+            if (currentFocus != null) {
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     SubscriptionBadge(model.subscriptionBadge)

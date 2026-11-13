@@ -30,6 +30,7 @@ import com.v2ray.ang.ui.AboutActivity
 import com.v2ray.ang.ui.backup.BackupActivity
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
 import com.v2ray.ang.ui.checkupdate.CheckUpdateActivity
+import com.v2ray.ang.ui.compose.isTelevisionDevice
 import com.v2ray.ang.ui.logcat.LogcatActivity
 import com.v2ray.ang.ui.perappproxy.PerAppProxyActivity
 import com.v2ray.ang.ui.routing.RoutingSettingActivity
@@ -103,30 +104,32 @@ class MainActivity : HelperBaseComponentActivity() {
     @Composable
     override fun ScreenContent() {
         BackHandler { moveTaskToBack(false) }
-        MainScreen(
-            mainViewModel = mainViewModel,
-            onAction = { action ->
-                when (action) {
-                    is MainAction.ViewModelIntent -> mainViewModel.onAction(action)
-                    is MainAction.ActivityRequest -> when (action) {
-                        MainAction.ToggleService -> handleFabAction()
-                        MainAction.TestCurrentServer -> handleLayoutTestClick()
-                        MainAction.ImportQRcode -> importQRcode()
-                        MainAction.ImportClipboard -> importClipboard()
-                        MainAction.ImportConfigLocal -> importConfigLocal()
-                        is MainAction.ImportManually -> importManually(action.type)
-                        MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
-                        MainAction.Exit -> exitApp()
-                        is MainAction.SelectServer -> setSelectServer(action.guid)
-                        is MainAction.EditServer -> editServer(action.guid, action.profile)
-                        is MainAction.ShareClipboard -> shareToClipboard(action.guid)
-                        is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
-                        is MainAction.OpenSubscriptionLink -> openSubscriptionLink(action.url)
-                    }
-                }
-            },
-            onNavigate = { route -> navigateTo(route) },
-        )
+        if (isTelevisionDevice()) {
+            TvMainScreen(mainViewModel, ::handleMainAction, ::navigateTo)
+        } else {
+            MainScreen(mainViewModel, ::handleMainAction, ::navigateTo)
+        }
+    }
+
+    private fun handleMainAction(action: MainAction) {
+        when (action) {
+            is MainAction.ViewModelIntent -> mainViewModel.onAction(action)
+            is MainAction.ActivityRequest -> when (action) {
+                MainAction.ToggleService -> handleFabAction()
+                MainAction.TestCurrentServer -> handleLayoutTestClick()
+                MainAction.ImportQRcode -> importQRcode()
+                MainAction.ImportClipboard -> importClipboard()
+                MainAction.ImportConfigLocal -> importConfigLocal()
+                is MainAction.ImportManually -> importManually(action.type)
+                MainAction.RestartService -> LauncherManager.restartServiceOrStart(this, ::requestServiceStart)
+                MainAction.Exit -> exitApp()
+                is MainAction.SelectServer -> setSelectServer(action.guid)
+                is MainAction.EditServer -> editServer(action.guid, action.profile)
+                is MainAction.ShareClipboard -> shareToClipboard(action.guid)
+                is MainAction.ShareFullContent -> shareFullContentAsync(action.guid)
+                is MainAction.OpenSubscriptionLink -> openSubscriptionLink(action.url)
+            }
+        }
     }
 
     private fun shareToClipboard(guid: String): Boolean =

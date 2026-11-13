@@ -60,6 +60,7 @@ sealed interface MainAction {
     data object LocateSelectedServer : ViewModelIntent
     data class SelectGroup(val groupId: String) : ViewModelIntent
     data class RemoveServer(val guid: String) : ViewModelIntent
+    data class MoveServer(val groupId: String, val fromGuid: String, val toGuid: String) : ViewModelIntent
     data class Search(val query: String) : ViewModelIntent
     data class ShareQRCode(val guid: String) : ViewModelIntent
     data object DismissQRCodeDialog : ViewModelIntent
