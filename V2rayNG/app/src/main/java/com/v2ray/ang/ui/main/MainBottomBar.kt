@@ -249,6 +249,7 @@ fun MainBottomBar(
                         )
                         Text(
                             text = displayText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = statusStyle,
                             maxLines = if (testDisplayText.isBlank()) 2 else 1,
                             overflow = TextOverflow.Ellipsis,
@@ -257,6 +258,7 @@ fun MainBottomBar(
                         if (testDisplayText.isNotBlank()) {
                             Text(
                                 text = testDisplayText,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 style = statusStyle.copy(fontSize = MaterialTheme.typography.bodySmall.fontSize),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
