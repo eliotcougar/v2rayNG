@@ -51,6 +51,19 @@
     <string name="menu_item_import_config_manually_wireguard">افزودن [WireGuard]</string>
     <string name="menu_item_import_config_manually_hysteria2">افزودن [Hysteria2]</string>
     <string name="menu_item_import_config_manually_masque">افزودن [MASQUE]</string>
+    <plurals name="acc_group_tab">
+        <item quantity="one">%1$s. شامل %2$d سرور است</item>
+        <item quantity="other">%1$s. شامل %2$d سرور است</item>
+    </plurals>
+    <string name="acc_server_test_failed">آزمایش اتصال ناموفق بود</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="one">%1$d میلی‌ثانیه</item>
+        <item quantity="other">%1$d میلی‌ثانیه</item>
+    </plurals>
+    <string name="acc_share_config_named">اشتراک‌گذاری پیکربندی %1$s</string>
+    <string name="acc_edit_config_named">ویرایش پیکربندی %1$s</string>
+    <string name="acc_delete_config_named">حذف پیکربندی %1$s</string>
+    <string name="acc_select_server">انتخاب</string>
     <string name="confirm_delete_visible_profiles">آیا مطمئن هستید که می‌خواهید همه پروفایل‌های نمایش‌داده‌شده را حذف کنید؟</string>
     <string name="confirm_delete_duplicate_profiles">آیا مطمئن هستید که می‌خواهید همه پروفایل‌های تکراری نمایش‌داده‌شده را حذف کنید؟</string>
     <string name="confirm_delete_invalid_profiles">لطفاً ابتدا پروفایل‌ها را آزمایش کنید. آیا مطمئن هستید که می‌خواهید همه پروفایل‌های نامعتبر نمایش‌داده‌شده را حذف کنید؟</string>

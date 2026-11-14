@@ -51,6 +51,17 @@
     <string name="menu_item_import_config_manually_wireguard">添加 [WireGuard]</string>
     <string name="menu_item_import_config_manually_hysteria2">添加 [Hysteria2]</string>
     <string name="menu_item_import_config_manually_masque">添加 [MASQUE]</string>
+    <plurals name="acc_group_tab">
+        <item quantity="other">%1$s。包含%2$d个服务器</item>
+    </plurals>
+    <string name="acc_server_test_failed">连接测试失败</string>
+    <plurals name="server_test_delay_accessibility_value">
+        <item quantity="other">%1$d 毫秒</item>
+    </plurals>
+    <string name="acc_share_config_named">分享配置 %1$s</string>
+    <string name="acc_edit_config_named">编辑配置 %1$s</string>
+    <string name="acc_delete_config_named">删除配置 %1$s</string>
+    <string name="acc_select_server">选择</string>
     <string name="confirm_delete_visible_profiles">确定要删除当前显示的所有配置吗？</string>
     <string name="confirm_delete_duplicate_profiles">确定要删除当前显示的所有重复配置吗？</string>
     <string name="confirm_delete_invalid_profiles">请先测试配置。确定要删除当前显示的所有无效配置吗？</string>
