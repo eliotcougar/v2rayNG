@@ -16,6 +16,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -177,6 +178,7 @@ fun AppTheme(
         else -> LightColor
     }
     val snackbarController = rememberAppSnackbarController()
+    val actionFeedback = remember { AccessibilityActionFeedbackState() }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -191,6 +193,7 @@ fun AppTheme(
     }
 
     CompositionLocalProvider(
+        LocalAccessibilityActionFeedback provides actionFeedback,
         LocalDarkTheme provides darkTheme,
     ) {
         MaterialTheme(
@@ -201,6 +204,7 @@ fun AppTheme(
                 content()
                 AppSnackbarHost(controller = snackbarController)
             }
+            AccessibilityActionFeedbackHost(actionFeedback)
         }
     }
 }
