@@ -9,50 +9,58 @@ import com.v2ray.ang.extension.moveItem
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.util.HttpUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
 class RoutingSettingsViewModel(application: Application) : BaseViewModel(application) {
-    private val rulesets: MutableList<RulesetItem> = mutableListOf()
+    private val changes = Mutex()
 
     private val _rulesetsFlow = MutableStateFlow<List<RulesetItem>>(emptyList())
     val rulesetsFlow: StateFlow<List<RulesetItem>> = _rulesetsFlow.asStateFlow()
 
-    fun getAll(): List<RulesetItem> = rulesets.toList()
+    fun getAll(): List<RulesetItem> = _rulesetsFlow.value
 
-    fun reload() {
-        val loaded = MmkvManager.decodeRoutingRulesets()?.toMutableList() ?: mutableListOf()
-        var needsSave = false
-        loaded.forEachIndexed { index, item ->
-            if (item.id.isEmpty()) {
-                item.id = UUID.randomUUID().toString()
-                SettingsManager.saveRoutingRuleset(index, item)
-                needsSave = true
-            }
-        }
-        rulesets.clear()
-        rulesets.addAll(loaded)
-        _rulesetsFlow.value = rulesets.toList()
-    }
-
-    fun update(position: Int, item: RulesetItem) {
-        if (position in rulesets.indices) {
-            rulesets[position] = item
-            SettingsManager.saveRoutingRuleset(position, item)
-            _rulesetsFlow.value = rulesets.toList()
+    suspend fun reload() = changes.withLock {
+        _rulesetsFlow.value = withContext(Dispatchers.IO) {
+            MmkvManager.decodeRoutingRulesetsForEditing().orEmpty()
         }
     }
 
-    fun move(fromPosition: Int, toPosition: Int) {
-        if (rulesets.moveItem(fromPosition, toPosition)) {
-            MmkvManager.encodeRoutingRulesets(rulesets)
-            _rulesetsFlow.value = rulesets.toList()
+    suspend fun setEnabled(ruleId: String, enabled: Boolean) = changeRulesets {
+        val rule = firstOrNull { it.id == ruleId } ?: return@changeRulesets false
+        if (rule.enabled == enabled) return@changeRulesets false
+        rule.enabled = enabled
+        true
+    }
+
+    suspend fun move(fromId: String, toId: String): Boolean = changeRulesets {
+        moveItem(indexOfFirst { it.id == fromId }, indexOfFirst { it.id == toId })
+    }
+
+    internal suspend fun move(ruleId: String, command: ReorderCommand): Boolean = changeRulesets {
+        val from = indexOfFirst { it.id == ruleId }
+        val to = command.targetIndex(from, size) ?: return@changeRulesets false
+        moveItem(from, to)
+    }
+
+    suspend fun remove(ruleId: String) = changes.withLock {
+        _rulesetsFlow.value = withContext(Dispatchers.IO) {
+            MmkvManager.removeRoutingRuleset(ruleId)
         }
+    }
+
+    private suspend fun changeRulesets(change: MutableList<RulesetItem>.() -> Boolean): Boolean = changes.withLock {
+        val saved = withContext(Dispatchers.IO) { MmkvManager.changeRoutingRulesets(change) }
+            ?: return@withLock false
+        _rulesetsFlow.value = saved
+        true
     }
 
     fun importRulesets(content: String?) {
