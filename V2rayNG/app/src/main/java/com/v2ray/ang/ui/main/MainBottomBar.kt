@@ -37,8 +37,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,6 +52,7 @@ import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.accessibilityClickLabel
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 private val KNOB_SIZE = 56.dp
@@ -69,11 +72,25 @@ private const val TEXT_LINE_HEIGHT_FACTOR = 1.3f
 @Composable
 fun MainBottomBar(
     displayText: String,
+    accessibilityText: String,
+    status: MainStatus,
+    testAnnouncements: Flow<MainTestAnnouncement?>,
+    formatTestAnnouncement: (MainStatus) -> String,
     isRunning: Boolean,
     isDarkTheme: Boolean,
     onAction: (MainAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val checkConnectionLabel = stringResource(R.string.connection_test_pending)
+    val connectionActionModifier = if (isRunning) {
+        Modifier.clickable(
+            onClickLabel = checkConnectionLabel,
+            onClick = { onAction(MainAction.TestCurrentServer) },
+        )
+    } else {
+        Modifier
+    }
+
     val scope = rememberCoroutineScope()
     val rotationAnim = remember { Animatable(0f) }
     val textLayoutDirection = LocalLayoutDirection.current
@@ -92,7 +109,12 @@ fun MainBottomBar(
     val trackHeight = maxOf(KNOB_SIZE + 4.dp, twoLinesHeight + 20.dp)
     val knobInset = (trackHeight - KNOB_SIZE) / 2
 
-    Box(
+    MainTestFeedback(
+        connectionText = accessibilityText,
+        status = status,
+        isRunning = isRunning,
+        testAnnouncements = testAnnouncements,
+        formatTestAnnouncement = formatTestAnnouncement,
         modifier = modifier
             // On wide screens (tablets, landscape) the bar keeps a phone-like width and stays centered
             // instead of stretching across the whole screen.
@@ -100,7 +122,7 @@ fun MainBottomBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 14.dp)
-    ) {
+    ) { statusText ->
         // Forced left-to-right so that the button stays on the physical right edge in every language;
         // the message below gets the real layout direction back.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
@@ -116,7 +138,8 @@ fun MainBottomBar(
                         .shadow(elevation = 3.dp, shape = CircleShape)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .clickable(onClick = { onAction(MainAction.TestCurrentServer) })
+                        .semantics { text = statusText }
+                        .then(connectionActionModifier)
                 )
                 CompositionLocalProvider(LocalLayoutDirection provides textLayoutDirection) {
                     Box(
@@ -148,7 +171,7 @@ fun MainBottomBar(
                                     fontSizeSp = (fontSizeSp - 1f).coerceAtLeast(TEXT_MIN_SP)
                                 }
                             },
-                            modifier = Modifier.semantics { contentDescription = displayText }
+                            modifier = Modifier.clearAndSetSemantics { hideFromAccessibility() }
                         )
                     }
                 }
