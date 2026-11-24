@@ -72,7 +72,14 @@ fun Context.toastInfo(message: CharSequence, long: Boolean = false) {
  */
 fun Context.showNotification(
     message: CharSequence,
-    type: AppNotificationType = AppNotificationType.NORMAL
+    type: AppNotificationType = AppNotificationType.NORMAL,
+    assertive: Boolean = false,
+    accessibilityMessage: String? = null,
 ) {
-    dispatchMessage(message, type)
+    AppNotificationManager.show(
+        message = message,
+        type = type,
+        assertive = assertive,
+        accessibilityMessage = accessibilityMessage,
+    )
 }

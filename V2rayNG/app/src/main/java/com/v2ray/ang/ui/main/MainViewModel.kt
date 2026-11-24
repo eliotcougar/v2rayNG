@@ -20,6 +20,8 @@ import com.v2ray.ang.dto.entities.SubscriptionCache
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.isComplexType
 import com.v2ray.ang.extension.matchesPattern
+import com.v2ray.ang.extension.showNotification
+import com.v2ray.ang.handler.AppNotificationType
 import com.v2ray.ang.handler.SubscriptionInfoParser
 import com.v2ray.ang.ui.base.BaseViewModel
 import com.v2ray.ang.util.LogUtil
@@ -140,21 +142,38 @@ class MainViewModel(
         when (event) {
             MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
-            MainServiceEvent.StateStartSuccess -> {
-                toastSuccess(R.string.toast_services_success)
+            is MainServiceEvent.StateStartSuccess -> {
                 updateRunningState(true)
+                val name = event.serverName.trim()
+                localizedContext.showNotification(
+                    message = getString(R.string.toast_services_success),
+                    type = AppNotificationType.SUCCESS,
+                    assertive = true,
+                    accessibilityMessage = name.takeIf(String::isNotEmpty)?.let {
+                        getString(R.string.acc_service_started_connected_to, it)
+                    },
+                )
             }
 
             is MainServiceEvent.StateStartFailure -> {
-                if (!event.message.isNullOrBlank()) {
-                    toastError(event.message)
-                } else {
-                    toastError(R.string.toast_services_failure)
-                }
                 updateRunningState(false)
+                localizedContext.showNotification(
+                    message = event.message?.takeUnless(String::isBlank) ?: getString(R.string.toast_services_failure),
+                    type = AppNotificationType.ERROR,
+                    assertive = true,
+                )
             }
 
-            MainServiceEvent.StateStopSuccess -> updateRunningState(false)
+            is MainServiceEvent.StateStopSuccess -> {
+                updateRunningState(false)
+                if (event.wasRunning) {
+                    localizedContext.showNotification(
+                        message = getString(R.string.toast_services_stop),
+                        type = AppNotificationType.SUCCESS,
+                        assertive = true,
+                    )
+                }
+            }
             is MainServiceEvent.MeasureDelayResult -> {
                 if (!uiState.value.isRunning) return
                 _uiState.update { it.copy(isTesting = false, status = MainStatus.ConnectionTest(event.result)) }

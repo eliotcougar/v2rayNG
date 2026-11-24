@@ -21,8 +21,13 @@ fun calculateNotificationDuration(message: CharSequence): Long {
 data class AppNotificationData(
     val message: CharSequence,
     val type: AppNotificationType = AppNotificationType.NORMAL,
-    val durationMs: Long = calculateNotificationDuration(message)
-)
+    val durationMs: Long = calculateNotificationDuration(message),
+    val assertive: Boolean = false,
+    val accessibilityMessage: String? = null,
+) {
+    val announcementText: String
+        get() = accessibilityMessage?.takeUnless(String::isBlank) ?: message.toString()
+}
 
 object AppNotificationManager {
     private val _notifications = MutableSharedFlow<AppNotificationData>(
@@ -35,13 +40,17 @@ object AppNotificationManager {
     fun show(
         message: CharSequence,
         type: AppNotificationType = AppNotificationType.NORMAL,
-        durationMs: Long = calculateNotificationDuration(message)
+        durationMs: Long = calculateNotificationDuration(message),
+        assertive: Boolean = false,
+        accessibilityMessage: String? = null,
     ) {
         _notifications.tryEmit(
             AppNotificationData(
                 message = message,
                 type = type,
-                durationMs = durationMs
+                durationMs = durationMs,
+                assertive = assertive,
+                accessibilityMessage = accessibilityMessage,
             )
         )
     }

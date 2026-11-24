@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -38,19 +37,32 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.v2ray.ang.R
 import com.v2ray.ang.extension.delay
 import com.v2ray.ang.handler.AppNotificationData
 import com.v2ray.ang.handler.AppNotificationManager
@@ -184,7 +196,11 @@ fun AppNotificationHost(
                             .fillMaxWidth(0.92f)
                             .widthIn(max = 420.dp)
                             .heightIn(max = maxNotificationCardHeight)
-                            .clickable { onDismiss() },
+                            .clickable(
+                                onClickLabel = stringResource(R.string.action_close),
+                                role = Role.Button,
+                                onClick = onDismiss,
+                            ),
                         shape = RoundedCornerShape(20.dp),
                         color = bgColor,
                         shadowElevation = 6.dp
@@ -199,19 +215,10 @@ fun AppNotificationHost(
                                     .heightIn(max = maxTextScrollHeight)
                                     .verticalScroll(textScrollState)
                             ) {
-                                Text(
-                                    text = data.message.toString(),
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontSize = 14.sp,
-                                        lineHeight = 19.sp
-                                    ),
-                                    color = Color.White,
-                                    maxLines = 50,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Clip
-                                )
+                                AppNotificationMessage(data)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
-                            CloseButton { onDismiss() }
+                            NotificationCloseIcon()
                         }
                     }
                 }
@@ -221,13 +228,41 @@ fun AppNotificationHost(
 }
 
 @Composable
-private fun CloseButton(onClick: () -> Unit) {
+private fun AppNotificationMessage(data: AppNotificationData) {
+    val languageTag = LocalConfiguration.current.locales[0].toLanguageTag()
+    val announcement = remember(data.announcementText, languageTag) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(localeList = LocaleList(Locale(languageTag)))) {
+                append(data.announcementText)
+            }
+        }
+    }
+    var published by remember(data) { mutableStateOf(false) }
+    LaunchedEffect(data) {
+        // Install the live region before changing its text so even the first card announces.
+        withFrameNanos { }
+        withFrameNanos { }
+        published = true
+    }
+
+    Text(
+        text = data.message.toString(),
+        modifier = Modifier.clearAndSetSemantics {
+            liveRegion = if (data.assertive) LiveRegionMode.Assertive else LiveRegionMode.Polite
+            if (published && announcement.isNotBlank()) text = announcement
+        },
+        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 19.sp),
+        color = Color.White,
+        maxLines = 50,
+        overflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+    )
+}
+
+@Composable
+private fun NotificationCloseIcon() {
     val iconColor = Color.White.copy(alpha = 0.8f)
     Box(
-        modifier = Modifier
-            .size(24.dp)
-            .clip(CircleShape)
-            .clickable { onClick() },
+        modifier = Modifier.size(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.size(10.dp)) {
