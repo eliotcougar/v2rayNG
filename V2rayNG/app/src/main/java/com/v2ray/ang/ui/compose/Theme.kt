@@ -16,6 +16,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -168,6 +169,8 @@ fun AppTheme(
         darkTheme -> DarkColor
         else -> LightColor
     }
+    val actionFeedback = remember { AccessibilityActionFeedbackState() }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -181,6 +184,7 @@ fun AppTheme(
     }
 
     CompositionLocalProvider(
+        LocalAccessibilityActionFeedback provides actionFeedback,
         LocalDarkTheme provides darkTheme,
         LocalAppNotification provides AppNotificationManager
     ) {
@@ -191,6 +195,7 @@ fun AppTheme(
                 AppNotificationBridge()
                 content()
             }
+            AccessibilityActionFeedbackHost(actionFeedback)
         }
     }
 }
