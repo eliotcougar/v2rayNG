@@ -37,6 +37,11 @@ internal data class ServerGroupUiState(
     }
 }
 
+internal fun ServerRowUiModel.accessibilityDescription(testResult: String, prefix: String?): String =
+    listOfNotNull(prefix, remarks, subscriptionBadge.uppercase(), statistics, typeDescription, testResult)
+        .filter { it.isNotBlank() }
+        .joinToString(". ")
+
 internal fun buildServerRowUiModel(
     server: ServersCache,
     subscriptionRemarks: String,

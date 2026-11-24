@@ -59,6 +59,9 @@ internal fun serverMenuActions(
     (includeManagementActions || action.isShareAction) && (!isComplexProfile || action.supportsComplexProfiles)
 }
 
+internal fun serverAccessibilityActions(isComplexProfile: Boolean): List<ServerMenuAction> =
+    serverMenuActions(isComplexProfile, includeManagementActions = true).sortedBy { it.isShareAction }
+
 @Composable
 fun ImportMenuContent(onAction: (MainAction) -> Unit) = AppDropdownMenuItems(
     items = ImportMenuAction.entries,

@@ -227,7 +227,7 @@ fun MainScreen(
                             doubleColumnDisplay = doubleColumnDisplay,
                             searchQuery = searchQuery,
                             onSelectServer = { guid -> onAction(MainAction.SelectServer(guid)) },
-                            onEditServer = { guid, profile -> onAction(MainAction.EditServer(guid, profile)) },
+                            onAction = onAction,
                             onShareServer = { guid, profile ->
                                 shareTarget = Triple(guid, profile, false)
                             },

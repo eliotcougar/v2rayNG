@@ -24,12 +24,16 @@ import com.v2ray.ang.extension.showNotification
 import com.v2ray.ang.handler.AppNotificationType
 import com.v2ray.ang.handler.SubscriptionInfoParser
 import com.v2ray.ang.ui.base.BaseViewModel
+import com.v2ray.ang.ui.compose.ReorderCommand
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -421,9 +425,13 @@ class MainViewModel(
     }
 
     private fun updateGroupUi(groupId: String, servers: List<ServersCache>) {
+        mutableServerGroupState(groupId).value = buildGroupUiState(groupId, servers)
+    }
+
+    private fun buildGroupUiState(groupId: String, servers: List<ServersCache>): ServerGroupUiState {
         val keyword = uiState.value.searchQuery.trim()
         val filteredServers = applyKeywordFilter(servers, keyword)
-        mutableServerGroupState(groupId).value = ServerGroupUiState(
+        return ServerGroupUiState(
             servers = filteredServers,
             rows = buildServerRows(groupId, filteredServers),
             isFiltered = keyword.isNotEmpty()
@@ -804,6 +812,17 @@ class MainViewModel(
         _uiState.update { it.copy(selectedGuid = guid) }
     }
 
+    internal fun moveServer(groupId: String, guid: String, command: ReorderCommand, onSaved: () -> Unit): Boolean {
+        val servers = groupUiFlows[groupId]?.value?.servers ?: return false
+        val fromPosition = servers.indexOfFirst { it.guid == guid }
+        val toPosition = command.targetIndex(fromPosition, servers.size) ?: return false
+        val write = moveServer(MainAction.MoveServer(groupId, guid, servers[toPosition].guid)) ?: return false
+        viewModelScope.launch {
+            if (write.await()) onSaved()
+        }
+        return true
+    }
+
     fun refreshSelectedGuid() {
         _uiState.update { it.copy(selectedGuid = dataSource.getSelectServer()) }
     }
@@ -820,26 +839,19 @@ class MainViewModel(
         }
     }
 
-    private fun moveServer(action: MainAction.MoveServer) {
+    internal fun moveServer(action: MainAction.MoveServer): Deferred<Boolean>? {
         val groupId = action.groupId
-        val groupFlow = groupUiFlows[groupId] ?: return
+        val groupFlow = groupUiFlows[groupId] ?: return null
         val current = groupFlow.value
-        if (!current.canReorder(groupId, uiState.value.searchQuery)) return
-        groupFlow.value = current.moveServer(action.fromGuid, action.toGuid) ?: return
-        // Keep immediate D-pad feedback, but apply queued moves by GUID to the stored index.
+        if (!current.canReorder(groupId, uiState.value.searchQuery)) return null
+        groupFlow.value = current.moveServer(action.fromGuid, action.toGuid) ?: return null
+        // Update the visible list immediately and apply queued moves to the stored index by GUID.
         val previousPersistenceJob = serverOrderPersistenceJobs[groupId]
-        serverOrderPersistenceJobs[groupId] = viewModelScope.launch {
+        val write = viewModelScope.async(start = CoroutineStart.LAZY) {
             previousPersistenceJob?.join()
             val saved = withContext(ioDispatcher) {
                 try {
-                    val order = dataSource.moveServerInGroup(groupId, action.fromGuid, action.toGuid)
-                    cacheMutex.withLock {
-                        val cached = groupDataCache.remove(groupId)?.associateBy { it.guid }
-                        if (order != null && cached != null && order.size == cached.size && order.all(cached::containsKey)) {
-                            groupDataCache[groupId] = order.map(cached::getValue)
-                        }
-                    }
-                    order != null
+                    dataSource.moveServerInGroup(groupId, action.fromGuid, action.toGuid) != null
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
@@ -847,11 +859,29 @@ class MainViewModel(
                     false
                 }
             }
-            if (serverOrderPersistenceJobs[groupId] == coroutineContext[Job]) {
-                serverOrderPersistenceJobs.remove(groupId)
-                if (!saved) setupGroupTab(forceRefresh = true)
+            if (!saved) toastError(R.string.toast_failure)
+
+            // Only the last queued move publishes the current persisted membership and order.
+            val thisJob = currentCoroutineContext()[Job]
+            if (serverOrderPersistenceJobs[groupId] === thisJob) {
+                try {
+                    val persisted = withContext(ioDispatcher) {
+                        buildGroupUiState(groupId, loadGroup(groupId, forceRefresh = true))
+                    }
+                    if (serverOrderPersistenceJobs[groupId] === thisJob) groupFlow.value = persisted
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    LogUtil.e(AppConfig.TAG, "Failed to reload profile order for group: $groupId", error)
+                } finally {
+                    if (serverOrderPersistenceJobs[groupId] === thisJob) serverOrderPersistenceJobs.remove(groupId)
+                }
             }
+            saved
         }
+        serverOrderPersistenceJobs[groupId] = write
+        write.start()
+        return write
     }
 
     // ---------- Testing ----------

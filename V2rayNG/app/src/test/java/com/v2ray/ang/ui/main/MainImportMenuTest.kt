@@ -6,6 +6,28 @@ import org.junit.jupiter.api.Test
 class MainImportMenuTest {
 
     @Test
+    fun accessibilityActionsPutManagementBeforeShareVariants() {
+        assertEquals(
+            listOf(
+                ServerMenuAction.Edit,
+                ServerMenuAction.Delete,
+                ServerMenuAction.ShareQRCode,
+                ServerMenuAction.ShareClipboard,
+                ServerMenuAction.ShareFullContent,
+            ),
+            serverAccessibilityActions(isComplexProfile = false),
+        )
+    }
+
+    @Test
+    fun complexAccessibilityActionsKeepOnlySupportedShareVariant() {
+        assertEquals(
+            listOf(ServerMenuAction.Edit, ServerMenuAction.Delete, ServerMenuAction.ShareFullContent),
+            serverAccessibilityActions(isComplexProfile = true),
+        )
+    }
+
+    @Test
     fun tvMoreMenuLeavesRestartToTheToolbarAndOmitsDeleteAll() {
         assertEquals(listOf(MainMoreMenuAction.RestartService, MainMoreMenuAction.DeleteAll),
             MainMoreMenuAction.entries - tvMoreMenuActions.toSet())
